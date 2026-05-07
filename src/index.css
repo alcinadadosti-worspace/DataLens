@@ -1,0 +1,115 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #FAF7F2;
+  font-family: 'Inter Tight', sans-serif;
+  color: #1C1814;
+}
+
+/* ---------- Tier-detail card stripe / shimmer ---------- */
+.diamante-shimmer-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer 3.5s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes dia-bg {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ---------- Tier card sparkles ---------- */
+.sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 6px white;
+  pointer-events: none;
+}
+
+.s1 { top: 14px; right: 28px; animation: tw 2.5s ease-in-out infinite; }
+.s2 { top: 32px; right: 56px; animation: tw 2.5s ease-in-out infinite 0.6s; }
+.s3 { top: 22px; right: 80px; animation: tw 2.5s ease-in-out infinite 1.2s; }
+
+@keyframes tw {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ---------- Ambience animations ---------- */
+@keyframes amb-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes amb-prism {
+  0%   { background-position:   0%  50%; }
+  25%  { background-position:  50%   0%; }
+  50%  { background-position: 100%  50%; }
+  75%  { background-position:  50% 100%; }
+  100% { background-position:   0%  50%; }
+}
+
+@keyframes amb-shimmer {
+  0%   { background-position: -100% 0; }
+  100% { background-position:  220% 0; }
+}
+
+@keyframes amb-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes amb-streak {
+  0%   { transform: translateX(-30%) rotate(15deg); opacity: 0; }
+  25%  {                                             opacity: 0.32; }
+  100% { transform: translateX(180%) rotate(15deg); opacity: 0; }
+}
+
+@keyframes amb-twinkle {
+  0%, 100% { opacity: 0;   transform: scale(0.4); }
+  50%      { opacity: 1;   transform: scale(1.4); }
+}
+
+@keyframes amb-float {
+  0%, 100% { transform: translate(0, 0); }
+  33%      { transform: translate(20px, -28px); }
+  66%      { transform: translate(-16px, 18px); }
+}
+
+@keyframes amb-drift-0 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(80px, 60px) scale(1.15); }
+}
+
+@keyframes amb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1.05); }
+  50%      { transform: translate(-90px, -50px) scale(0.92); }
+}
+
+@keyframes amb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(0.95); }
+  50%      { transform: translate(60px, -80px) scale(1.1); }
+}
+
+i.ph {
+  display: inline-flex;
+}
