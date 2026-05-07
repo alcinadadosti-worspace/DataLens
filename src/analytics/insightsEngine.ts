@@ -95,7 +95,7 @@ export function generateInsights(
       id: 'avg-sla',
       type,
       icon: 'ph-hourglass',
-      title: `SLA médio de ${fmtMinutes(operational.avgSLAMinutes)}`,
+      title: `ANS médio de ${fmtMinutes(operational.avgSLAMinutes)}`,
       description: `Tempo médio entre aprovação e autorização de faturamento.`,
     });
   }

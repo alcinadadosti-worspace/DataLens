@@ -95,7 +95,7 @@ const SupervisorScreen: React.FC = () => {
     'Revendedores': s.resellerCount,
     'Receita Total': s.totalRevenue,
     'Ticket Médio': s.avgTicket,
-    'SLA Médio (min)': Math.round(s.avgSLAMinutes),
+    'ANS Médio (min)': Math.round(s.avgSLAMinutes),
     'Cancelados': s.cancelledCount,
   }));
 
@@ -167,7 +167,7 @@ const SupervisorScreen: React.FC = () => {
           <div style={{ fontSize: 28, fontWeight: 600 }}>{fmtBRLshort(totalRevenue)}</div>
         </div>
         <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 4 }}>SLA médio geral</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 4 }}>ANS médio geral</div>
           <div style={{ fontSize: 28, fontWeight: 600 }}>{fmtMinutes(avgSLA)}</div>
         </div>
       </div>
@@ -197,7 +197,7 @@ const SupervisorScreen: React.FC = () => {
                   Ticket Médio {sortKey === 'avgTicket' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                 </th>
                 <th style={{ ...thStyle('avgSLAMinutes'), textAlign: 'right' }} onClick={() => toggleSort('avgSLAMinutes')}>
-                  SLA Médio {sortKey === 'avgSLAMinutes' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                  ANS Médio {sortKey === 'avgSLAMinutes' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                 </th>
                 <th style={{ ...thStyle('cancelledCount'), textAlign: 'right' }} onClick={() => toggleSort('cancelledCount')}>
                   Cancelados {sortKey === 'cancelledCount' ? (sortDir === 'desc' ? '↓' : '↑') : ''}

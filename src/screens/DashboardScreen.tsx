@@ -114,16 +114,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       {operational && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 14 }}>
           <KpiCard
-            eyebrow="SLA médio"
+            eyebrow="ANS médio"
             value={fmtMinutes(operational.avgSLAMinutes)}
           />
           <KpiCard
-            eyebrow="SLA mínimo"
+            eyebrow="ANS mínimo"
             value={fmtMinutes(operational.minSLAMinutes)}
             deltaDirection="up"
           />
           <KpiCard
-            eyebrow="SLA máximo"
+            eyebrow="ANS máximo"
             value={fmtMinutes(operational.maxSLAMinutes)}
             deltaDirection={operational.maxSLAMinutes > 1440 ? 'down' : 'up'}
           />
@@ -278,7 +278,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       {/* SLA distribution */}
       {operational && operational.slaDistribution.some(d => d.count > 0) && (
         <div style={{ marginTop: 14 }}>
-          <ChartCard title="Distribuição de SLA" subtitle="Tempo entre aprovação e autorização de faturamento">
+          <ChartCard title="Distribuição de ANS" subtitle="Tempo entre aprovação e autorização de faturamento">
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               {operational.slaDistribution.map((bucket, i) => {
                 const maxCount = Math.max(...operational.slaDistribution.map(d => d.count), 1);
