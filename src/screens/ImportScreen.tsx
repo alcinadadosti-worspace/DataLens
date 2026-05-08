@@ -14,6 +14,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
   const [file, setFile] = useState<File | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [rowCount, setRowCount] = useState(0);
+  const [fvcExcluded, setFvcExcluded] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -26,6 +27,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
 
     const result = await parseSpreadsheet(f);
     setRowCount(result.orders.length);
+    setFvcExcluded(result.fvcExcludedCount);
     setColumns(result.detectedColumns.slice(0, 8));
 
     if (result.errors.length > 0 && result.orders.length === 0) {
@@ -132,6 +134,12 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
               <div style={{ fontSize: 13, color: '#6B6258', marginTop: 4 }}>
                 {rowCount.toLocaleString('pt-BR')} pedidos importados com sucesso
               </div>
+              {fvcExcluded > 0 && (
+                <div style={{ fontSize: 12, color: '#9B9287', marginTop: 4 }}>
+                  <i className="ph ph-funnel" style={{ marginRight: 4 }} />
+                  {fvcExcluded.toLocaleString('pt-BR')} pedidos FVC (terceirizados) excluídos automaticamente
+                </div>
+              )}
             </div>
             {errors.length > 0 && (
               <div style={{ background: '#FBF3D0', border: '1px solid #E8C547', borderRadius: 10, padding: '10px 14px', textAlign: 'left', width: '100%', maxWidth: 480 }}>

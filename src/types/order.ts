@@ -43,5 +43,6 @@ export interface ParseResult {
   orders: Order[];
   errors: string[];
   rowCount: number;
+  fvcExcludedCount: number;
   detectedColumns: string[];
 }

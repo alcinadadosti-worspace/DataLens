@@ -152,6 +152,10 @@ function mapRow(raw: Record<string, unknown>): Order {
   };
 }
 
+function isFVC(order: Order): boolean {
+  return order.Estrutura.trimStart().toUpperCase().startsWith('FVC');
+}
+
 export async function parseXLSX(file: File): Promise<ParseResult> {
   const errors: string[] = [];
 
@@ -166,11 +170,11 @@ export async function parseXLSX(file: File): Promise<ParseResult> {
     });
 
     if (rawRows.length === 0) {
-      return { orders: [], errors: ['Planilha vazia'], rowCount: 0, detectedColumns: [] };
+      return { orders: [], errors: ['Planilha vazia'], rowCount: 0, fvcExcludedCount: 0, detectedColumns: [] };
     }
 
     const detectedColumns = Object.keys(rawRows[0]);
-    const orders = rawRows.map((row, i) => {
+    const mapped = rawRows.map((row, i) => {
       try {
         return mapRow(row);
       } catch (e) {
@@ -178,13 +182,16 @@ export async function parseXLSX(file: File): Promise<ParseResult> {
         return null;
       }
     }).filter((o): o is Order => o !== null);
+    const orders = mapped.filter(o => !isFVC(o));
+    const fvcExcludedCount = mapped.length - orders.length;
 
-    return { orders, errors, rowCount: rawRows.length, detectedColumns };
+    return { orders, errors, rowCount: rawRows.length, fvcExcludedCount, detectedColumns };
   } catch (e) {
     return {
       orders: [],
       errors: [`Erro ao ler arquivo: ${e instanceof Error ? e.message : String(e)}`],
       rowCount: 0,
+      fvcExcludedCount: 0,
       detectedColumns: [],
     };
   }
@@ -201,7 +208,7 @@ export async function parseCSV(file: File): Promise<ParseResult> {
         const errors: string[] = result.errors.map(e => `Linha ${e.row}: ${e.message}`);
         const detectedColumns = result.meta.fields ?? [];
 
-        const orders = result.data.map((row, i) => {
+        const mapped = result.data.map((row, i) => {
           try {
             return mapRow(row);
           } catch (e) {
@@ -209,11 +216,14 @@ export async function parseCSV(file: File): Promise<ParseResult> {
             return null;
           }
         }).filter((o): o is Order => o !== null);
+        const orders = mapped.filter(o => !isFVC(o));
+        const fvcExcludedCount = mapped.length - orders.length;
 
         resolve({
           orders,
           errors,
           rowCount: result.data.length,
+          fvcExcludedCount,
           detectedColumns,
         });
       },
@@ -222,6 +232,7 @@ export async function parseCSV(file: File): Promise<ParseResult> {
           orders: [],
           errors: [`Erro ao parsear CSV: ${err.message}`],
           rowCount: 0,
+          fvcExcludedCount: 0,
           detectedColumns: [],
         });
       },
