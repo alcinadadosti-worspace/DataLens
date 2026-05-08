@@ -166,7 +166,7 @@ export async function parseXLSX(file: File): Promise<ParseResult> {
     const sheet = workbook.Sheets[sheetName];
     const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
       defval: '',
-      raw: false,
+      raw: true,
     });
 
     if (rawRows.length === 0) {
