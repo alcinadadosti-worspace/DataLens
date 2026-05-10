@@ -63,6 +63,23 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
     revenueByDayAndTier[day][tierId] = (revenueByDayAndTier[day][tierId] ?? 0) + v;
   }
 
+  // top 3 resellers per day
+  const resellersByDay: Record<string, Record<string, { name: string; tierId: string; value: number }>> = {};
+  for (const order of eligible) {
+    const day = order.DiaDoCiclo || '?';
+    const resellerId = order.Pessoa;
+    if (!resellerId) continue;
+    if (!resellersByDay[day]) resellersByDay[day] = {};
+    if (!resellersByDay[day][resellerId]) {
+      resellersByDay[day][resellerId] = { name: order.NomePessoa, tierId: order.tierId || 'cf', value: 0 };
+    }
+    resellersByDay[day][resellerId].value += order.ValorPraticado;
+  }
+  const topResellersByDay: Record<string, { name: string; tierId: string; value: number }[]> = {};
+  for (const [day, sellers] of Object.entries(resellersByDay)) {
+    topResellersByDay[day] = Object.values(sellers).sort((a, b) => b.value - a.value).slice(0, 3);
+  }
+
   const topResellersByTier: Record<string, { name: string; value: number }[]> = {};
   for (const data of Object.values(revenueByReseller)) {
     if (!topResellersByTier[data.tier]) topResellersByTier[data.tier] = [];
@@ -90,5 +107,6 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
     revenueByMeioCaptacao,
     topResellersByTier,
     revenueByDayAndTier,
+    topResellersByDay,
   };
 }

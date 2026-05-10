@@ -15,6 +15,7 @@ export interface FinancialMetrics {
   revenueByMeioCaptacao: Record<string, number>;
   topResellersByTier: Record<string, { name: string; value: number }[]>;
   revenueByDayAndTier: Record<string, Record<string, number>>;
+  topResellersByDay: Record<string, { name: string; tierId: string; value: number }[]>;
 }
 
 export interface OperationalMetrics {

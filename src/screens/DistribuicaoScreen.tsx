@@ -107,6 +107,7 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
         <ChartCard title="Receita diária por tier" subtitle="Evolução da receita pelos dias do ciclo">
           <DailyCycleChart
             revenueByDayAndTier={financial.revenueByDayAndTier}
+            topResellersByDay={financial.topResellersByDay}
             tierIds={TIER_IDS_CHART}
           />
           <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap', fontSize: 11 }}>

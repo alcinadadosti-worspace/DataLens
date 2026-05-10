@@ -136,11 +136,11 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
           }
         />
         <KpiCard
-          eyebrow="Receita líquida"
-          value={fmtBRLshort(financial.netRevenue)}
+          eyebrow="Ticket Médio"
+          value={fmtBRLshort(financial.avgTicket)}
           tooltip={
             <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
-              {fmtBRL(financial.netRevenue)}
+              {fmtBRL(financial.avgTicket)}
             </span>
           }
         />
@@ -150,7 +150,11 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginTop: 28 }}>
         <ChartCard title="Receita por tier" subtitle="Comparativo de receita por grupo">
           {tierBarData.length > 0 ? (
-            <TierBarChart data={tierBarData} topResellersByTier={financial.topResellersByTier} />
+            <TierBarChart
+              data={tierBarData}
+              topResellersByTier={financial.topResellersByTier}
+              onBarClick={tierId => onTierClick(tierId)}
+            />
           ) : (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9B9287' }}>
               Sem dados
