@@ -14,7 +14,10 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
   const grossRevenue = eligible.reduce((s, o) => s + o.ValorPraticado, 0);
   const netRevenue = eligible.reduce((s, o) => s + o.ValorLiquido, 0);
   const totalOrders = orders.length;
+  const finalizados = eligible.length;
+  const cancelados = totalOrders - finalizados;
   const avgTicket = eligible.length > 0 ? grossRevenue / eligible.length : 0;
+  const activeResellers = new Set(eligible.map(o => o.Pessoa).filter(Boolean)).size;
 
   const revenueByTier: Record<string, number> = {};
   const ordersByTier: Record<string, number> = {};
@@ -23,6 +26,7 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
   const revenueByReseller: Record<string, { name: string; value: number; tier: string }> = {};
   const revenueByModeloComercial: Record<string, number> = {};
   const revenueByMeioCaptacao: Record<string, number> = {};
+  const revenueByDayAndTier: Record<string, Record<string, number>> = {};
 
   for (const order of orders) {
     const tierId = order.tierId || 'cf';
@@ -53,6 +57,20 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
 
     const meio = order.MeioCaptacao || 'Não informado';
     revenueByMeioCaptacao[meio] = (revenueByMeioCaptacao[meio] ?? 0) + v;
+
+    const day = order.DiaDoCiclo || '?';
+    if (!revenueByDayAndTier[day]) revenueByDayAndTier[day] = {};
+    revenueByDayAndTier[day][tierId] = (revenueByDayAndTier[day][tierId] ?? 0) + v;
+  }
+
+  const topResellersByTier: Record<string, { name: string; value: number }[]> = {};
+  for (const data of Object.values(revenueByReseller)) {
+    if (!topResellersByTier[data.tier]) topResellersByTier[data.tier] = [];
+    topResellersByTier[data.tier].push({ name: data.name, value: data.value });
+  }
+  for (const tier of Object.keys(topResellersByTier)) {
+    topResellersByTier[tier].sort((a, b) => b.value - a.value);
+    topResellersByTier[tier] = topResellersByTier[tier].slice(0, 3);
   }
 
   return {
@@ -60,6 +78,9 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
     netRevenue,
     avgTicket,
     totalOrders,
+    finalizados,
+    cancelados,
+    activeResellers,
     revenueByTier,
     ordersByTier,
     revenueByCycle,
@@ -67,5 +88,7 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
     revenueByReseller,
     revenueByModeloComercial,
     revenueByMeioCaptacao,
+    topResellersByTier,
+    revenueByDayAndTier,
   };
 }

@@ -85,20 +85,64 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 28 }}>
         <KpiCard
-          eyebrow="Receita bruta"
+          eyebrow="Valor Praticado"
           value={fmtBRLshort(financial.grossRevenue)}
+          tooltip={
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
+              {fmtBRL(financial.grossRevenue)}
+            </span>
+          }
         />
         <KpiCard
           eyebrow="Total de pedidos"
           value={financial.totalOrders.toLocaleString('pt-BR')}
+          delta={((financial.finalizados / financial.totalOrders) * 100).toFixed(1).replace('.', ',') + '% fin.'}
+          deltaDirection="up"
+          tooltip={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                <span style={{ color: '#9B9287' }}>Finalizados</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+                  {financial.finalizados.toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                <span style={{ color: '#9B9287' }}>Cancelados</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#C04040' }}>
+                  {financial.cancelados.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          }
         />
         <KpiCard
-          eyebrow="Ticket médio"
-          value={fmtBRLshort(financial.avgTicket)}
+          eyebrow="RPA"
+          value={fmtBRLshort(financial.activeResellers > 0 ? financial.grossRevenue / financial.activeResellers : 0)}
+          tooltip={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                <span style={{ color: '#9B9287' }}>Clientes ativos</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+                  {financial.activeResellers.toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                <span style={{ color: '#9B9287' }}>Faturamento</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+                  {fmtBRLshort(financial.grossRevenue)}
+                </span>
+              </div>
+            </div>
+          }
         />
         <KpiCard
           eyebrow="Receita líquida"
           value={fmtBRLshort(financial.netRevenue)}
+          tooltip={
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
+              {fmtBRL(financial.netRevenue)}
+            </span>
+          }
         />
       </div>
 
@@ -106,7 +150,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginTop: 28 }}>
         <ChartCard title="Receita por tier" subtitle="Comparativo de receita por grupo">
           {tierBarData.length > 0 ? (
-            <TierBarChart data={tierBarData} />
+            <TierBarChart data={tierBarData} topResellersByTier={financial.topResellersByTier} />
           ) : (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9B9287' }}>
               Sem dados

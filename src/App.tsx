@@ -8,6 +8,7 @@ import TableScreen from './screens/TableScreen';
 import DetailScreen from './screens/DetailScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import SupervisorScreen from './screens/SupervisorScreen';
+import DistribuicaoScreen from './screens/DistribuicaoScreen';
 
 function App() {
   const [route, setRoute] = useState('tiers');
@@ -23,6 +24,8 @@ function App() {
     screen = <TiersScreen onTierClick={t => navigate(`detail-${t}`)} onNavigate={navigate} />;
   } else if (route === 'table') {
     screen = <TableScreen />;
+  } else if (route === 'distribuicao') {
+    screen = <DistribuicaoScreen onNavigate={navigate} />;
   } else if (route === 'dashboard') {
     screen = <DashboardScreen onNavigate={navigate} />;
   } else if (route === 'supervisors') {

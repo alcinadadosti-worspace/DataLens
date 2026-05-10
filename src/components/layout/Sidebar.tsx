@@ -9,11 +9,12 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { id: 'tiers', label: 'Visão geral', icon: 'ph-squares-four' },
-  { id: 'dashboard', label: 'Dashboard', icon: 'ph-chart-line' },
-  { id: 'table', label: 'Pedidos', icon: 'ph-table' },
-  { id: 'supervisors', label: 'Supervisores', icon: 'ph-users' },
-  { id: 'import', label: 'Importar', icon: 'ph-upload-simple' },
+  { id: 'tiers',        label: 'Visão geral',  icon: 'ph-squares-four' },
+  { id: 'distribuicao', label: 'Distribuição', icon: 'ph-chart-pie' },
+  { id: 'dashboard',    label: 'Dashboard',    icon: 'ph-chart-line' },
+  { id: 'table',        label: 'Pedidos',      icon: 'ph-table' },
+  { id: 'supervisors',  label: 'Supervisores', icon: 'ph-users' },
+  { id: 'import',       label: 'Importar',     icon: 'ph-upload-simple' },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ active, onNavigate, activeTier }) => {

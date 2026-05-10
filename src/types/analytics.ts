@@ -3,6 +3,9 @@ export interface FinancialMetrics {
   netRevenue: number;
   avgTicket: number;
   totalOrders: number;
+  finalizados: number;
+  cancelados: number;
+  activeResellers: number;
   revenueByTier: Record<string, number>;
   ordersByTier: Record<string, number>;
   revenueByCycle: Record<string, number>;
@@ -10,6 +13,8 @@ export interface FinancialMetrics {
   revenueByReseller: Record<string, { name: string; value: number; tier: string }>;
   revenueByModeloComercial: Record<string, number>;
   revenueByMeioCaptacao: Record<string, number>;
+  topResellersByTier: Record<string, { name: string; value: number }[]>;
+  revenueByDayAndTier: Record<string, Record<string, number>>;
 }
 
 export interface OperationalMetrics {
