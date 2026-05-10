@@ -85,15 +85,15 @@ const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Hover tooltip */}
+      {/* Hover tooltip — positioned below the SVG */}
       {hoveredDay !== null && hoveredIdx !== null && (
         <div
           className="chart-tooltip-enter"
           style={{
             position: 'absolute',
-            top: 4,
+            top: 'calc(100% + 10px)',
             left: `${tooltipLeftPct}%`,
-            transform: 'translateX(-50%) translateY(-100%)',
+            transform: 'translateX(-50%)',
             background: 'linear-gradient(160deg, #252018 0%, #1C1814 100%)',
             color: '#FAF7F2',
             borderRadius: 12,
@@ -159,12 +159,12 @@ const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
             )}
           </div>
           <div style={{
-            position: 'absolute', top: '100%', left: '50%',
+            position: 'absolute', bottom: '100%', left: '50%',
             transform: 'translateX(-50%)',
             width: 0, height: 0,
             borderLeft: '7px solid transparent',
             borderRight: '7px solid transparent',
-            borderTop: '7px solid #1C1814',
+            borderBottom: '7px solid #252018',
           }} />
         </div>
       )}

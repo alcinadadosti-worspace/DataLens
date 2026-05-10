@@ -31,7 +31,7 @@ function App() {
   } else if (route === 'supervisors') {
     screen = <SupervisorScreen />;
   } else if (activeTier) {
-    screen = <DetailScreen tierId={activeTier} onBack={() => navigate('tiers')} />;
+    screen = <DetailScreen tierId={activeTier} onBack={() => navigate('tiers')} onNavigate={navigate} />;
   }
 
   return (

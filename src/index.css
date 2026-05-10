@@ -114,6 +114,59 @@ i.ph {
   display: inline-flex;
 }
 
+/* ---------- Metallic tier name ---------- */
+.metallic-tier-name {
+  display: inline-block;
+  animation: metal-gleam 3.2s ease-in-out infinite;
+}
+.metallic-tier-name.diamante {
+  animation-duration: 2.2s;
+}
+
+@keyframes metal-gleam {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+    text-shadow:
+      0  1px 1px rgba(255,255,255,0.35),
+      0 -1px 1px rgba(0,0,0,0.18);
+  }
+  50% {
+    filter: brightness(1.22) saturate(1.18);
+    text-shadow:
+      0  1px 4px rgba(255,255,255,0.85),
+      0 -1px 2px rgba(0,0,0,0.28),
+      0  0  14px var(--tier-accent, currentColor);
+  }
+}
+
+/* Star/cross glint flash */
+@keyframes glimmer-flash {
+  0%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  50%       { opacity: 1; transform: scale(1)   rotate(45deg); }
+}
+
+/* Floating particles — 4 drift directions */
+@keyframes p-float-a {
+  0%   { opacity: 0; transform: translate(0,0)        scale(0); }
+  18%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-10px,-30px) scale(0); }
+}
+@keyframes p-float-b {
+  0%   { opacity: 0; transform: translate(0,0)       scale(0); }
+  18%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(9px,-34px)  scale(0); }
+}
+@keyframes p-float-c {
+  0%   { opacity: 0; transform: translate(0,0)       scale(0); }
+  18%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(3px,-38px)  scale(0); }
+}
+@keyframes p-float-d {
+  0%   { opacity: 0; transform: translate(0,0)       scale(0); }
+  18%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-5px,-26px) scale(0); }
+}
+
 /* ---------- Chart tooltip entrance ---------- */
 @keyframes tooltip-in {
   from { opacity: 0; transform: translateX(-50%) translateY(-92%); }
@@ -130,4 +183,51 @@ i.ph {
 }
 .bar-hovered {
   animation: bar-pulse 1.4s ease-in-out infinite;
+}
+
+/* ---------- Gem shimmer overlay (Esmeralda/Rubi bar hover) ---------- */
+@keyframes gem-pulse {
+  0%, 100% { opacity: 0; }
+  50%       { opacity: 0.32; }
+}
+
+/* ---------- Diamante — barra reluzente ---------- */
+@keyframes prism-bar {
+  0%   { filter: drop-shadow(0 0 18px rgba(252,228,240,1)) brightness(1.35) hue-rotate(-18deg) saturate(1.6); }
+  25%  { filter: drop-shadow(0 0 22px rgba(176,191,239,1)) brightness(1.5)  hue-rotate(12deg)  saturate(1.8); }
+  50%  { filter: drop-shadow(0 0 18px rgba(196,244,229,1)) brightness(1.35) hue-rotate(32deg)  saturate(1.6); }
+  75%  { filter: drop-shadow(0 0 22px rgba(255,241,181,1)) brightness(1.5)  hue-rotate(6deg)   saturate(1.8); }
+  100% { filter: drop-shadow(0 0 18px rgba(252,228,240,1)) brightness(1.35) hue-rotate(-18deg) saturate(1.6); }
+}
+
+/* Camadas de cor prismática pulsando sobre a barra */
+@keyframes prism-layer-a {
+  0%,100% { opacity: 0;    }
+  40%,60% { opacity: 0.22; }
+}
+@keyframes prism-layer-b {
+  0%,100% { opacity: 0;    }
+  40%,60% { opacity: 0.18; }
+}
+@keyframes prism-layer-c {
+  0%,100% { opacity: 0;    }
+  40%,60% { opacity: 0.20; }
+}
+
+/* ---------- Diamante bar sweep (light ray across bar) ---------- */
+@keyframes diamante-sweep {
+  0%   { transform: translateX(0px);  opacity: 0; }
+  12%  { opacity: 0.7; }
+  88%  { opacity: 0.6; }
+  100% { transform: translateX(90px); opacity: 0; }
+}
+
+/* ---------- Diamante radiant aura pulse ---------- */
+@keyframes diamante-aura {
+  0%,100% { opacity: 0.18; }
+  50%     { opacity: 0.32; }
+}
+@keyframes diamante-aura-mid {
+  0%,100% { opacity: 0.22; }
+  50%     { opacity: 0.38; }
 }

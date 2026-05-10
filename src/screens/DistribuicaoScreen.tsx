@@ -2,10 +2,11 @@ import React from 'react';
 import { useFinancialMetrics } from '../hooks/useAnalytics';
 import { useOrderStore } from '../store/useOrderStore';
 import { TIER_DEFINITIONS, TIER_STYLES } from '../design-system/tierStyles';
-import { fmtBRLshort } from '../utils/formatters';
+import { fmtBRLshort, fmtBRL } from '../utils/formatters';
 import ChartCard from '../components/charts/ChartCard';
 import TierPieChart from '../components/charts/TierPieChart';
 import DailyCycleChart from '../components/charts/DailyCycleChart';
+import KpiCard from '../components/ui/KpiCard';
 import Button from '../components/ui/Button';
 
 interface DistribuicaoScreenProps {
@@ -41,6 +42,20 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
 
   const grandTotal = financial.grossRevenue;
 
+  // Daily stats for info panels
+  const days = Object.keys(financial.revenueByDayAndTier)
+    .filter(d => d !== '?')
+    .sort((a, b) => parseInt(a) - parseInt(b));
+  const dailyTotals = days.map(d => ({
+    day: d,
+    total: Object.values(financial.revenueByDayAndTier[d] ?? {}).reduce((s, v) => s + v, 0),
+  }));
+  const peakDay = dailyTotals.reduce((best, d) => d.total > best.total ? d : best, { day: '-', total: 0 });
+  const avgDaily = days.length > 0 ? grandTotal / days.length : 0;
+  const topTierEntry = Object.entries(financial.revenueByTier).sort((a, b) => b[1] - a[1])[0];
+  const topTier = TIER_DEFINITIONS.find(t => t.id === topTierEntry?.[0]);
+  const topTierStyle = topTier ? TIER_STYLES[topTier.id] : null;
+
   const tierPieData = TIER_DEFINITIONS
     .filter(t => (financial.revenueByTier[t.id] ?? 0) > 0)
     .map(t => ({
@@ -67,7 +82,57 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, marginTop: 28 }}>
+      {/* Info panels */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 28 }}>
+        <KpiCard
+          eyebrow="Receita Total"
+          value={fmtBRLshort(grandTotal)}
+          tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(grandTotal)}</span>}
+        />
+        <KpiCard
+          eyebrow="Dia de Pico"
+          value={peakDay.day !== '-' ? `Dia ${peakDay.day}` : '—'}
+          tooltip={peakDay.day !== '-'
+            ? <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                  <span style={{ color: '#9B9287' }}>Receita do dia</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRLshort(peakDay.total)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                  <span style={{ color: '#9B9287' }}>vs. média</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#2E7D5B' }}>
+                    +{avgDaily > 0 ? ((peakDay.total / avgDaily - 1) * 100).toFixed(0) : '0'}%
+                  </span>
+                </div>
+              </div>
+            : undefined}
+        />
+        <KpiCard
+          eyebrow="Média Diária"
+          value={fmtBRLshort(avgDaily)}
+          tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(avgDaily)}</span>}
+        />
+        <KpiCard
+          eyebrow="Tier Líder"
+          value={topTier?.name ?? '—'}
+          tooltip={topTier && topTierEntry
+            ? <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                  <span style={{ color: '#9B9287' }}>Receita</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRLshort(topTierEntry[1])}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                  <span style={{ color: '#9B9287' }}>Share</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: topTierStyle?.accent ?? '#C9A227' }}>
+                    {grandTotal > 0 ? ((topTierEntry[1] / grandTotal) * 100).toFixed(1).replace('.', ',') : '0,0'}%
+                  </span>
+                </div>
+              </div>
+            : undefined}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, marginTop: 14 }}>
         {/* Pie */}
         <ChartCard title="Receita por tier" subtitle={`Total ${fmtBRLshort(grandTotal)}`}>
           {tierPieData.length > 0 ? (

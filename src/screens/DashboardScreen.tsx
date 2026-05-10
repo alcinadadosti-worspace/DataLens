@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import KpiCard from '../components/ui/KpiCard';
 import ChartCard from '../components/charts/ChartCard';
 import TierDonutChart from '../components/charts/TierDonutChart';
 import TrendLineChart from '../components/charts/TrendLineChart';
 import { useFinancialMetrics, useOperationalMetrics, useCommercialMetrics, useInsights } from '../hooks/useAnalytics';
 import { useOrderStore } from '../store/useOrderStore';
-import { fmtBRLshort, fmtMinutes, fmtPct, fmtNumber } from '../utils/formatters';
+import { useFilterStore } from '../store/useFilterStore';
+import { fmtBRLshort, fmtBRL, fmtMinutes, fmtNumber } from '../utils/formatters';
 import { TIER_DEFINITIONS, TIER_STYLES } from '../design-system/tierStyles';
 import Button from '../components/ui/Button';
 import { cycleSortKey } from '../utils/dateUtils';
@@ -20,6 +21,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
   const commercial = useCommercialMetrics();
   const insights = useInsights();
   const { fileName } = useOrderStore();
+  const setFilter = useFilterStore(s => s.setFilter);
+  const [hoveredSup, setHoveredSup] = useState<string | null>(null);
 
   if (!financial) {
     return (
@@ -90,23 +93,58 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 28 }}>
         <KpiCard
-          eyebrow="Receita bruta"
+          eyebrow="Valor Praticado"
           value={fmtBRLshort(financial.grossRevenue)}
           delta={sortedCycles.length >= 2 ? `${Math.abs(cycleGrowth).toFixed(1).replace('.', ',')}%` : undefined}
           deltaDirection={cycleGrowth >= 0 ? 'up' : 'down'}
           meta="vs ciclo ant."
+          tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(financial.grossRevenue)}</span>}
         />
         <KpiCard
-          eyebrow="Pedidos totais"
+          eyebrow="Pedidos"
           value={fmtNumber(financial.totalOrders)}
+          delta={financial.totalOrders > 0 ? `${((financial.finalizados / financial.totalOrders) * 100).toFixed(1).replace('.', ',')}% fin.` : undefined}
+          deltaDirection="up"
+          tooltip={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                <span style={{ color: '#9B9287' }}>Finalizados</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{financial.finalizados.toLocaleString('pt-BR')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                <span style={{ color: '#9B9287' }}>Cancelados</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#C04040' }}>{financial.cancelados.toLocaleString('pt-BR')}</span>
+              </div>
+            </div>
+          }
         />
         <KpiCard
-          eyebrow="Ticket médio"
+          eyebrow="Ticket Médio"
           value={fmtBRLshort(financial.avgTicket)}
+          tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(financial.avgTicket)}</span>}
         />
         <KpiCard
           eyebrow="Revendedores ativos"
           value={commercial ? fmtNumber(commercial.activeResellers) : '-'}
+          tooltip={commercial ? (() => {
+            const top3 = Object.entries(commercial.resellersByTier)
+              .sort((a, b) => b[1] - a[1]).slice(0, 3);
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {top3.map(([tierId, count]) => {
+                  const td = TIER_DEFINITIONS.find(t => t.id === tierId);
+                  const ts = TIER_STYLES[tierId];
+                  return (
+                    <div key={tierId} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: ts?.accent ?? '#6B6258', flexShrink: 0 }} />
+                      <span style={{ flex: 1, color: '#9B9287' }}>{td?.name ?? tierId}</span>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })() : undefined}
         />
       </div>
 
@@ -188,27 +226,71 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       {/* Row 2: Supervisors + Modelo Comercial */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
         {/* Top supervisors */}
-        <ChartCard title="Top supervisores" subtitle="Por receita gerada">
+        <ChartCard title="Top supervisores" subtitle="Por receita gerada · clique para filtrar pedidos">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {topSupervisors.map(([name, value]) => (
-              <div key={name}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#6B6258', flexShrink: 0 }}>
-                    {fmtBRLshort(value)}
-                  </span>
+            {topSupervisors.map(([name, value], idx) => {
+              const isHov = hoveredSup === name;
+              const pct = (value / topSupervisorMax) * 100;
+              return (
+                <div
+                  key={name}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredSup(name)}
+                  onMouseLeave={() => setHoveredSup(null)}
+                  onClick={() => {
+                    setFilter('supervisor', name);
+                    onNavigate('table');
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, marginBottom: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      {/* Rank badge */}
+                      <span style={{
+                        width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                        background: idx === 0 ? 'linear-gradient(135deg, #E8C547, #C9A227)' :
+                                    idx === 1 ? 'linear-gradient(135deg, #D8D0C0, #9B9287)' :
+                                    idx === 2 ? 'linear-gradient(135deg, #E8B68A, #C9824D)' : '#F2EEE6',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 9, fontWeight: 700,
+                        color: idx < 3 ? 'white' : '#6B6258',
+                        boxShadow: idx === 0 ? '0 1px 4px rgba(201,162,39,0.4)' : 'none',
+                      }}>{idx + 1}</span>
+                      <span style={{
+                        fontWeight: isHov ? 600 : 500,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        color: isHov ? '#C9A227' : '#1C1814',
+                        textDecoration: isHov ? 'underline' : 'none',
+                        textDecorationColor: '#C9A22766',
+                        transition: 'color 150ms',
+                      }}>{name}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 8 }}>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: isHov ? '#C9A227' : '#6B6258', transition: 'color 150ms' }}>
+                        {fmtBRLshort(value)}
+                      </span>
+                      <i className="ph ph-arrow-right" style={{
+                        fontSize: 12, color: '#C9A227',
+                        opacity: isHov ? 1 : 0,
+                        transform: isHov ? 'translateX(0)' : 'translateX(-4px)',
+                        transition: 'opacity 150ms, transform 150ms',
+                      }} />
+                    </div>
+                  </div>
+                  <div style={{ height: 4, background: '#F2EEE6', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${pct}%`,
+                      background: isHov
+                        ? 'linear-gradient(90deg, #C9A227, #E8C547, #FFF3B0)'
+                        : 'linear-gradient(90deg, #C9A227, #E8C547)',
+                      borderRadius: 2,
+                      transition: 'width 600ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms',
+                      boxShadow: isHov ? '0 0 6px rgba(201,162,39,0.5)' : 'none',
+                    }} />
+                  </div>
                 </div>
-                <div style={{ height: 4, background: '#F2EEE6', borderRadius: 2 }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${(value / topSupervisorMax) * 100}%`,
-                    background: 'linear-gradient(90deg, #C9A227, #E8C547)',
-                    borderRadius: 2,
-                    transition: 'width 600ms cubic-bezier(0.22, 1, 0.36, 1)',
-                  }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {topSupervisors.length === 0 && (
               <div style={{ color: '#9B9287', fontSize: 13, padding: '20px 0' }}>Sem dados de supervisor</div>
             )}
@@ -322,17 +404,51 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
             </div>
             <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>pedidos por revendedor</div>
           </div>
-          <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 8 }}>
-              Receita líquida
-            </div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>
-              {fmtBRLshort(financial.netRevenue)}
-            </div>
-            <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>
-              {financial.grossRevenue > 0 ? ((financial.netRevenue / financial.grossRevenue) * 100).toFixed(1).replace('.', ',') : '0,0'}% da receita bruta
-            </div>
-          </div>
+          {(() => {
+            const days = Object.keys(financial.revenueByDayAndTier)
+              .filter(d => d !== '?')
+              .sort((a, b) => parseInt(a) - parseInt(b));
+            const peak = days.reduce<{ day: string; total: number }>(
+              (best, d) => {
+                const total = Object.values(financial.revenueByDayAndTier[d] ?? {}).reduce((s, v) => s + v, 0);
+                return total > best.total ? { day: d, total } : best;
+              },
+              { day: '-', total: 0 }
+            );
+            const avgDaily = days.length > 0 ? financial.grossRevenue / days.length : 0;
+            const aboveAvg = avgDaily > 0 ? ((peak.total / avgDaily - 1) * 100) : 0;
+            const topTierOnPeak = peak.day !== '-'
+              ? Object.entries(financial.revenueByDayAndTier[peak.day] ?? {}).sort((a, b) => b[1] - a[1])[0]
+              : null;
+            const topTierDef = topTierOnPeak ? TIER_DEFINITIONS.find(t => t.id === topTierOnPeak[0]) : null;
+            const topTierStyle = topTierOnPeak ? TIER_STYLES[topTierOnPeak[0]] : null;
+            return (
+              <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 8 }}>
+                  Dia de Pico
+                </div>
+                <div style={{ fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+                  {peak.day !== '-' ? `Dia ${peak.day}` : '—'}
+                </div>
+                <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#1C1814', fontWeight: 600 }}>
+                    {peak.total > 0 ? fmtBRLshort(peak.total) : '—'}
+                  </span>
+                  {aboveAvg > 0 && (
+                    <span style={{ color: '#2E7D5B' }}>
+                      +{aboveAvg.toFixed(0)}% acima da média diária
+                    </span>
+                  )}
+                  {topTierDef && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: 2, background: topTierStyle?.accent, flexShrink: 0 }} />
+                      <span>Liderado por {topTierDef.name}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

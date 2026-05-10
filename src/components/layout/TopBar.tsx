@@ -50,13 +50,40 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      <Input
-        icon={<i className="ph ph-magnifying-glass" style={{ fontSize: 16 }} />}
-        placeholder="Buscar pedido, revendedor..."
-        value={searchQuery}
-        onChange={e => setSearch(e.target.value)}
-        style={{ width: 300 }}
-      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Input
+          icon={<i className="ph ph-magnifying-glass" style={{ fontSize: 16 }} />}
+          placeholder="Buscar pedido, revendedor..."
+          value={searchQuery}
+          onChange={e => setSearch(e.target.value)}
+          style={{ width: 300 }}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearch('')}
+            title="Limpar pesquisa"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 30, height: 30, borderRadius: 8, border: '1px solid #E8E2D6',
+              background: 'white', cursor: 'pointer', color: '#6B6258',
+              fontSize: 15, flexShrink: 0,
+              transition: 'background 150ms, color 150ms, border-color 150ms',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = '#FBE5E9';
+              (e.currentTarget as HTMLButtonElement).style.color = '#B83A3A';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#F0A8B3';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'white';
+              (e.currentTarget as HTMLButtonElement).style.color = '#6B6258';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E2D6';
+            }}
+          >
+            <i className="ph ph-x" />
+          </button>
+        )}
+      </div>
 
       <Button
         variant="primary"

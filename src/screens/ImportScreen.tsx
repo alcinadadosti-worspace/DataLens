@@ -19,6 +19,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
   const [columns, setColumns] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const setOrders = useOrderStore(s => s.setOrders);
+  const clearOrders = useOrderStore(s => s.clearOrders);
 
   async function processFile(f: File) {
     setFile(f);
@@ -174,7 +175,16 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-        <Button variant="ghost" onClick={() => { setPhase('idle'); setFile(null); setErrors([]); }}>
+        <Button variant="ghost" onClick={() => {
+          clearOrders();
+          setPhase('idle');
+          setFile(null);
+          setErrors([]);
+          setColumns([]);
+          setRowCount(0);
+          setFvcExcluded(0);
+          if (fileRef.current) fileRef.current.value = '';
+        }}>
           Limpar
         </Button>
         <Button
