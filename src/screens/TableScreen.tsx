@@ -34,6 +34,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
   tierAccent: string;
   onClear: () => void;
 }) {
+  const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const eligible = orders.filter(isRevenueEligible);
   const cancelled = orders.filter(o => !isRevenueEligible(o));
   const totalRevenue = eligible.reduce((s, o) => s + o.ValorPraticado, 0);
@@ -132,24 +133,65 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
           <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 10 }}>
             Receita por dia do ciclo
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 60 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 72, position: 'relative' }}>
             {days.map(d => {
               const v = revenueByDay[d] ?? 0;
               const h = Math.max((v / maxDay) * 52, 3);
+              const isHov = hoveredDay === d;
               return (
-                <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <div
-                    title={`Dia ${d}: ${fmtBRLshort(v)}`}
-                    style={{
-                      width: '100%', height: h,
-                      background: tierAccent,
-                      borderRadius: '3px 3px 0 0',
-                      opacity: 0.8,
-                      minHeight: 3,
-                    }}
-                  />
+                <div
+                  key={d}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative', cursor: 'default' }}
+                  onMouseEnter={() => setHoveredDay(d)}
+                  onMouseLeave={() => setHoveredDay(null)}
+                >
+                  {/* Tooltip */}
+                  {isHov && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 'calc(100% + 6px)',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#1C1814',
+                      color: '#FAF7F2',
+                      borderRadius: 8,
+                      padding: '6px 10px',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'none',
+                      zIndex: 20,
+                      fontSize: 11,
+                      boxShadow: '0 4px 16px rgba(28,24,20,0.3)',
+                    }}>
+                      <div style={{ fontSize: 9, color: '#9B9287', marginBottom: 2, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                        Dia {d}
+                      </div>
+                      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: tierAccent }}>
+                        {fmtBRL(v)}
+                      </div>
+                      {/* Arrow */}
+                      <div style={{
+                        position: 'absolute', top: '100%', left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 0, height: 0,
+                        borderLeft: '5px solid transparent',
+                        borderRight: '5px solid transparent',
+                        borderTop: '5px solid #1C1814',
+                      }} />
+                    </div>
+                  )}
+                  <div style={{
+                    width: '100%', height: h,
+                    background: tierAccent,
+                    borderRadius: '3px 3px 0 0',
+                    opacity: isHov ? 1 : 0.7,
+                    minHeight: 3,
+                    transform: isHov ? 'scaleY(1.04)' : 'scaleY(1)',
+                    transformOrigin: 'bottom',
+                    transition: 'opacity 120ms, transform 120ms',
+                    boxShadow: isHov ? `0 0 8px ${tierAccent}88` : 'none',
+                  }} />
                   {days.length <= 31 && (
-                    <div style={{ fontSize: 8, color: '#9B9287', lineHeight: 1 }}>{d}</div>
+                    <div style={{ fontSize: 8, color: isHov ? tierAccent : '#9B9287', lineHeight: 1, fontWeight: isHov ? 700 : 400, transition: 'color 120ms' }}>{d}</div>
                   )}
                 </div>
               );
