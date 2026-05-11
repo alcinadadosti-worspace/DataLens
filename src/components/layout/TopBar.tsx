@@ -13,6 +13,12 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
   const searchQuery = useFilterStore(s => s.searchQuery);
   const fileName = useOrderStore(s => s.fileName);
   const rowCount = useOrderStore(s => s.rowCount);
+  const dateRange = useOrderStore(s => s.dateRange);
+
+  function fmtDate(d: Date | null) {
+    if (!d) return '—';
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
 
   return (
     <div style={{
@@ -45,8 +51,15 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
       <div style={{ flex: 1 }} />
 
       {fileName && (
-        <div style={{ fontSize: 12, color: '#6B6258', fontFamily: 'JetBrains Mono, monospace' }}>
-          {fileName} · {rowCount.toLocaleString('pt-BR')} pedidos
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+          <div style={{ fontSize: 12, color: '#1C1814', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+            {fileName} · {rowCount.toLocaleString('pt-BR')} pedidos
+          </div>
+          {(dateRange.from || dateRange.to) && (
+            <div style={{ fontSize: 10, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}>
+              {fmtDate(dateRange.from)} – {fmtDate(dateRange.to)}
+            </div>
+          )}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TopBar from './components/layout/TopBar';
 import Sidebar from './components/layout/Sidebar';
 import TierAmbience from './components/TierAmbience';
@@ -9,9 +9,29 @@ import DetailScreen from './screens/DetailScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import SupervisorScreen from './screens/SupervisorScreen';
 import DistribuicaoScreen from './screens/DistribuicaoScreen';
+import { parseSpreadsheet } from './parsers/spreadsheetParser';
+import { useOrderStore } from './store/useOrderStore';
 
 function App() {
   const [route, setRoute] = useState('tiers');
+  const setOrders = useOrderStore(s => s.setOrders);
+  const hasOrders = useOrderStore(s => s.orders.length > 0);
+
+  useEffect(() => {
+    if (hasOrders) return;
+    fetch('/sample.xlsx')
+      .then(r => r.blob())
+      .then(blob => {
+        const file = new File([blob], 'ConsultaPedidos_exemplo.xlsx', { type: blob.type });
+        return parseSpreadsheet(file);
+      })
+      .then(result => {
+        if (result.orders.length > 0) {
+          setOrders(result.orders, 'ConsultaPedidos_exemplo.xlsx');
+        }
+      })
+      .catch(() => {/* silently skip if sample not available */});
+  }, []);
 
   function navigate(r: string) { setRoute(r); }
 
