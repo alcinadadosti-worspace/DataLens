@@ -21,6 +21,7 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
 
   const revenueByTier: Record<string, number> = {};
   const ordersByTier: Record<string, number> = {};
+  const canceladosByTier: Record<string, number> = {};
   const revenueByCycle: Record<string, number> = {};
   const revenueBySupervisor: Record<string, number> = {};
   const revenueByReseller: Record<string, { name: string; value: number; tier: string }> = {};
@@ -32,7 +33,10 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
     const tierId = order.tierId || 'cf';
     ordersByTier[tierId] = (ordersByTier[tierId] ?? 0) + 1;
 
-    if (!isRevenueEligible(order)) continue;
+    if (!isRevenueEligible(order)) {
+      canceladosByTier[tierId] = (canceladosByTier[tierId] ?? 0) + 1;
+      continue;
+    }
 
     const v = order.ValorPraticado;
 
@@ -100,6 +104,7 @@ export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
     activeResellers,
     revenueByTier,
     ordersByTier,
+    canceladosByTier,
     revenueByCycle,
     revenueBySupervisor,
     revenueByReseller,

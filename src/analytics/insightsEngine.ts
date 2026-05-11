@@ -1,5 +1,6 @@
 import { FinancialMetrics, OperationalMetrics, CommercialMetrics, InsightItem } from '../types/analytics';
 import { fmtBRLshort, fmtMinutes, fmtPct } from '../utils/formatters';
+import { TIER_DEFINITIONS } from '../design-system/tierStyles';
 
 export function generateInsights(
   financial: FinancialMetrics,
@@ -122,6 +123,23 @@ export function generateInsights(
       icon: 'ph-users',
       title: `${commercial.activeResellers} revendedores ativos`,
       description: `Frequência média de ${commercial.repurchaseFrequency.toFixed(1).replace('.', ',')} pedidos por revendedor.`,
+    });
+  }
+
+  // Tier with most cancellations
+  const tierCancellations = Object.entries(financial.canceladosByTier)
+    .sort((a, b) => b[1] - a[1]);
+  if (tierCancellations.length > 0) {
+    const [tierId, count] = tierCancellations[0];
+    const tierDef = TIER_DEFINITIONS.find(t => t.id === tierId);
+    const totalCancelled = tierCancellations.reduce((s, [, v]) => s + v, 0);
+    const pct = totalCancelled > 0 ? (count / totalCancelled) * 100 : 0;
+    insights.push({
+      id: 'most-cancelled-tier',
+      type: 'negative',
+      icon: 'ph-x-circle',
+      title: `Segmentação que mais cancelou`,
+      description: `${tierDef?.name ?? tierId} concentrou ${count} cancelamentos (${pct.toFixed(0)}% do total).`,
     });
   }
 

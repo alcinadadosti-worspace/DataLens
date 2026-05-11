@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinancialMetrics } from '../hooks/useAnalytics';
 import { useOrderStore } from '../store/useOrderStore';
+import { useFilterStore } from '../store/useFilterStore';
 import { TIER_DEFINITIONS, TIER_STYLES } from '../design-system/tierStyles';
 import { fmtBRLshort, fmtBRL } from '../utils/formatters';
 import ChartCard from '../components/charts/ChartCard';
@@ -18,6 +19,23 @@ const TIER_IDS_CHART = ['diamante', 'esmeralda', 'rubi', 'ouro', 'platina'];
 const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) => {
   const financial = useFinancialMetrics();
   const { fileName } = useOrderStore();
+  const filterCycle = useFilterStore(s => s.cycle);
+  const filterTier = useFilterStore(s => s.tier);
+  const setFilter = useFilterStore(s => s.setFilter);
+
+  // Local tier selection for chart visibility (independent of global tier filter)
+  const [selectedTiers, setSelectedTiers] = useState<string[]>(TIER_IDS_CHART);
+
+  // Reset local selections when data changes
+  useEffect(() => {
+    setSelectedTiers(TIER_IDS_CHART);
+  }, [financial?.grossRevenue]);
+
+  function toggleTier(tierId: string) {
+    setSelectedTiers(prev =>
+      prev.includes(tierId) ? prev.filter(t => t !== tierId) : [...prev, tierId]
+    );
+  }
 
   if (!financial) {
     return (
@@ -56,6 +74,8 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
   const topTier = TIER_DEFINITIONS.find(t => t.id === topTierEntry?.[0]);
   const topTierStyle = topTier ? TIER_STYLES[topTier.id] : null;
 
+  const availableCycles = Object.keys(financial.revenueByCycle).sort();
+
   const tierPieData = TIER_DEFINITIONS
     .filter(t => (financial.revenueByTier[t.id] ?? 0) > 0)
     .map(t => ({
@@ -63,6 +83,15 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
       value: financial.revenueByTier[t.id] ?? 0,
       label: t.name,
     }));
+
+  const filteredTierPieData = tierPieData.filter(t => selectedTiers.includes(t.tierId));
+  const filteredPieTotal = filteredTierPieData.reduce((s, t) => s + t.value, 0);
+
+  const activeTiersInChart = selectedTiers.filter(id =>
+    Object.values(financial.revenueByDayAndTier).some(d => (d[id] ?? 0) > 0)
+  );
+
+  const hasActiveFilters = filterCycle !== null || selectedTiers.length < TIER_IDS_CHART.length;
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -82,8 +111,95 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
         )}
       </div>
 
+      {/* Filter bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        marginTop: 16, padding: '10px 14px',
+        background: '#FAF7F2', borderRadius: 10, border: '1px solid #E8E2D6',
+      }}>
+        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6258', flexShrink: 0 }}>
+          Filtros
+        </span>
+
+        {/* Cycle filter */}
+        {availableCycles.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: '#9B9287' }}>Ciclo:</span>
+            <button
+              onClick={() => setFilter('cycle', null)}
+              style={{
+                padding: '3px 10px', borderRadius: 6, border: '1px solid',
+                fontSize: 11, cursor: 'pointer', fontWeight: filterCycle === null ? 700 : 400,
+                borderColor: filterCycle === null ? '#C9A227' : '#D8D0C0',
+                background: filterCycle === null ? '#FFF8E6' : 'white',
+                color: filterCycle === null ? '#C9A227' : '#3D362E',
+              }}
+            >Todos</button>
+            {availableCycles.map(cycle => (
+              <button
+                key={cycle}
+                onClick={() => setFilter('cycle', filterCycle === cycle ? null : cycle)}
+                style={{
+                  padding: '3px 10px', borderRadius: 6, border: '1px solid',
+                  fontSize: 11, cursor: 'pointer', fontWeight: filterCycle === cycle ? 700 : 400,
+                  borderColor: filterCycle === cycle ? '#C9A227' : '#D8D0C0',
+                  background: filterCycle === cycle ? '#FFF8E6' : 'white',
+                  color: filterCycle === cycle ? '#C9A227' : '#3D362E',
+                }}
+              >{cycle}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Tier toggle chips */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, color: '#9B9287' }}>Tier:</span>
+          {tierPieData.map(t => {
+            const style = TIER_STYLES[t.tierId];
+            const active = selectedTiers.includes(t.tierId);
+            return (
+              <button
+                key={t.tierId}
+                onClick={() => toggleTier(t.tierId)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '3px 10px', borderRadius: 6, border: '1px solid',
+                  fontSize: 11, cursor: 'pointer',
+                  borderColor: active ? (style?.accent ?? '#C9A227') : '#D8D0C0',
+                  background: active ? `${style?.accent ?? '#C9A227'}18` : 'white',
+                  color: active ? (style?.accent ?? '#C9A227') : '#9B9287',
+                  fontWeight: active ? 600 : 400,
+                  transition: 'all 150ms',
+                }}
+              >
+                <span style={{
+                  width: 6, height: 6, borderRadius: 1,
+                  background: active ? (style?.accent ?? '#C9A227') : '#D8D0C0',
+                  flexShrink: 0,
+                }} />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Clear button */}
+        {hasActiveFilters && (
+          <button
+            onClick={() => { setFilter('cycle', null); setSelectedTiers(TIER_IDS_CHART); }}
+            style={{
+              marginLeft: 'auto', padding: '3px 10px', borderRadius: 6,
+              border: '1px solid #D8D0C0', fontSize: 11, cursor: 'pointer',
+              background: 'white', color: '#6B6258',
+            }}
+          >
+            Limpar
+          </button>
+        )}
+      </div>
+
       {/* Info panels */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 14 }}>
         <KpiCard
           eyebrow="Receita Total"
           value={fmtBRLshort(grandTotal)}
@@ -134,13 +250,13 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, marginTop: 14 }}>
         {/* Pie */}
-        <ChartCard title="Receita por tier" subtitle={`Total ${fmtBRLshort(grandTotal)}`}>
-          {tierPieData.length > 0 ? (
+        <ChartCard title="Receita por tier" subtitle={`Total ${fmtBRLshort(filteredPieTotal)}`}>
+          {filteredTierPieData.length > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <TierPieChart data={tierPieData} size={180} hoverReveal />
+              <TierPieChart data={filteredTierPieData} size={180} hoverReveal />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7, fontSize: 11, flex: 1 }}>
-                {tierPieData.map(t => {
-                  const pct = grandTotal > 0 ? (t.value / grandTotal) * 100 : 0;
+                {filteredTierPieData.map(t => {
+                  const pct = filteredPieTotal > 0 ? (t.value / filteredPieTotal) * 100 : 0;
                   const style = TIER_STYLES[t.tierId];
                   return (
                     <div key={t.tierId} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -173,10 +289,11 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
           <DailyCycleChart
             revenueByDayAndTier={financial.revenueByDayAndTier}
             topResellersByDay={financial.topResellersByDay}
-            tierIds={TIER_IDS_CHART}
+            tierIds={activeTiersInChart}
+            showTotal
           />
           <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap', fontSize: 11 }}>
-            {TIER_IDS_CHART.filter(id =>
+            {activeTiersInChart.filter(id =>
               Object.values(financial.revenueByDayAndTier).some(d => (d[id] ?? 0) > 0)
             ).map(id => {
               const t = TIER_DEFINITIONS.find(x => x.id === id);
@@ -188,6 +305,13 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
                 </div>
               );
             })}
+            {/* Total legend entry */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width={18} height={2} style={{ overflow: 'visible' }}>
+                <line x1={0} y1={1} x2={18} y2={1} stroke="#3D362E" strokeWidth={2.5} strokeDasharray="5 3" />
+              </svg>
+              <span style={{ color: '#3D362E', fontWeight: 600 }}>Faturamento Geral</span>
+            </div>
           </div>
         </ChartCard>
       </div>

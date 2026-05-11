@@ -13,15 +13,19 @@ interface DailyCycleChartProps {
   topResellersByDay?: Record<string, TopReseller[]>;
   tierIds?: string[];
   height?: number;
+  showTotal?: boolean;
 }
 
 const DEFAULT_TIER_IDS = ['diamante', 'esmeralda', 'rubi', 'ouro', 'platina'];
+
+const TOTAL_COLOR = '#3D362E';
 
 const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
   revenueByDayAndTier,
   topResellersByDay,
   tierIds = DEFAULT_TIER_IDS,
   height = 210,
+  showTotal = false,
 }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -47,10 +51,17 @@ const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
     points: days.map(d => revenueByDayAndTier[d]?.[tierId] ?? 0),
   }));
 
+  const totalPoints = days.map(d =>
+    Object.values(revenueByDayAndTier[d] ?? {}).reduce((s, v) => s + v, 0)
+  );
+
   const W = 600;
   const H = height;
   const padL = 52, padR = 12, padT = 12, padB = 28;
-  const allVals = series.flatMap(s => s.points);
+  const allVals = [
+    ...series.flatMap(s => s.points),
+    ...(showTotal ? totalPoints : []),
+  ];
   const maxV = Math.max(...allVals, 1) * 1.1;
   const xStep = days.length > 1 ? (W - padL - padR) / (days.length - 1) : W - padL - padR;
   const yScale = (v: number) => padT + (H - padT - padB) * (1 - v / maxV);
@@ -127,6 +138,20 @@ const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
                 </div>
               );
             })}
+            {/* Total line in tooltip */}
+            {showTotal && (() => {
+              const dayIdx = days.indexOf(hoveredDay);
+              const total = dayIdx >= 0 ? totalPoints[dayIdx] : 0;
+              return total > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 4, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  <span style={{ width: 7, height: 7, borderRadius: 2, background: TOTAL_COLOR, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 11, color: '#D8D0C0', fontWeight: 600 }}>Faturamento Geral</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#FAF7F2', fontWeight: 600 }}>
+                    {fmtBRLshort(total)}
+                  </span>
+                </div>
+              ) : null;
+            })()}
 
             {/* Top resellers */}
             {topResellersByDay && topResellersByDay[hoveredDay]?.length > 0 && (
@@ -236,6 +261,26 @@ const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
             </g>
           );
         })}
+        {/* Total line */}
+        {showTotal && (
+          <g>
+            <path d={path(totalPoints)} fill="none" stroke={TOTAL_COLOR} strokeWidth="2.5"
+              strokeDasharray="6 3" strokeLinecap="round" strokeLinejoin="round" />
+            <circle
+              cx={padL + (days.length - 1) * xStep}
+              cy={yScale(totalPoints[days.length - 1])}
+              r="3.5" fill={TOTAL_COLOR} stroke="white" strokeWidth="2"
+            />
+            {hoveredIdx !== null && (
+              <circle
+                cx={padL + hoveredIdx * xStep}
+                cy={yScale(totalPoints[hoveredIdx])}
+                r="4.5" fill={TOTAL_COLOR} stroke="white" strokeWidth="2"
+                style={{ filter: `drop-shadow(0 0 4px ${TOTAL_COLOR}99)` }}
+              />
+            )}
+          </g>
+        )}
       </svg>
     </div>
   );

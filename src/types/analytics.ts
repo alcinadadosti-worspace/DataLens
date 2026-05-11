@@ -16,6 +16,7 @@ export interface FinancialMetrics {
   topResellersByTier: Record<string, { name: string; value: number }[]>;
   revenueByDayAndTier: Record<string, Record<string, number>>;
   topResellersByDay: Record<string, { name: string; tierId: string; value: number }[]>;
+  canceladosByTier: Record<string, number>;
 }
 
 export interface OperationalMetrics {

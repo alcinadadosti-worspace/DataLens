@@ -45,16 +45,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
     cycleSortKey(a).localeCompare(cycleSortKey(b))
   );
 
-  const donutStatusData = operational
-    ? Object.entries(operational.ordersByStatus).map(([label, value]) => {
-        const colorMap: Record<string, string> = {
-          'Entregue': 'esmeralda',
-          'Cancelado': 'rubi',
-          'Separação': 'ouro',
-          'Transporte': 'platina',
-        };
-        return { tierId: colorMap[label] ?? 'cf', value, label };
-      })
+  const donutStatusData = financial
+    ? [
+        { tierId: 'esmeralda', value: financial.finalizados, label: 'Finalizados' },
+        { tierId: 'rubi', value: financial.cancelados, label: 'Cancelados' },
+      ].filter(d => d.value > 0)
     : [];
 
   const topSupervisors = Object.entries(financial.revenueBySupervisor)

@@ -139,9 +139,16 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
           eyebrow="Ticket Médio"
           value={fmtBRLshort(financial.avgTicket)}
           tooltip={
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
-              {fmtBRL(financial.avgTicket)}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                <span style={{ color: '#9B9287' }}>Valor exato</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(financial.avgTicket)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
+                <span style={{ color: '#9B9287' }}>Base</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{financial.finalizados.toLocaleString('pt-BR')} pedidos</span>
+              </div>
+            </div>
           }
         />
       </div>
