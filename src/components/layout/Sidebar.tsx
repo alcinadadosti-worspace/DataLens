@@ -64,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onNavigate, activeTier }) => 
         textTransform: 'uppercase', color: '#9B9287',
         padding: '20px 14px 8px',
       }}>
-        Tiers
+        Segmentações
       </div>
 
       {TIER_DEFINITIONS.map(t => {
