@@ -338,7 +338,7 @@ interface ComparacaoSemanalScreenProps {
 const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNavigate }) => {
   const orders = useOrderStore(s => s.orders);
   const [activeMetric, setActiveMetric] = useState<MetricKey>('faturamento');
-  const [weekWindow, setWeekWindow] = useState<number>(8);
+  const [weekWindow, setWeekWindow] = useState<2 | 3 | 4>(4);
   const [evolWindow, setEvolWindow] = useState<2 | 3 | 4>(4);
   const [compWindow, setCompWindow] = useState<2 | 3 | 4>(2);
   const [compMetric, setCompMetric] = useState<MetricKey>('faturamento');
@@ -709,8 +709,8 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       ═══════════════════════════════════════════════════════ */}
       {sectionLabel('Faturamento Semanal')}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10, gap: 4 }}>
-        {WEEK_WINDOW_OPTIONS.map(w => (
-          <button key={w} onClick={() => setWeekWindow(w)} style={pillBtn(weekWindow === w)}>{WINDOW_LABELS[w]}</button>
+        {COMP_WINDOW_OPTIONS.map(w => (
+          <button key={w} onClick={() => setWeekWindow(w)} style={pillBtn(weekWindow === w)}>{w} semanas</button>
         ))}
       </div>
       <ChartCard title="Faturamento semanal" subtitle={`${visibleWeeks.length} semanas`}>
