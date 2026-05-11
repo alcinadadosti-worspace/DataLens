@@ -79,8 +79,22 @@ function getISOWeek(date: Date): { year: number; week: number } {
   return { year: d.getFullYear(), week };
 }
 
-function weekLabel(year: number, week: number) {
-  return `Sem ${String(week).padStart(2, '0')}/${year}`;
+function getWeekStartDate(year: number, week: number): Date {
+  // Jan 4th is always in ISO week 1
+  const jan4 = new Date(year, 0, 4);
+  const dayOfWeek = (jan4.getDay() + 6) % 7; // 0=Mon … 6=Sun
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - dayOfWeek + (week - 1) * 7);
+  return monday;
+}
+
+function weekLabel(year: number, week: number): string {
+  const start = getWeekStartDate(year, week);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const fmt = (d: Date) =>
+    `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `${fmt(start)} a ${fmt(end)}`;
 }
 
 function weekSortKey(year: number, week: number) {
@@ -868,20 +882,64 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
             </ResponsiveContainer>
           </ChartCard>
 
-          <ChartCard title="Totais agregados por período" subtitle="Soma / média das métricas em cada período">
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={aggregateData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F2EEE6" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6B6258' }} />
-                <YAxis tick={{ fontSize: 9, fill: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}
-                  tickFormatter={v => yFmt(v)} width={52} />
-                <Tooltip content={ttCompBar} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                <Bar dataKey="periodoA" name="Período A" fill={COLOR_A} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="periodoB" name="Período B" fill={COLOR_B} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div style={{
+              background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
+              padding: '14px 18px 10px', boxShadow: '0 1px 4px rgba(28,24,20,0.05)',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#1C1814', marginBottom: 2 }}>Totais agregados por período</div>
+              <div style={{ fontSize: 11, color: '#9B9287', marginBottom: 14 }}>Soma / média das métricas em cada período</div>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_A }} />
+                  <span style={{ fontSize: 11, color: '#6B6258' }}>Período A</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_B }} />
+                  <span style={{ fontSize: 11, color: '#6B6258' }}>Período B</span>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                {aggregateData.map(row => {
+                  const maxVal = Math.max(row.periodoA, row.periodoB) || 1;
+                  const delta = row.periodoB > 0 ? ((row.periodoA - row.periodoB) / row.periodoB) * 100 : null;
+                  const isUp = delta != null && delta >= 0;
+                  return (
+                    <div key={row.name} style={{
+                      background: '#FAF7F2', borderRadius: 10, padding: '10px 12px',
+                    }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 8 }}>
+                        {row.name}
+                      </div>
+                      {[
+                        { val: row.periodoA, color: COLOR_A, lbl: 'A' },
+                        { val: row.periodoB, color: COLOR_B, lbl: 'B' },
+                      ].map(p => (
+                        <div key={p.lbl} style={{ marginBottom: 6 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 2 }}>
+                            <span style={{ color: p.color, fontWeight: 600 }}>Período {p.lbl}</span>
+                            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#1C1814' }}>{row.fmt(p.val)}</span>
+                          </div>
+                          <div style={{ height: 5, background: '#E8E2D6', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{
+                              width: `${(p.val / maxVal) * 100}%`, height: '100%',
+                              background: p.color, borderRadius: 3,
+                              transition: 'width 500ms ease',
+                            }} />
+                          </div>
+                        </div>
+                      ))}
+                      {delta != null && (
+                        <div style={{ fontSize: 10, fontWeight: 600, color: isUp ? '#2E7D5B' : '#B83A3A', marginTop: 4 }}>
+                          {isUp ? '↑' : '↓'} {Math.abs(delta).toFixed(1).replace('.', ',')}%
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div style={{
