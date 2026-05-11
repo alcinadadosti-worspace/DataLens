@@ -41,7 +41,9 @@ function tooltipAccentColor(tierId: string, accent: string): string {
 const TierBarChart: React.FC<TierBarChartProps> = ({ data, height = 220, topResellersByTier, onBarClick }) => {
   const [hovered, setHovered] = useState<number | null>(null);
   const max = Math.max(...data.map(d => d.value), 1);
-  const totalW = data.length * 80;
+  const MIN_W = 400;
+  const totalW = Math.max(data.length * 80, MIN_W);
+  const xOffset = (totalW - data.length * 80) / 2;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -50,7 +52,7 @@ const TierBarChart: React.FC<TierBarChartProps> = ({ data, height = 220, topRese
         const d = data[hovered];
         const sellers = topResellersByTier[d.tierId] ?? [];
         const tStyle = TIER_STYLES[d.tierId] || TIER_STYLES.cf;
-        const rawPct = (hovered * 80 + 40) / totalW * 100;
+        const rawPct = (xOffset + hovered * 80 + 40) / totalW * 100;
         const leftPct = Math.max(12, Math.min(88, rawPct));
         const isPremium = PREMIUM_TIERS.has(d.tierId);
         const isDiamante = d.tierId === 'diamante';
@@ -187,7 +189,7 @@ const TierBarChart: React.FC<TierBarChartProps> = ({ data, height = 220, topRese
           {hovered !== null && data[hovered]?.tierId === 'diamante' && (() => {
             const di = hovered;
             const bH = Math.max((data[di].value / max) * (height - 24), 2);
-            const bX = di * 80 + 16;
+            const bX = xOffset + di * 80 + 16;
             const bY = height - bH;
             return (
               <clipPath id="clip-diamante-sweep">
@@ -197,11 +199,11 @@ const TierBarChart: React.FC<TierBarChartProps> = ({ data, height = 220, topRese
           })()}
         </defs>
 
-        <line x1="0" x2={totalW} y1={height + 1} y2={height + 1} stroke="#E8E2D6" strokeWidth="1" />
+        <line x1={xOffset} x2={xOffset + data.length * 80} y1={height + 1} y2={height + 1} stroke="#E8E2D6" strokeWidth="1" />
 
         {data.map((d, i) => {
           const barH = Math.max((d.value / max) * (height - 24), 2);
-          const x = i * 80 + 16;
+          const x = xOffset + i * 80 + 16;
           const y = height - barH;
           const isDiamante = d.tierId === 'diamante';
           const isEsmeralda = d.tierId === 'esmeralda';
