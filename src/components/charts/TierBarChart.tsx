@@ -94,7 +94,7 @@ const TierBarChart: React.FC<TierBarChartProps> = ({ data, height = 220, topRese
                   WebkitTextFillColor: 'transparent',
                 }),
               }}>
-                Top investidores · {d.label}
+                Top revendedores · {d.label}
               </div>
 
               {sellers.length === 0 ? (
