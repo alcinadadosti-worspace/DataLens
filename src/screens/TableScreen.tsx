@@ -191,7 +191,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
                     boxShadow: isHov ? `0 0 8px ${tierAccent}88` : 'none',
                   }} />
                   {days.length <= 31 && (
-                    <div style={{ fontSize: 8, color: isHov ? tierAccent : '#9B9287', lineHeight: 1, fontWeight: isHov ? 700 : 400, transition: 'color 120ms' }}>{d}</div>
+                    <div style={{ fontSize: 11, color: isHov ? tierAccent : '#9B9287', lineHeight: 1, fontWeight: isHov ? 700 : 400, transition: 'color 120ms' }}>{d}</div>
                   )}
                 </div>
               );
