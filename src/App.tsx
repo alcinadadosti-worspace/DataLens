@@ -9,6 +9,7 @@ import DetailScreen from './screens/DetailScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import SupervisorScreen from './screens/SupervisorScreen';
 import DistribuicaoScreen from './screens/DistribuicaoScreen';
+import ComparacaoSemanalScreen from './screens/ComparacaoSemanalScreen';
 import { parseSpreadsheet } from './parsers/spreadsheetParser';
 import { useOrderStore } from './store/useOrderStore';
 
@@ -53,6 +54,8 @@ function App() {
     screen = <DistribuicaoScreen onNavigate={navigate} />;
   } else if (route === 'dashboard') {
     screen = <DashboardScreen onNavigate={navigate} />;
+  } else if (route === 'comparacao-semanal') {
+    screen = <ComparacaoSemanalScreen onNavigate={navigate} />;
   } else if (route === 'supervisors') {
     screen = <SupervisorScreen />;
   } else if (activeTier) {
