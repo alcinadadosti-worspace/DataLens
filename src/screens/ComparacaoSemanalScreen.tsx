@@ -339,6 +339,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
   const orders = useOrderStore(s => s.orders);
   const [activeMetric, setActiveMetric] = useState<MetricKey>('faturamento');
   const [weekWindow, setWeekWindow] = useState<number>(8);
+  const [evolWindow, setEvolWindow] = useState<2 | 3 | 4>(4);
   const [compWindow, setCompWindow] = useState<2 | 3 | 4>(2);
   const [compMetric, setCompMetric] = useState<MetricKey>('faturamento');
   const [exporting, setExporting] = useState(false);
@@ -395,6 +396,11 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
   const visibleWeeks = useMemo(
     () => weekWindow ? weeklyData.slice(-weekWindow) : weeklyData,
     [weeklyData, weekWindow],
+  );
+
+  const evolWeeks = useMemo(
+    () => weeklyData.slice(-evolWindow),
+    [weeklyData, evolWindow],
   );
 
   /* ── Period comparison ── */
@@ -1071,14 +1077,14 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           ))}
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          {WEEK_WINDOW_OPTIONS.map(w => (
-            <button key={w} onClick={() => setWeekWindow(w)} style={pillBtn(weekWindow === w)}>{WINDOW_LABELS[w]}</button>
+          {COMP_WINDOW_OPTIONS.map(w => (
+            <button key={w} onClick={() => setEvolWindow(w)} style={pillBtn(evolWindow === w)}>{w} semanas</button>
           ))}
         </div>
       </div>
-      <ChartCard title={`Evolução semanal — ${metric.label}`} subtitle={`${visibleWeeks.length} semanas`}>
+      <ChartCard title={`Evolução semanal — ${metric.label}`} subtitle={`${evolWeeks.length} semanas`}>
         <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={visibleWeeks} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
+          <AreaChart data={evolWeeks} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
             <defs>
               <linearGradient id="metricGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={metric.color} stopOpacity={0.15} />
