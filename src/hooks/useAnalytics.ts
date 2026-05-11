@@ -22,15 +22,15 @@ export function useFilteredOrders(): Order[] {
 
   return useMemo(() => {
     return orders.filter(order => {
-      if (filters.cycle && order.CicloMarketing !== filters.cycle) return false;
-      if (filters.supervisor && order.ResponsavelEstrutura !== filters.supervisor) return false;
-      if (filters.structure && order.Estrutura !== filters.structure) return false;
-      if (filters.city && order.CidadeEntregaRetirada !== filters.city) return false;
-      if (filters.state && order.UFEntregaRetirada !== filters.state) return false;
-      if (filters.modeloComercial && order.ModeloComercial !== filters.modeloComercial) return false;
-      if (filters.meioCaptacao && order.MeioCaptacao !== filters.meioCaptacao) return false;
-      if (filters.situacaoComercial && order.SituacaoComercial !== filters.situacaoComercial) return false;
-      if (filters.tier && order.tierId !== filters.tier) return false;
+      if (filters.cycle?.length && !filters.cycle.includes(order.CicloMarketing)) return false;
+      if (filters.supervisor?.length && !filters.supervisor.includes(order.ResponsavelEstrutura)) return false;
+      if (filters.structure?.length && !filters.structure.includes(order.Estrutura)) return false;
+      if (filters.city?.length && !filters.city.includes(order.CidadeEntregaRetirada)) return false;
+      if (filters.state?.length && !filters.state.includes(order.UFEntregaRetirada)) return false;
+      if (filters.modeloComercial?.length && !filters.modeloComercial.includes(order.ModeloComercial)) return false;
+      if (filters.meioCaptacao?.length && !filters.meioCaptacao.includes(order.MeioCaptacao)) return false;
+      if (filters.situacaoComercial?.length && !filters.situacaoComercial.includes(order.SituacaoComercial)) return false;
+      if (filters.tier?.length && !filters.tier.includes(order.tierId)) return false;
 
       if (filters.searchQuery) {
         const q = filters.searchQuery.toLowerCase();

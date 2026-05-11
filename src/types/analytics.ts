@@ -69,15 +69,15 @@ export interface InsightItem {
 }
 
 export interface FilterState {
-  cycle: string | null;
-  supervisor: string | null;
-  structure: string | null;
-  city: string | null;
-  state: string | null;
-  modeloComercial: string | null;
-  meioCaptacao: string | null;
-  situacaoComercial: string | null;
-  tier: string | null;
+  cycle: string[] | null;
+  supervisor: string[] | null;
+  structure: string[] | null;
+  city: string[] | null;
+  state: string[] | null;
+  modeloComercial: string[] | null;
+  meioCaptacao: string[] | null;
+  situacaoComercial: string[] | null;
+  tier: string[] | null;
   searchQuery: string;
   dateFrom: string | null;
   dateTo: string | null;

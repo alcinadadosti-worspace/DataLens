@@ -91,7 +91,7 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
     Object.values(financial.revenueByDayAndTier).some(d => (d[id] ?? 0) > 0)
   );
 
-  const hasActiveFilters = filterCycle !== null || selectedTiers.length < TIER_IDS_CHART.length;
+  const hasActiveFilters = !!filterCycle || selectedTiers.length < TIER_IDS_CHART.length;
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -129,25 +129,28 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
               onClick={() => setFilter('cycle', null)}
               style={{
                 padding: '3px 10px', borderRadius: 6, border: '1px solid',
-                fontSize: 11, cursor: 'pointer', fontWeight: filterCycle === null ? 700 : 400,
-                borderColor: filterCycle === null ? '#C9A227' : '#D8D0C0',
-                background: filterCycle === null ? '#FFF8E6' : 'white',
-                color: filterCycle === null ? '#C9A227' : '#3D362E',
+                fontSize: 11, cursor: 'pointer', fontWeight: !filterCycle ? 700 : 400,
+                borderColor: !filterCycle ? '#C9A227' : '#D8D0C0',
+                background: !filterCycle ? '#FFF8E6' : 'white',
+                color: !filterCycle ? '#C9A227' : '#3D362E',
               }}
             >Todos</button>
-            {availableCycles.map(cycle => (
-              <button
-                key={cycle}
-                onClick={() => setFilter('cycle', filterCycle === cycle ? null : cycle)}
-                style={{
-                  padding: '3px 10px', borderRadius: 6, border: '1px solid',
-                  fontSize: 11, cursor: 'pointer', fontWeight: filterCycle === cycle ? 700 : 400,
-                  borderColor: filterCycle === cycle ? '#C9A227' : '#D8D0C0',
-                  background: filterCycle === cycle ? '#FFF8E6' : 'white',
-                  color: filterCycle === cycle ? '#C9A227' : '#3D362E',
-                }}
-              >{cycle}</button>
-            ))}
+            {availableCycles.map(cycle => {
+              const active = filterCycle?.includes(cycle) ?? false;
+              return (
+                <button
+                  key={cycle}
+                  onClick={() => setFilter('cycle', active ? null : cycle)}
+                  style={{
+                    padding: '3px 10px', borderRadius: 6, border: '1px solid',
+                    fontSize: 11, cursor: 'pointer', fontWeight: active ? 700 : 400,
+                    borderColor: active ? '#C9A227' : '#D8D0C0',
+                    background: active ? '#FFF8E6' : 'white',
+                    color: active ? '#C9A227' : '#3D362E',
+                  }}
+                >{cycle}</button>
+              );
+            })}
           </div>
         )}
 
