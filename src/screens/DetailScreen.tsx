@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { TIER_STYLES, TIER_DEFINITIONS } from '../design-system/tierStyles';
 import { useFilteredOrders, useTierMetrics } from '../hooks/useAnalytics';
-import { useFilterStore } from '../store/useFilterStore';
 import { fmtBRLshort, fmtBRL } from '../utils/formatters';
 import { isRevenueEligible } from '../analytics/financialMetrics';
 import TierBadge from '../components/ui/TierBadge';
@@ -146,12 +145,12 @@ interface DetailScreenProps {
   tierId: string;
   onBack: () => void;
   onNavigate: (route: string) => void;
+  onResellerClick: (id: string, name: string) => void;
 }
 
-const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate }) => {
+const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate, onResellerClick }) => {
   const allOrders = useFilteredOrders();
   const tierMetrics = useTierMetrics();
-  const setSearch = useFilterStore(s => s.setSearch);
   const [hoveredReseller, setHoveredReseller] = useState<string | null>(null);
   const tierStyle = TIER_STYLES[tierId];
   const tierDef = TIER_DEFINITIONS.find(t => t.id === tierId);
@@ -288,7 +287,7 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate 
                       onMouseEnter={() => setHoveredReseller(id)}
                       onMouseLeave={() => setHoveredReseller(null)}
                       onClick={() => {
-                        setSearch(data.name);
+                        onResellerClick(id, data.name);
                         onNavigate('table');
                       }}
                     >

@@ -14,6 +14,7 @@ import { useOrderStore } from './store/useOrderStore';
 
 function App() {
   const [route, setRoute] = useState('tiers');
+  const [selectedReseller, setSelectedReseller] = useState<{ id: string; name: string } | null>(null);
   const setOrders = useOrderStore(s => s.setOrders);
   const hasOrders = useOrderStore(s => s.orders.length > 0);
 
@@ -33,7 +34,11 @@ function App() {
       .catch(() => {/* silently skip if sample not available */});
   }, []);
 
-  function navigate(r: string) { setRoute(r); }
+  function navigate(r: string) {
+    setRoute(r);
+    // Clear reseller selection when navigating away from the table
+    if (r !== 'table') setSelectedReseller(null);
+  }
 
   const activeTier = route.startsWith('detail-') ? route.replace('detail-', '') : null;
 
@@ -43,7 +48,7 @@ function App() {
   } else if (route === 'tiers') {
     screen = <TiersScreen onTierClick={t => navigate(`detail-${t}`)} onNavigate={navigate} />;
   } else if (route === 'table') {
-    screen = <TableScreen />;
+    screen = <TableScreen selectedReseller={selectedReseller} onClearReseller={() => setSelectedReseller(null)} />;
   } else if (route === 'distribuicao') {
     screen = <DistribuicaoScreen onNavigate={navigate} />;
   } else if (route === 'dashboard') {
@@ -51,7 +56,7 @@ function App() {
   } else if (route === 'supervisors') {
     screen = <SupervisorScreen />;
   } else if (activeTier) {
-    screen = <DetailScreen tierId={activeTier} onBack={() => navigate('tiers')} onNavigate={navigate} />;
+    screen = <DetailScreen tierId={activeTier} onBack={() => navigate('tiers')} onNavigate={navigate} onResellerClick={(id, name) => setSelectedReseller({ id, name })} />;
   }
 
   return (
