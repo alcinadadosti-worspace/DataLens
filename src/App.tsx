@@ -21,15 +21,15 @@ function App() {
 
   useEffect(() => {
     if (hasOrders) return;
-    fetch('/sample.xlsx')
+    fetch('/PrimeiraSemanaCiclos5e7.xlsx')
       .then(r => r.blob())
       .then(blob => {
-        const file = new File([blob], 'ConsultaPedidos_exemplo.xlsx', { type: blob.type });
+        const file = new File([blob], 'PrimeiraSemanaCiclos5e7.xlsx', { type: blob.type });
         return parseSpreadsheet(file);
       })
       .then(result => {
         if (result.orders.length > 0) {
-          setOrders(result.orders, 'ConsultaPedidos_exemplo.xlsx');
+          setOrders(result.orders, 'PrimeiraSemanaCiclos5e7.xlsx');
         }
       })
       .catch(() => {/* silently skip if sample not available */});
