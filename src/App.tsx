@@ -12,24 +12,27 @@ import DistribuicaoScreen from './screens/DistribuicaoScreen';
 import ComparacaoSemanalScreen from './screens/ComparacaoSemanalScreen';
 import { parseSpreadsheet } from './parsers/spreadsheetParser';
 import { useOrderStore } from './store/useOrderStore';
+import { useFilterStore } from './store/useFilterStore';
 
 function App() {
   const [route, setRoute] = useState('tiers');
   const [selectedReseller, setSelectedReseller] = useState<{ id: string; name: string } | null>(null);
   const setOrders = useOrderStore(s => s.setOrders);
   const hasOrders = useOrderStore(s => s.orders.length > 0);
+  const setFilter = useFilterStore(s => s.setFilter);
 
   useEffect(() => {
     if (hasOrders) return;
-    fetch('/PrimeiraSemanaCiclos5e7.xlsx')
+    fetch('/ConsultaPedidos_Completo.xlsx')
       .then(r => r.blob())
       .then(blob => {
-        const file = new File([blob], 'PrimeiraSemanaCiclos5e7.xlsx', { type: blob.type });
+        const file = new File([blob], 'ConsultaPedidos_Completo.xlsx', { type: blob.type });
         return parseSpreadsheet(file);
       })
       .then(result => {
         if (result.orders.length > 0) {
-          setOrders(result.orders, 'PrimeiraSemanaCiclos5e7.xlsx');
+          setOrders(result.orders, 'ConsultaPedidos_Completo.xlsx');
+          setFilter('cycle', '07/2026');
         }
       })
       .catch(() => {/* silently skip if sample not available */});
