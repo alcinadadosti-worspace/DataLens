@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -99,6 +99,48 @@ function weekLabel(year: number, week: number): string {
 
 function weekSortKey(year: number, week: number) {
   return `${year}-${String(week).padStart(2, '0')}`;
+}
+
+function buildWeeklyData(orders: Order[]): WeekData[] {
+  if (orders.length === 0) return [];
+  const map = new Map<string, { year: number; week: number; orders: Order[] }>();
+  for (const order of orders) {
+    const date = parseBRDate(order.DataCaptacao);
+    if (!date) continue;
+    const { year, week } = getISOWeek(date);
+    const key = weekSortKey(year, week);
+    if (!map.has(key)) map.set(key, { year, week, orders: [] });
+    map.get(key)!.orders.push(order);
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, { year, week, orders: wo }]) => {
+      const eligible = wo.filter(o => !isCancelled(o));
+      const faturamento = eligible.reduce((s, o) => s + o.ValorPraticado, 0);
+      const pedidos = wo.length;
+      const finalizados = eligible.length;
+      const cancelados = pedidos - finalizados;
+      const ticketMedio = finalizados > 0 ? faturamento / finalizados : 0;
+      const ativos = new Set(eligible.map(o => o.Pessoa).filter(Boolean)).size;
+      const rpa = ativos > 0 ? faturamento / ativos : 0;
+      const ansRate = pedidos > 0 ? (finalizados / pedidos) * 100 : 0;
+      const dayMap = new Map<string, number>();
+      for (const o of wo) {
+        const d = parseBRDate(o.DataCaptacao);
+        if (!d) continue;
+        const dk = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        dayMap.set(dk, (dayMap.get(dk) ?? 0) + 1);
+      }
+      let peakDayOrders = 0; let peakDayLabel = '';
+      for (const [dk, cnt] of dayMap) {
+        if (cnt > peakDayOrders) { peakDayOrders = cnt; peakDayLabel = dk; }
+      }
+      return {
+        weekKey: weekSortKey(year, week), label: weekLabel(year, week),
+        faturamento, pedidos, finalizados, cancelados, ticketMedio, ativos, rpa, ansRate,
+        peakDayOrders, peakDayLabel,
+      };
+    });
 }
 
 function isCancelled(o: Order) {
@@ -354,58 +396,37 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
   const [activeMetric, setActiveMetric] = useState<MetricKey>('faturamento');
   const [weekWindow, setWeekWindow] = useState<2 | 3 | 4>(4);
   const [evolWindow, setEvolWindow] = useState<2 | 3 | 4>(4);
-  const [compWindow, setCompWindow] = useState<2 | 3 | 4>(2);
   const [compMetric, setCompMetric] = useState<MetricKey>('faturamento');
+  const [cicloA, setCicloA] = useState<string>('');
+  const [cicloB, setCicloB] = useState<string>('');
   const [exporting, setExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
-  /* ── Weekly aggregation ── */
-  const weeklyData = useMemo<WeekData[]>(() => {
-    if (orders.length === 0) return [];
-
-    const map = new Map<string, { year: number; week: number; orders: typeof orders }>();
-    for (const order of orders) {
-      const date = parseBRDate(order.DataCaptacao);
-      if (!date) continue;
-      const { year, week } = getISOWeek(date);
-      const key = weekSortKey(year, week);
-      if (!map.has(key)) map.set(key, { year, week, orders: [] });
-      map.get(key)!.orders.push(order);
-    }
-
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([, { year, week, orders: wo }]) => {
-        const eligible = wo.filter(o => !isCancelled(o));
-        const faturamento = eligible.reduce((s, o) => s + o.ValorPraticado, 0);
-        const pedidos = wo.length;
-        const finalizados = eligible.length;
-        const cancelados = pedidos - finalizados;
-        const ticketMedio = finalizados > 0 ? faturamento / finalizados : 0;
-        const ativos = new Set(eligible.map(o => o.Pessoa).filter(Boolean)).size;
-        const rpa = ativos > 0 ? faturamento / ativos : 0;
-        const ansRate = pedidos > 0 ? (finalizados / pedidos) * 100 : 0;
-
-        // Daily peak within week
-        const dayMap = new Map<string, number>();
-        for (const o of wo) {
-          const d = parseBRDate(o.DataCaptacao);
-          if (!d) continue;
-          const dk = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-          dayMap.set(dk, (dayMap.get(dk) ?? 0) + 1);
-        }
-        let peakDayOrders = 0; let peakDayLabel = '';
-        for (const [dk, cnt] of dayMap) {
-          if (cnt > peakDayOrders) { peakDayOrders = cnt; peakDayLabel = dk; }
-        }
-
-        return {
-          weekKey: weekSortKey(year, week), label: weekLabel(year, week),
-          faturamento, pedidos, finalizados, cancelados, ticketMedio, ativos, rpa, ansRate,
-          peakDayOrders, peakDayLabel,
-        };
-      });
+  /* ── Available cycles (most recent first) ── */
+  const availableCycles = useMemo(() => {
+    const set = new Set<string>();
+    for (const o of orders) { if (o.CicloMarketing) set.add(o.CicloMarketing); }
+    return Array.from(set).sort((a, b) => {
+      const [am, ay] = a.split('/').map(Number);
+      const [bm, by] = b.split('/').map(Number);
+      return ay !== by ? by - ay : bm - am;
+    });
   }, [orders]);
+
+  /* Reset cycle selections when dataset changes */
+  const prevCyclesRef = useRef<string[]>([]);
+  useEffect(() => {
+    const prev = prevCyclesRef.current;
+    const changed = prev.length !== availableCycles.length || prev.some((c, i) => c !== availableCycles[i]);
+    if (changed) {
+      prevCyclesRef.current = availableCycles;
+      setCicloA(availableCycles[0] ?? '');
+      setCicloB(availableCycles[1] ?? '');
+    }
+  }, [availableCycles]);
+
+  /* ── Weekly aggregation (all data, used by top charts) ── */
+  const weeklyData = useMemo<WeekData[]>(() => buildWeeklyData(orders), [orders]);
 
   const visibleWeeks = useMemo(
     () => weekWindow ? weeklyData.slice(-weekWindow) : weeklyData,
@@ -417,30 +438,26 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
     [weeklyData, evolWindow],
   );
 
-  /* ── Period comparison ── */
-  const periodAWeeks = useMemo(() => weeklyData.slice(-compWindow), [weeklyData, compWindow]);
-  const periodBWeeks = useMemo(() => {
-    if (weeklyData.length <= compWindow) return [];
-    return weeklyData.slice(-(compWindow * 2), -compWindow);
-  }, [weeklyData, compWindow]);
+  /* ── Cycle-based period comparison ── */
+  const periodAWeeks = useMemo(
+    () => cicloA ? buildWeeklyData(orders.filter(o => o.CicloMarketing === cicloA)) : [],
+    [orders, cicloA],
+  );
+  const periodBWeeks = useMemo(
+    () => cicloB ? buildWeeklyData(orders.filter(o => o.CicloMarketing === cicloB)) : [],
+    [orders, cicloB],
+  );
 
   const hasPeriodB = periodBWeeks.length > 0;
 
-  const getOrdersForWeeks = useCallback((weeks: WeekData[]) => {
-    if (!weeks.length) return [];
-    const first = weeks[0].weekKey;
-    const last = weeks[weeks.length - 1].weekKey;
-    return orders.filter(o => {
-      const d = parseBRDate(o.DataCaptacao);
-      if (!d) return false;
-      const { year, week } = getISOWeek(d);
-      const k = weekSortKey(year, week);
-      return k >= first && k <= last;
-    });
-  }, [orders]);
-
-  const periodAOrders = useMemo(() => getOrdersForWeeks(periodAWeeks), [periodAWeeks, getOrdersForWeeks]);
-  const periodBOrders = useMemo(() => getOrdersForWeeks(periodBWeeks), [periodBWeeks, getOrdersForWeeks]);
+  const periodAOrders = useMemo(
+    () => cicloA ? orders.filter(o => o.CicloMarketing === cicloA) : [],
+    [orders, cicloA],
+  );
+  const periodBOrders = useMemo(
+    () => cicloB ? orders.filter(o => o.CicloMarketing === cicloB) : [],
+    [orders, cicloB],
+  );
 
   const rankingsA = useMemo(() => computeRankings(periodAOrders), [periodAOrders]);
   const rankingsB = useMemo(() => computeRankings(periodBOrders), [periodBOrders]);
@@ -597,7 +614,10 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
 
   /* ── Period label helpers ── */
   const periodLabel = (weeks: WeekData[]) =>
-    weeks.length ? `${weeks[0].label} — ${weeks[weeks.length - 1].label}` : '—';
+    weeks.length ? `${weeks[0].label.split(' a ')[0]} a ${weeks[weeks.length - 1].label.split(' a ')[1]}` : '—';
+
+  const cycleLabel = (ciclo: string, weeks: WeekData[]) =>
+    ciclo ? `Ciclo ${ciclo}${weeks.length ? ` — ${periodLabel(weeks)}` : ''}` : '—';
 
   const pillBtn = (active: boolean, color = '#1C1814'): React.CSSProperties => ({
     padding: '5px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
@@ -808,37 +828,52 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
         background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
         padding: '18px 20px', marginBottom: 16, boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 24 }}>
+
+          {/* Ciclo A selector */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 8 }}>
-              Janela
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_A, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+                Ciclo A
+              </span>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {COMP_WINDOW_OPTIONS.map(w => (
-                <button key={w} onClick={() => setCompWindow(w)} style={pillBtn(compWindow === w)}>
-                  {w} semanas
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {availableCycles.map(c => (
+                <button key={c} onClick={() => setCicloA(c)} style={pillBtn(cicloA === c, COLOR_A)}>
+                  {c}
                 </button>
               ))}
             </div>
+            {periodAWeeks.length > 0 && (
+              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 5 }}>{periodLabel(periodAWeeks)}</div>
+            )}
           </div>
 
-          <div style={{ display: 'flex', gap: 20 }}>
-            {[
-              { color: COLOR_A, label: 'Período A (mais recente)', weeks: periodAWeeks },
-              { color: COLOR_B, label: 'Período B (anterior)', weeks: periodBWeeks },
-            ].map(p => (
-              <div key={p.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 3, background: p.color, flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#3D362E' }}>{p.label}</div>
-                  <div style={{ fontSize: 11, color: '#9B9287' }}>
-                    {p.weeks.length ? periodLabel(p.weeks) : 'Dados insuficientes'}
-                  </div>
-                </div>
-              </div>
-            ))}
+          {/* Ciclo B selector */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_B, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+                Ciclo B
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {availableCycles.map(c => (
+                <button key={c} onClick={() => setCicloB(cicloB === c ? '' : c)} style={pillBtn(cicloB === c, COLOR_B)}>
+                  {c}
+                </button>
+              ))}
+            </div>
+            {periodBWeeks.length > 0 && (
+              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 5 }}>{periodLabel(periodBWeeks)}</div>
+            )}
+            {cicloB === '' && (
+              <div style={{ fontSize: 11, color: '#9B9287', fontStyle: 'italic', marginTop: 5 }}>Nenhum selecionado</div>
+            )}
           </div>
 
+          {/* Metric selector */}
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 8 }}>
               Métrica
@@ -947,7 +982,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           padding: '28px 24px', textAlign: 'center', color: '#9B9287', fontSize: 14, marginBottom: 20,
         }}>
           <i className="ph ph-warning" style={{ fontSize: 28, display: 'block', marginBottom: 8, color: '#D8D0C0' }} />
-          Dados insuficientes para o Período B com janela de {compWindow} semanas.
+          {cicloB ? `Nenhum dado encontrado para o Ciclo B (${cicloB}).` : 'Selecione um Ciclo B para habilitar a comparação.'}
         </div>
       )}
 
@@ -970,12 +1005,12 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
         <div style={{ display: 'flex', gap: 20, marginLeft: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_A }} />
-            <span style={{ fontSize: 11, color: '#D8D0C0' }}>Período A — {periodLabel(periodAWeeks)}</span>
+            <span style={{ fontSize: 11, color: '#D8D0C0' }}>Período A — {cycleLabel(cicloA, periodAWeeks)}</span>
           </div>
           {hasPeriodB && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_B }} />
-              <span style={{ fontSize: 11, color: '#D8D0C0' }}>Período B — {periodLabel(periodBWeeks)}</span>
+              <span style={{ fontSize: 11, color: '#D8D0C0' }}>Período B — {cycleLabel(cicloB, periodBWeeks)}</span>
             </div>
           )}
         </div>
@@ -1084,8 +1119,8 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                 itemA={row.itemA}
                 itemB={row.itemB ?? null}
                 fmtVal={row.fmtVal}
-                labelA={`Período A — ${periodLabel(periodAWeeks)}`}
-                labelB={`Período B — ${periodLabel(periodBWeeks)}`}
+                labelA={`Período A — ${cycleLabel(cicloA, periodAWeeks)}`}
+                labelB={`Período B — ${cycleLabel(cicloB, periodBWeeks)}`}
                 showB={hasPeriodB}
               />
             ))}
