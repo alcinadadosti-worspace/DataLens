@@ -23,15 +23,15 @@ function App() {
 
   useEffect(() => {
     if (hasOrders) return;
-    fetch('/ConsultaPedidos_Completo.xlsx')
+    fetch('/ConsultaPedidos_faf0273d-4e3e-4768-9197-ef3cbcb748bd.xlsx')
       .then(r => r.blob())
       .then(blob => {
-        const file = new File([blob], 'ConsultaPedidos_Completo.xlsx', { type: blob.type });
+        const file = new File([blob], 'ConsultaPedidos_faf0273d-4e3e-4768-9197-ef3cbcb748bd.xlsx', { type: blob.type });
         return parseSpreadsheet(file);
       })
       .then(result => {
         if (result.orders.length > 0) {
-          setOrders(result.orders, 'ConsultaPedidos_Completo.xlsx');
+          setOrders(result.orders, 'ConsultaPedidos_faf0273d-4e3e-4768-9197-ef3cbcb748bd.xlsx');
           setFilter('cycle', '07/2026');
         }
       })
