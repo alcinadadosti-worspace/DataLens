@@ -24,10 +24,30 @@ function isoToBr(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
+// Apply DD/MM/YYYY mask as user types
+function applyDateMask(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+// Return ISO string if the DD/MM/YYYY string is a valid date, else null
+function parseBrInput(br: string): string | null {
+  const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const [, d, mo, y] = m.map(Number);
+  const date = new Date(y, mo - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) return null;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 const FilterBuilder: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [activeCol, setActiveCol] = useState<ColumnDef | 'date' | null>(null);
   const [search, setSearch] = useState('');
+  const [fromInput, setFromInput] = useState('');
+  const [toInput, setToInput] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
   const filters = useFilterStore();
@@ -72,6 +92,12 @@ const FilterBuilder: React.FC = () => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Sync text inputs when date panel opens or store values change externally
+  useEffect(() => {
+    setFromInput(filters.dateFrom ? isoToBr(filters.dateFrom) : '');
+    setToInput(filters.dateTo ? isoToBr(filters.dateTo) : '');
+  }, [activeCol, filters.dateFrom, filters.dateTo]);
 
   function closePanel() {
     setOpen(false);
@@ -253,16 +279,28 @@ const FilterBuilder: React.FC = () => {
                     De
                   </label>
                   <input
-                    type="date"
-                    min={minDate}
-                    max={filters.dateTo ?? maxDate}
-                    value={filters.dateFrom ?? ''}
-                    onChange={e => filters.setDateRange(e.target.value || null, filters.dateTo)}
+                    type="text"
+                    placeholder="DD/MM/AAAA"
+                    maxLength={10}
+                    value={fromInput}
+                    onChange={e => {
+                      const masked = applyDateMask(e.target.value);
+                      setFromInput(masked);
+                      const iso = parseBrInput(masked);
+                      if (iso) filters.setDateRange(iso, filters.dateTo);
+                    }}
+                    onBlur={() => {
+                      const iso = parseBrInput(fromInput);
+                      if (!iso) {
+                        setFromInput(filters.dateFrom ? isoToBr(filters.dateFrom) : '');
+                      }
+                    }}
                     style={{
                       width: '100%', padding: '7px 10px', borderRadius: 8,
-                      border: '1px solid #D8D0C0', fontSize: 13, color: '#1C1814',
+                      border: `1px solid ${fromInput.length === 10 && !parseBrInput(fromInput) ? '#B83A3A' : '#D8D0C0'}`,
+                      fontSize: 13, color: '#1C1814',
                       background: '#FAF7F2', outline: 'none', boxSizing: 'border-box',
-                      fontFamily: 'inherit',
+                      fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.03em',
                     }}
                   />
                 </div>
@@ -272,23 +310,35 @@ const FilterBuilder: React.FC = () => {
                     Até
                   </label>
                   <input
-                    type="date"
-                    min={filters.dateFrom ?? minDate}
-                    max={maxDate}
-                    value={filters.dateTo ?? ''}
-                    onChange={e => filters.setDateRange(filters.dateFrom, e.target.value || null)}
+                    type="text"
+                    placeholder="DD/MM/AAAA"
+                    maxLength={10}
+                    value={toInput}
+                    onChange={e => {
+                      const masked = applyDateMask(e.target.value);
+                      setToInput(masked);
+                      const iso = parseBrInput(masked);
+                      if (iso) filters.setDateRange(filters.dateFrom, iso);
+                    }}
+                    onBlur={() => {
+                      const iso = parseBrInput(toInput);
+                      if (!iso) {
+                        setToInput(filters.dateTo ? isoToBr(filters.dateTo) : '');
+                      }
+                    }}
                     style={{
                       width: '100%', padding: '7px 10px', borderRadius: 8,
-                      border: '1px solid #D8D0C0', fontSize: 13, color: '#1C1814',
+                      border: `1px solid ${toInput.length === 10 && !parseBrInput(toInput) ? '#B83A3A' : '#D8D0C0'}`,
+                      fontSize: 13, color: '#1C1814',
                       background: '#FAF7F2', outline: 'none', boxSizing: 'border-box',
-                      fontFamily: 'inherit',
+                      fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.03em',
                     }}
                   />
                 </div>
 
                 {hasDateFilter && (
                   <span
-                    onClick={() => filters.setDateRange(null, null)}
+                    onClick={() => { filters.setDateRange(null, null); setFromInput(''); setToInput(''); }}
                     style={{
                       fontSize: 12, color: '#9B9287', cursor: 'pointer',
                       textDecoration: 'underline', textAlign: 'right',
