@@ -48,11 +48,11 @@ export function useFilteredOrders(): Order[] {
         const orderDate = parseBRDate(order.DataCaptacao);
         if (orderDate) {
           if (filters.dateFrom) {
-            const from = new Date(filters.dateFrom);
+            const from = new Date(filters.dateFrom + 'T00:00:00');
             if (orderDate < from) return false;
           }
           if (filters.dateTo) {
-            const to = new Date(filters.dateTo);
+            const to = new Date(filters.dateTo + 'T23:59:59');
             if (orderDate > to) return false;
           }
         }

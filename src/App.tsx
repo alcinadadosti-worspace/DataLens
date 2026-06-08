@@ -23,16 +23,16 @@ function App() {
 
   useEffect(() => {
     if (hasOrders) return;
-    fetch('/ConsultaPedidos_faf0273d-4e3e-4768-9197-ef3cbcb748bd.xlsx')
+    fetch('/ciclos_6_e_8.xlsx')
       .then(r => r.blob())
       .then(blob => {
-        const file = new File([blob], 'ConsultaPedidos_faf0273d-4e3e-4768-9197-ef3cbcb748bd.xlsx', { type: blob.type });
+        const file = new File([blob], 'ciclos_6_e_8.xlsx', { type: blob.type });
         return parseSpreadsheet(file);
       })
       .then(result => {
         if (result.orders.length > 0 && useOrderStore.getState().orders.length === 0) {
-          setOrders(result.orders, 'ConsultaPedidos_faf0273d-4e3e-4768-9197-ef3cbcb748bd.xlsx');
-          setFilter('cycle', '07/2026');
+          setOrders(result.orders, 'ciclos_6_e_8.xlsx');
+          useFilterStore.setState({ cycle: ['08/2026'], dateFrom: '2026-06-01', dateTo: '2026-06-06' });
         }
       })
       .catch(() => {/* silently skip if sample not available */});
