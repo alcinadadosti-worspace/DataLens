@@ -12,9 +12,21 @@ interface ColumnDef {
   options: { value: string; label: string }[];
 }
 
+// Convert DD/MM/YYYY → YYYY-MM-DD for <input type="date">
+function brToIso(br: string): string {
+  const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}
+
+// Convert YYYY-MM-DD → DD/MM/YYYY for display
+function isoToBr(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
 const FilterBuilder: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [activeCol, setActiveCol] = useState<ColumnDef | null>(null);
+  const [activeCol, setActiveCol] = useState<ColumnDef | 'date' | null>(null);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
@@ -28,6 +40,13 @@ const FilterBuilder: React.FC = () => {
   const states      = [...new Set(orders.map(o => o.UFEntregaRetirada).filter(Boolean))].sort();
   const modelos     = [...new Set(orders.map(o => o.ModeloComercial).filter(Boolean))].sort();
   const meios       = [...new Set(orders.map(o => o.MeioCaptacao).filter(Boolean))].sort();
+
+  // Available dates from the spreadsheet (sorted, ISO format for inputs)
+  const availableDates = [...new Set(
+    orders.map(o => o.DataCaptacao).filter(Boolean).map(brToIso).filter(Boolean)
+  )].sort();
+  const minDate = availableDates[0] ?? '';
+  const maxDate = availableDates[availableDates.length - 1] ?? '';
 
   const columns: ColumnDef[] = [
     { id: 'cycle',            label: 'Ciclo Marketing',   options: cycles.map(v => ({ value: v, label: v })) },
@@ -65,7 +84,7 @@ const FilterBuilder: React.FC = () => {
     setSearch('');
   }
 
-  // Collect all active filter chips (one chip per selected value)
+  // Active multi-select chips
   const activeChips: { colId: MultiKey; colLabel: string; value: string; valueLabel: string }[] = [];
   for (const col of columns) {
     const vals = filters[col.id] as string[] | null;
@@ -76,14 +95,25 @@ const FilterBuilder: React.FC = () => {
     }
   }
 
-  const currentVals = (activeCol ? (filters[activeCol.id] as string[] | null) : null) ?? [];
-  const filteredOptions = activeCol
-    ? activeCol.options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
+  const hasDateFilter = !!(filters.dateFrom || filters.dateTo);
+  const dateChipLabel = filters.dateFrom && filters.dateTo
+    ? `${isoToBr(filters.dateFrom)} → ${isoToBr(filters.dateTo)}`
+    : filters.dateFrom
+      ? `A partir de ${isoToBr(filters.dateFrom)}`
+      : `Até ${isoToBr(filters.dateTo!)}`;
+
+  const hasAnyFilter = activeChips.length > 0 || hasDateFilter;
+
+  const activeColIsDate = activeCol === 'date';
+  const activeColDef = activeCol !== 'date' ? activeCol : null;
+  const currentVals = (activeColDef ? (filters[activeColDef.id] as string[] | null) : null) ?? [];
+  const filteredOptions = activeColDef
+    ? activeColDef.options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
     : [];
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', position: 'relative' }} ref={ref}>
-      {/* Active filter chips */}
+      {/* Active multi-select chips */}
       {activeChips.map(chip => (
         <FilterChip
           key={`${chip.colId}-${chip.value}`}
@@ -92,7 +122,17 @@ const FilterBuilder: React.FC = () => {
           onRemove={() => filters.toggleFilterValue(chip.colId, chip.value)}
         />
       ))}
-      {activeChips.length > 0 && (
+
+      {/* Active date range chip */}
+      {hasDateFilter && (
+        <FilterChip
+          column="Período"
+          value={dateChipLabel}
+          onRemove={() => filters.setDateRange(null, null)}
+        />
+      )}
+
+      {hasAnyFilter && (
         <span
           onClick={() => filters.clearFilters()}
           style={{
@@ -137,9 +177,34 @@ const FilterBuilder: React.FC = () => {
             }}>
               Filtrar por
             </div>
+
+            {/* Date range entry */}
+            <div
+              onClick={() => { setActiveCol('date'); setSearch(''); }}
+              style={{
+                padding: '8px 14px', cursor: 'pointer', fontSize: 13,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: activeColIsDate ? '#F2EEE6' : 'transparent',
+                fontWeight: activeColIsDate ? 600 : 400,
+                color: activeColIsDate ? '#1C1814' : '#3D362E',
+              }}
+              onMouseEnter={e => { if (!activeColIsDate) e.currentTarget.style.background = '#FAF7F2'; }}
+              onMouseLeave={e => { if (!activeColIsDate) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <span>Período</span>
+              {hasDateFilter
+                ? <span style={{
+                    fontSize: 10, fontWeight: 700,
+                    background: '#C9A227', color: 'white',
+                    borderRadius: 999, padding: '1px 6px',
+                  }}>✓</span>
+                : <i className="ph ph-calendar-blank" style={{ fontSize: 13, color: '#9B9287' }} />
+              }
+            </div>
+
             {columns.map(col => {
               const selected = (filters[col.id] as string[] | null)?.length ?? 0;
-              const isActive = col.id === activeCol?.id;
+              const isActive = activeColDef?.id === col.id;
               return (
                 <div
                   key={col.id}
@@ -170,8 +235,72 @@ const FilterBuilder: React.FC = () => {
             })}
           </div>
 
+          {/* Right: date range panel */}
+          {activeColIsDate && (
+            <div style={{ width: 260, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid #F2EEE6' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#6B6258', marginBottom: 2 }}>Período de captação</div>
+                <div style={{ fontSize: 11, color: '#9B9287' }}>
+                  Disponível: {isoToBr(minDate)} → {isoToBr(maxDate)}
+                </div>
+              </div>
+
+              <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6B6258', display: 'block', marginBottom: 6 }}>
+                    De
+                  </label>
+                  <input
+                    type="date"
+                    min={minDate}
+                    max={filters.dateTo ?? maxDate}
+                    value={filters.dateFrom ?? ''}
+                    onChange={e => filters.setDateRange(e.target.value || null, filters.dateTo)}
+                    style={{
+                      width: '100%', padding: '7px 10px', borderRadius: 8,
+                      border: '1px solid #D8D0C0', fontSize: 13, color: '#1C1814',
+                      background: '#FAF7F2', outline: 'none', boxSizing: 'border-box',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6B6258', display: 'block', marginBottom: 6 }}>
+                    Até
+                  </label>
+                  <input
+                    type="date"
+                    min={filters.dateFrom ?? minDate}
+                    max={maxDate}
+                    value={filters.dateTo ?? ''}
+                    onChange={e => filters.setDateRange(filters.dateFrom, e.target.value || null)}
+                    style={{
+                      width: '100%', padding: '7px 10px', borderRadius: 8,
+                      border: '1px solid #D8D0C0', fontSize: 13, color: '#1C1814',
+                      background: '#FAF7F2', outline: 'none', boxSizing: 'border-box',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                </div>
+
+                {hasDateFilter && (
+                  <span
+                    onClick={() => filters.setDateRange(null, null)}
+                    style={{
+                      fontSize: 12, color: '#9B9287', cursor: 'pointer',
+                      textDecoration: 'underline', textAlign: 'right',
+                    }}
+                  >
+                    Limpar período
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Right: multi-select options */}
-          {activeCol && (
+          {activeColDef && (
             <div style={{ width: 240, display: 'flex', flexDirection: 'column' }}>
               {/* Search */}
               <div style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6' }}>
@@ -185,7 +314,7 @@ const FilterBuilder: React.FC = () => {
                     autoFocus
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder={`Buscar ${activeCol.label.toLowerCase()}...`}
+                    placeholder={`Buscar ${activeColDef.label.toLowerCase()}...`}
                     style={{
                       border: 'none', background: 'transparent', outline: 'none',
                       fontSize: 13, color: '#1C1814', width: '100%',
@@ -203,7 +332,7 @@ const FilterBuilder: React.FC = () => {
                   return (
                     <div
                       key={opt.value}
-                      onClick={() => filters.toggleFilterValue(activeCol.id, opt.value)}
+                      onClick={() => filters.toggleFilterValue(activeColDef.id, opt.value)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '8px 14px', cursor: 'pointer', fontSize: 13,
@@ -213,7 +342,6 @@ const FilterBuilder: React.FC = () => {
                       onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#FAF7F2'; }}
                       onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent'; }}
                     >
-                      {/* Checkbox */}
                       <span style={{
                         width: 16, height: 16, borderRadius: 4, flexShrink: 0,
                         border: `2px solid ${checked ? '#C9A227' : '#D8D0C0'}`,
@@ -240,7 +368,7 @@ const FilterBuilder: React.FC = () => {
                     {currentVals.length} selecionado{currentVals.length > 1 ? 's' : ''}
                   </span>
                   <span
-                    onClick={() => filters.setFilter(activeCol.id, null)}
+                    onClick={() => filters.setFilter(activeColDef.id, null)}
                     style={{ color: '#9B9287', cursor: 'pointer', textDecoration: 'underline' }}
                   >
                     Limpar

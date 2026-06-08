@@ -7,6 +7,7 @@ interface FilterStore extends FilterState {
   setFilter: (key: MultiKey, value: string | string[] | null) => void;
   toggleFilterValue: (key: MultiKey, value: string) => void;
   setSearch: (q: string) => void;
+  setDateRange: (from: string | null, to: string | null) => void;
   clearFilters: () => void;
 }
 
@@ -48,5 +49,6 @@ export const useFilterStore = create<FilterStore>((set, get) => ({
     }
   },
   setSearch: (q) => set({ searchQuery: q }),
+  setDateRange: (from, to) => set({ dateFrom: from, dateTo: to }),
   clearFilters: () => set(defaultState),
 }));
