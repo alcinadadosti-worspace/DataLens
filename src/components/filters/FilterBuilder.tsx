@@ -287,7 +287,12 @@ const FilterBuilder: React.FC = () => {
                       const masked = applyDateMask(e.target.value);
                       setFromInput(masked);
                       const iso = parseBrInput(masked);
-                      if (iso) filters.setDateRange(iso, filters.dateTo);
+                      if (iso) {
+                        // Se a nova data De for maior que o Até existente, limpa o Até
+                        const newDateTo = filters.dateTo && iso > filters.dateTo ? null : filters.dateTo;
+                        if (newDateTo !== filters.dateTo) setToInput('');
+                        filters.setDateRange(iso, newDateTo);
+                      }
                     }}
                     onBlur={() => {
                       const iso = parseBrInput(fromInput);
@@ -318,7 +323,12 @@ const FilterBuilder: React.FC = () => {
                       const masked = applyDateMask(e.target.value);
                       setToInput(masked);
                       const iso = parseBrInput(masked);
-                      if (iso) filters.setDateRange(filters.dateFrom, iso);
+                      if (iso) {
+                        // Se o novo Até for menor que o De existente, limpa o De
+                        const newDateFrom = filters.dateFrom && iso < filters.dateFrom ? null : filters.dateFrom;
+                        if (newDateFrom !== filters.dateFrom) setFromInput('');
+                        filters.setDateRange(newDateFrom, iso);
+                      }
                     }}
                     onBlur={() => {
                       const iso = parseBrInput(toInput);
