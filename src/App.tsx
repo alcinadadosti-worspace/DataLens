@@ -30,7 +30,7 @@ function App() {
         return parseSpreadsheet(file);
       })
       .then(result => {
-        if (result.orders.length > 0) {
+        if (result.orders.length > 0 && useOrderStore.getState().orders.length === 0) {
           setOrders(result.orders, 'ConsultaPedidos_faf0273d-4e3e-4768-9197-ef3cbcb748bd.xlsx');
           setFilter('cycle', '07/2026');
         }

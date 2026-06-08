@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import Button from '../components/ui/Button';
 import { parseSpreadsheet } from '../parsers/spreadsheetParser';
 import { useOrderStore } from '../store/useOrderStore';
+import { useFilterStore } from '../store/useFilterStore';
 
 interface ImportScreenProps {
   onComplete: () => void;
@@ -20,6 +21,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const setOrders = useOrderStore(s => s.setOrders);
   const clearOrders = useOrderStore(s => s.clearOrders);
+  const clearFilters = useFilterStore(s => s.clearFilters);
 
   async function processFile(f: File) {
     setFile(f);
@@ -41,6 +43,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
       setErrors(result.errors.slice(0, 5));
     }
 
+    clearFilters();
     setOrders(result.orders, f.name);
     setPhase('done');
   }
