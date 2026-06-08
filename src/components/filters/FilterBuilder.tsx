@@ -96,11 +96,13 @@ const FilterBuilder: React.FC = () => {
   }
 
   const hasDateFilter = !!(filters.dateFrom || filters.dateTo);
-  const dateChipLabel = filters.dateFrom && filters.dateTo
-    ? `${isoToBr(filters.dateFrom)} → ${isoToBr(filters.dateTo)}`
-    : filters.dateFrom
-      ? `A partir de ${isoToBr(filters.dateFrom)}`
-      : `Até ${isoToBr(filters.dateTo!)}`;
+  const dateChipLabel = !hasDateFilter
+    ? ''
+    : filters.dateFrom && filters.dateTo
+      ? `${isoToBr(filters.dateFrom)} → ${isoToBr(filters.dateTo)}`
+      : filters.dateFrom
+        ? `A partir de ${isoToBr(filters.dateFrom)}`
+        : `Até ${isoToBr(filters.dateTo!)}`;
 
   const hasAnyFilter = activeChips.length > 0 || hasDateFilter;
 
