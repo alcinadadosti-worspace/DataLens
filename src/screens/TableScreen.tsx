@@ -207,6 +207,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
 
 function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [hoveredDay, setHoveredDay] = useState<string | null>(null);
 
   const metrics = useMemo(() => {
     const eligible = orders.filter(isRevenueEligible);
@@ -277,8 +278,6 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
   const dayEntries = Object.entries(metrics.revenueByDay)
     .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
   const maxDayValue = Math.max(...dayEntries.map(([, v]) => v), 1);
-
-  const [hoveredDay, setHoveredDay] = useState<string | null>(null);
 
   const finalizadosPct = metrics.total > 0 ? (metrics.finalizados / metrics.total) * 100 : 0;
   const canceladosPct = metrics.total > 0 ? (metrics.cancelados / metrics.total) * 100 : 0;

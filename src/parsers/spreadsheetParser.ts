@@ -96,6 +96,25 @@ function parseStr(v: unknown): string {
   return String(v).trim();
 }
 
+function parseDate(v: unknown): string {
+  if (v === null || v === undefined || v === '') return '';
+  // Excel serial number (cellDates: false — numbers are UTC-based serials)
+  if (typeof v === 'number') {
+    // Excel epoch: Jan 0 1900 = serial 0; offset 25569 maps to Unix epoch
+    const epoch = new Date(Math.round((v - 25569) * 86400 * 1000));
+    const d = String(epoch.getUTCDate()).padStart(2, '0');
+    const m = String(epoch.getUTCMonth() + 1).padStart(2, '0');
+    return `${d}/${m}/${epoch.getUTCFullYear()}`;
+  }
+  // JS Date object (cellDates: true — SheetJS uses UTC.Date internally)
+  if (v instanceof Date) {
+    const d = String(v.getUTCDate()).padStart(2, '0');
+    const m = String(v.getUTCMonth() + 1).padStart(2, '0');
+    return `${d}/${m}/${v.getUTCFullYear()}`;
+  }
+  return String(v).trim();
+}
+
 function mapRow(raw: Record<string, unknown>): Order {
   const mapped: Partial<Record<keyof Order, unknown>> = {};
 
@@ -124,10 +143,10 @@ function mapRow(raw: Record<string, unknown>): Order {
     ModeloComercial: parseStr(mapped.ModeloComercial),
     SituacaoComercial: parseStr(mapped.SituacaoComercial),
     DetalheSituacaoComercial: parseStr(mapped.DetalheSituacaoComercial),
-    DataCaptacao: parseStr(mapped.DataCaptacao),
-    DataAprovacao: parseStr(mapped.DataAprovacao),
-    DataAutorizacaoFaturamento: parseStr(mapped.DataAutorizacaoFaturamento),
-    DataEntrega: parseStr(mapped.DataEntrega),
+    DataCaptacao: parseDate(mapped.DataCaptacao),
+    DataAprovacao: parseDate(mapped.DataAprovacao),
+    DataAutorizacaoFaturamento: parseDate(mapped.DataAutorizacaoFaturamento),
+    DataEntrega: parseDate(mapped.DataEntrega),
     CicloMarketing: parseStr(mapped.CicloMarketing),
     DiaDoCiclo: parseStr(mapped.DiaDoCiclo),
     Estrutura: parseStr(mapped.Estrutura),

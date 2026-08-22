@@ -23,16 +23,16 @@ function App() {
 
   useEffect(() => {
     if (hasOrders) return;
-    fetch('/ciclos_6_e_8.xlsx')
+    fetch('/ConsultaPedidos_Unificado.xlsx')
       .then(r => r.blob())
       .then(blob => {
-        const file = new File([blob], 'ciclos_6_e_8.xlsx', { type: blob.type });
+        const file = new File([blob], 'ConsultaPedidos_Unificado.xlsx', { type: blob.type });
         return parseSpreadsheet(file);
       })
       .then(result => {
         if (result.orders.length > 0 && useOrderStore.getState().orders.length === 0) {
-          setOrders(result.orders, 'ciclos_6_e_8.xlsx');
-          useFilterStore.setState({ cycle: ['08/2026'], dateFrom: '2026-06-01', dateTo: '2026-06-06' });
+          setOrders(result.orders, 'ConsultaPedidos_Unificado.xlsx');
+          useFilterStore.setState({ cycle: ['12/2026'], dateFrom: '2026-08-10', dateTo: '2026-08-21' });
         }
       })
       .catch(() => {/* silently skip if sample not available */});
