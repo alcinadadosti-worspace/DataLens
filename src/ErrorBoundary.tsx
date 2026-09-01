@@ -1,4 +1,5 @@
 import React from 'react';
+import GlossyContent from './components/ui/GlossyContent';
 
 interface State { error: Error | null }
 
@@ -36,13 +37,11 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
             {this.state.error.stack}
           </div>
           <button
+            className="glossy-btn"
             onClick={() => this.setState({ error: null })}
-            style={{
-              padding: '10px 24px', borderRadius: 8, border: 'none',
-              background: '#1C1814', color: 'white', cursor: 'pointer', fontSize: 14,
-            }}
+            style={{ borderRadius: 8, fontSize: 14 }}
           >
-            Tentar novamente
+            <GlossyContent>Tentar novamente</GlossyContent>
           </button>
         </div>
       );

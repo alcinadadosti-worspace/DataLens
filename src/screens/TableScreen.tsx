@@ -10,6 +10,7 @@ import {
   SortingState,
 } from '@tanstack/react-table';
 import Button from '../components/ui/Button';
+import GlossyContent from '../components/ui/GlossyContent';
 import TierBadge from '../components/ui/TierBadge';
 import FilterBuilder from '../components/filters/FilterBuilder';
 import { useFilteredOrders } from '../hooks/useAnalytics';
@@ -93,17 +94,13 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
           </div>
         </div>
         <button
+          className="glossy-btn"
           onClick={onClear}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '5px 12px', borderRadius: 8,
-            border: '1px solid #E8E2D6', background: '#FAF7F2',
-            fontSize: 12, color: '#6B6258', cursor: 'pointer',
-            fontWeight: 500,
-          }}
+          style={{ borderRadius: 8, fontSize: 12 }}
         >
-          <i className="ph ph-x" style={{ fontSize: 12 }} />
-          Limpar seleção
+          <GlossyContent compact icon={<i className="ph ph-x" style={{ fontSize: 12 }} />}>
+            Limpar seleção
+          </GlossyContent>
         </button>
       </div>
 

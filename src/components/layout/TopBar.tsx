@@ -3,6 +3,8 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { useFilterStore } from '../../store/useFilterStore';
 import { useOrderStore } from '../../store/useOrderStore';
+import { useAppModeStore } from '../../store/useAppModeStore';
+import GlossyContent from '../ui/GlossyContent';
 
 interface TopBarProps {
   onNavigate: (route: string) => void;
@@ -14,6 +16,7 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
   const fileName = useOrderStore(s => s.fileName);
   const rowCount = useOrderStore(s => s.rowCount);
   const dateRange = useOrderStore(s => s.dateRange);
+  const resetMode = useAppModeStore(s => s.resetMode);
 
   function fmtDate(d: Date | null) {
     if (!d) return '—';
@@ -73,30 +76,24 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
         />
         {searchQuery && (
           <button
+            className="glossy-btn"
             onClick={() => setSearch('')}
             title="Limpar pesquisa"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 30, height: 30, borderRadius: 8, border: '1px solid #E8E2D6',
-              background: 'white', cursor: 'pointer', color: '#6B6258',
-              fontSize: 15, flexShrink: 0,
-              transition: 'background 150ms, color 150ms, border-color 150ms',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#FBE5E9';
-              (e.currentTarget as HTMLButtonElement).style.color = '#B83A3A';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#F0A8B3';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'white';
-              (e.currentTarget as HTMLButtonElement).style.color = '#6B6258';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E2D6';
-            }}
+            style={{ width: 30, height: 30, borderRadius: 8, fontSize: 14, flexShrink: 0 }}
           >
-            <i className="ph ph-x" />
+            <GlossyContent icon={<i className="ph ph-x" />} compact />
           </button>
         )}
       </div>
+
+      <Button
+        variant="secondary"
+        size="sm"
+        icon={<i className="ph ph-arrows-left-right" style={{ fontSize: 14 }} />}
+        onClick={resetMode}
+      >
+        Trocar modo
+      </Button>
 
       <Button
         variant="primary"

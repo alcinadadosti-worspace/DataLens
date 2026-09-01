@@ -1,0 +1,69 @@
+import React from 'react';
+import ChartCard from '../../components/charts/ChartCard';
+import RankingList from '../../components/loja/RankingList';
+import Button from '../../components/ui/Button';
+import { useLojaStore } from '../../store/useLojaStore';
+import { aggregateByName } from '../../analytics/lojaMetrics';
+import { fmtBRLshort } from '../../utils/formatters';
+
+const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
+  const dataset = useLojaStore(s => s.dataset);
+
+  if (!dataset) {
+    return (
+      <div style={{ padding: '80px 32px', textAlign: 'center' }}>
+        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver as categorias.</p>
+        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+      </div>
+    );
+  }
+
+  const categorias = aggregateByName(dataset.gestao);
+  const anomalias = categorias.filter(c => c.descontoPct > 100);
+
+  const items = categorias.map(r => ({
+    label: r.key,
+    value: r.gmv,
+    valueLabel: fmtBRLshort(r.gmv),
+    meta: `${r.descontoPct.toFixed(0)}% desc.`,
+  }));
+
+  return (
+    <div style={{ padding: '32px 32px 64px' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
+        Modo Loja
+      </div>
+      <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 24px' }}>
+        Categorias (gestão estratégica)
+      </h1>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>
+        <ChartCard title="Ranking de categorias" subtitle="Por GMV, com % de desconto sobre a receita">
+          <RankingList items={items} />
+        </ChartCard>
+
+        <ChartCard title="Anomalias" subtitle="Desconto acima da receita líquida">
+          {anomalias.length === 0 ? (
+            <div style={{ color: '#6B6258', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <i className="ph ph-check-circle" style={{ color: '#2E7D5B', fontSize: 18 }} />
+              Nenhuma anomalia de desconto encontrada.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {anomalias.map((a, i) => (
+                <div key={i} style={{ background: '#FBE5E9', border: '1px solid #F0A8B3', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: '#5C0F1A' }}>{a.key}</div>
+                  <div style={{ fontSize: 12, color: '#8A1426', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
+                    Desconto {a.descontoPct.toFixed(0)}% da receita líquida
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ChartCard>
+      </div>
+    </div>
+  );
+};
+
+export default LojaCategoriasScreen;

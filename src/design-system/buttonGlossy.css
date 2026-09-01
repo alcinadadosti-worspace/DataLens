@@ -1,0 +1,147 @@
+/* ---------- Glossy metal button (Uiverse.io by FColombati, adapted) ----------
+   Recolored to the app's own warm-neutral palette: ink shell (#1C1814),
+   ivory-to-warm-taupe brushed surface (#FBF7EE → #D8D0C0), and an
+   ink-to-umber engraved label gradient (#1C1814 → #3D362E) instead of the
+   original's neutral black/silver tones. */
+
+.glossy-btn {
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  position: relative;
+  display: inline-block;
+  background-color: rgba(28, 24, 20, 0.85) !important;
+  background-image: none !important;
+  border: none !important;
+  padding: 0 !important;
+  /* The pressed-in clip-path below always rounds to a full pill/circle —
+     that's baked into the effect. Forcing the same full roundness on the
+     button itself (regardless of whatever border-radius a call site sets)
+     keeps the outer shape and the inner clip in sync, so no dark corner
+     "shadow" gap shows between them on hover. */
+  border-radius: 999px !important;
+  box-shadow:
+    -0.15em -0.15em 0.15em -0.075em rgba(28, 24, 20, 0.25),
+    0.0375em 0.0375em 0.0675em 0 rgba(28, 24, 20, 0.1) !important;
+}
+
+.glossy-btn:disabled,
+.glossy-btn[aria-disabled='true'] {
+  opacity: 0.55 !important;
+  cursor: not-allowed;
+}
+
+.glossy-btn::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  width: calc(100% + 0.3em);
+  height: calc(100% + 0.3em);
+  top: -0.15em;
+  left: -0.15em;
+  border-radius: inherit;
+  background: linear-gradient(-135deg, rgba(28, 24, 20, 0.5), transparent 20%, transparent 100%);
+  filter: blur(0.0125em);
+  opacity: 0.25;
+  mix-blend-mode: multiply;
+}
+
+.glossy-outer {
+  position: relative;
+  z-index: 1;
+  display: block;
+  border-radius: inherit;
+  transition: box-shadow 300ms ease;
+  will-change: box-shadow;
+  box-shadow:
+    0 0.05em 0.05em -0.01em rgba(28, 24, 20, 1),
+    0 0.01em 0.01em -0.01em rgba(28, 24, 20, 0.5),
+    0.15em 0.3em 0.1em -0.01em rgba(28, 24, 20, 0.25);
+}
+
+.glossy-btn:hover .glossy-outer {
+  box-shadow:
+    0 0 0 0 rgba(28, 24, 20, 1),
+    0 0 0 0 rgba(28, 24, 20, 0.5),
+    0 0 0 0 rgba(28, 24, 20, 0.25);
+}
+
+.glossy-inner {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  border-radius: inherit;
+  padding: 1em 1.5em;
+  background-image: linear-gradient(135deg, #FBF7EE 0%, #D8D0C0 100%);
+  transition: box-shadow 300ms ease, clip-path 250ms ease, background-image 250ms ease, transform 250ms ease;
+  will-change: box-shadow, clip-path, background-image, transform;
+  overflow: clip;
+  clip-path: inset(0 0 0 0 round 100em);
+  box-shadow:
+    0 0 0 0 inset rgba(28, 24, 20, 0.1),
+    -0.05em -0.05em 0.05em 0 inset rgba(28, 24, 20, 0.25),
+    0 0 0 0 inset rgba(28, 24, 20, 0.1),
+    0 0 0.05em 0.2em inset rgba(255, 250, 240, 0.35),
+    0.025em 0.05em 0.1em 0 inset rgba(255, 250, 240, 1),
+    0.12em 0.12em 0.12em inset rgba(255, 250, 240, 0.25),
+    -0.075em -0.25em 0.25em 0.1em inset rgba(28, 24, 20, 0.25);
+}
+
+.glossy-btn:hover .glossy-inner {
+  clip-path: inset(clamp(1px, 0.0625em, 2px) clamp(1px, 0.0625em, 2px) clamp(1px, 0.0625em, 2px) clamp(1px, 0.0625em, 2px) round 100em);
+  box-shadow:
+    0.1em 0.15em 0.05em 0 inset rgba(28, 24, 20, 0.75),
+    -0.025em -0.03em 0.05em 0.025em inset rgba(28, 24, 20, 0.5),
+    0.25em 0.25em 0.2em 0 inset rgba(28, 24, 20, 0.5),
+    0 0 0.05em 0.5em inset rgba(255, 250, 240, 0.2),
+    0 0 0 0 inset rgba(255, 250, 240, 1),
+    0.12em 0.12em 0.12em inset rgba(255, 250, 240, 0.25),
+    -0.075em -0.12em 0.2em 0.1em inset rgba(28, 24, 20, 0.25);
+}
+
+.glossy-label {
+  position: relative;
+  z-index: 4;
+  font-family: 'Inter Tight', sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0);
+  background-image: linear-gradient(135deg, #1C1814 0%, #3D362E 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  transition: transform 250ms ease;
+  display: inline-block;
+  will-change: transform;
+  text-shadow: rgba(28, 24, 20, 0.1) 0 0 0.1em;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.glossy-btn:hover .glossy-label {
+  transform: scale(0.975);
+}
+
+.glossy-btn:active .glossy-inner {
+  transform: scale(0.975);
+}
+
+/* Icons sit next to the clipped text span, tinted to match the metal tone */
+.glossy-inner > i {
+  position: relative;
+  z-index: 4;
+  color: rgba(28, 24, 20, 0.82);
+}
+
+/* Selection ring for toggle-style buttons (filters, tabs) so active state
+   stays visible even though the metal skin itself is uniform. */
+.glossy-btn.glossy-active {
+  box-shadow:
+    0 0 0 2px rgba(201, 162, 39, 0.85),
+    -0.15em -0.15em 0.15em -0.075em rgba(28, 24, 20, 0.25),
+    0.0375em 0.0375em 0.0675em 0 rgba(28, 24, 20, 0.1) !important;
+}

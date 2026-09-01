@@ -1,6 +1,7 @@
 import React from 'react';
 import { TIER_STYLES, TIER_DEFINITIONS } from '../../design-system/tierStyles';
 import { useTierMetrics } from '../../hooks/useAnalytics';
+import GlossyContent from '../ui/GlossyContent';
 
 interface SidebarProps {
   active: string;
@@ -42,20 +43,16 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onNavigate, activeTier }) => 
         return (
           <div
             key={item.id}
+            className={`glossy-btn${isActive ? ' glossy-active' : ''}`}
             onClick={() => onNavigate(item.id)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
-              background: isActive ? '#FFFFFF' : 'transparent',
-              color: isActive ? '#1C1814' : '#3D362E',
-              fontWeight: isActive ? 600 : 500, fontSize: 14,
-              boxShadow: isActive ? '0 1px 2px rgba(28,24,20,0.05)' : 'none',
-              border: isActive ? '1px solid #E8E2D6' : '1px solid transparent',
-              transition: 'all 150ms cubic-bezier(0.22, 1, 0.36, 1)',
-            }}
+            style={{ borderRadius: 10, fontSize: 14 }}
           >
-            <i className={`ph ${isActive ? 'ph-bold' : ''} ${item.icon}`} style={{ fontSize: 18 }} />
-            {item.label}
+            <GlossyContent
+              justify="flex-start"
+              icon={<i className={`ph ${isActive ? 'ph-bold' : ''} ${item.icon}`} style={{ fontSize: 18 }} />}
+            >
+              {item.label}
+            </GlossyContent>
           </div>
         );
       })}
@@ -75,28 +72,29 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onNavigate, activeTier }) => 
         return (
           <div
             key={t.id}
+            className={`glossy-btn${isActive ? ' glossy-active' : ''}`}
             onClick={() => onNavigate(`detail-${t.id}`)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-              background: isActive ? '#FFFFFF' : 'transparent',
-              border: isActive ? '1px solid #E8E2D6' : '1px solid transparent',
-              color: '#3D362E', fontSize: 13, fontWeight: isActive ? 600 : 500,
-              transition: 'all 150ms cubic-bezier(0.22, 1, 0.36, 1)',
-            }}
+            style={{ borderRadius: 10, fontSize: 13 }}
           >
-            <span style={{
-              width: 10, height: 10, borderRadius: '50%',
-              background: style.grad,
-              boxShadow: t.id === 'diamante' ? '0 0 6px rgba(107,125,217,0.5)' : 'none',
-            }} />
-            <span style={{ flex: 1 }}>{t.name}</span>
-            <span style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 10, color: '#9B9287',
-            }}>
-              {metrics ? metrics.resellerCount : 0}
-            </span>
+            <GlossyContent
+              compact
+              justify="flex-start"
+              icon={
+                <span style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: style.grad,
+                  boxShadow: t.id === 'diamante' ? '0 0 6px rgba(107,125,217,0.5)' : 'none',
+                  flexShrink: 0,
+                }} />
+              }
+              trailing={
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'rgba(45,45,45,0.6)', marginLeft: 'auto' }}>
+                  {metrics ? metrics.resellerCount : 0}
+                </span>
+              }
+            >
+              {t.name}
+            </GlossyContent>
           </div>
         );
       })}

@@ -1,4 +1,5 @@
 import React from 'react';
+import GlossyContent from './GlossyContent';
 
 interface FilterChipProps {
   column: string;
@@ -23,22 +24,11 @@ const FilterChip: React.FC<FilterChipProps> = ({ column, op, value, onRemove }) 
       {op && <span style={{ color: '#9B9287', fontSize: 11 }}>{op}</span>}
       <span style={{ fontWeight: 600 }}>{value}</span>
       <span
+        className="glossy-btn"
         onClick={onRemove}
-        style={{
-          width: 18,
-          height: 18,
-          borderRadius: '50%',
-          background: '#F2EEE6',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          color: '#6B6258',
-          fontSize: 12,
-          lineHeight: '1',
-        }}
+        style={{ width: 18, height: 18, borderRadius: '50%', fontSize: 11 }}
       >
-        ×
+        <GlossyContent compact icon={<span style={{ lineHeight: 1, color: 'rgba(45,45,45,0.85)' }}>×</span>} />
       </span>
     </span>
   );

@@ -9,6 +9,7 @@ import { parseBRDate } from '../utils/dateUtils';
 import { fmtBRLshort, fmtNumber } from '../utils/formatters';
 import ChartCard from '../components/charts/ChartCard';
 import Button from '../components/ui/Button';
+import GlossyContent from '../components/ui/GlossyContent';
 import { Order } from '../types/order';
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -687,20 +688,14 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           </p>
         </div>
         <button
+          className="glossy-btn"
           onClick={handleExportPDF}
           disabled={exporting}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-            border: '1px solid #E8E2D6',
-            background: exporting ? '#F2EEE6' : '#1C1814',
-            color: exporting ? '#9B9287' : 'white',
-            cursor: exporting ? 'default' : 'pointer',
-            transition: 'all 150ms',
-          }}
+          style={{ borderRadius: 10, fontSize: 13 }}
         >
-          <i className={`ph ph-${exporting ? 'spinner' : 'file-pdf'}`} style={{ fontSize: 16 }} />
-          {exporting ? 'Gerando PDF…' : 'Exportar Relatório'}
+          <GlossyContent icon={<i className={`ph ph-${exporting ? 'spinner' : 'file-pdf'}`} style={{ fontSize: 16 }} />}>
+            {exporting ? 'Gerando PDF…' : 'Exportar Relatório'}
+          </GlossyContent>
         </button>
       </div>
 
@@ -744,7 +739,9 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       {sectionLabel('Faturamento Semanal')}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10, gap: 4 }}>
         {COMP_WINDOW_OPTIONS.map(w => (
-          <button key={w} onClick={() => setWeekWindow(w)} style={pillBtn(weekWindow === w)}>{w} semanas</button>
+          <button key={w} className={`glossy-btn${weekWindow === w ? ' glossy-active' : ''}`} onClick={() => setWeekWindow(w)} style={pillBtn(weekWindow === w)}>
+            <GlossyContent compact>{w} semanas</GlossyContent>
+          </button>
         ))}
       </div>
       <ChartCard title="Faturamento semanal" subtitle={`${visibleWeeks.length} semanas`}>
@@ -840,8 +837,8 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {availableCycles.map(c => (
-                <button key={c} onClick={() => setCicloA(c)} style={pillBtn(cicloA === c, COLOR_A)}>
-                  {c}
+                <button key={c} className={`glossy-btn${cicloA === c ? ' glossy-active' : ''}`} onClick={() => setCicloA(c)} style={pillBtn(cicloA === c, COLOR_A)}>
+                  <GlossyContent compact>{c}</GlossyContent>
                 </button>
               ))}
             </div>
@@ -860,8 +857,8 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {availableCycles.map(c => (
-                <button key={c} onClick={() => setCicloB(cicloB === c ? '' : c)} style={pillBtn(cicloB === c, COLOR_B)}>
-                  {c}
+                <button key={c} className={`glossy-btn${cicloB === c ? ' glossy-active' : ''}`} onClick={() => setCicloB(cicloB === c ? '' : c)} style={pillBtn(cicloB === c, COLOR_B)}>
+                  <GlossyContent compact>{c}</GlossyContent>
                 </button>
               ))}
             </div>
@@ -880,14 +877,13 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {METRICS.map(m => (
-                <button key={m.key} onClick={() => setCompMetric(m.key)} style={{
-                  padding: '5px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500,
-                  border: `1px solid ${compMetric === m.key ? m.color : '#E8E2D6'}`,
-                  background: compMetric === m.key ? m.color : 'white',
-                  color: compMetric === m.key ? 'white' : '#3D362E',
-                  cursor: 'pointer', transition: 'all 150ms',
-                }}>
-                  {m.label}
+                <button
+                  key={m.key}
+                  className={`glossy-btn${compMetric === m.key ? ' glossy-active' : ''}`}
+                  onClick={() => setCompMetric(m.key)}
+                  style={{ borderRadius: 7, fontSize: 12 }}
+                >
+                  <GlossyContent compact>{m.label}</GlossyContent>
                 </button>
               ))}
             </div>
@@ -1158,20 +1154,21 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {METRICS.map(m => (
-            <button key={m.key} onClick={() => setActiveMetric(m.key)} style={{
-              padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-              border: `1px solid ${activeMetric === m.key ? m.color : '#E8E2D6'}`,
-              background: activeMetric === m.key ? m.color : 'white',
-              color: activeMetric === m.key ? 'white' : '#3D362E',
-              cursor: 'pointer', transition: 'all 150ms',
-            }}>
-              {m.label}
+            <button
+              key={m.key}
+              className={`glossy-btn${activeMetric === m.key ? ' glossy-active' : ''}`}
+              onClick={() => setActiveMetric(m.key)}
+              style={{ borderRadius: 8, fontSize: 13 }}
+            >
+              <GlossyContent compact>{m.label}</GlossyContent>
             </button>
           ))}
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
           {COMP_WINDOW_OPTIONS.map(w => (
-            <button key={w} onClick={() => setEvolWindow(w)} style={pillBtn(evolWindow === w)}>{w} semanas</button>
+            <button key={w} className={`glossy-btn${evolWindow === w ? ' glossy-active' : ''}`} onClick={() => setEvolWindow(w)} style={pillBtn(evolWindow === w)}>
+              <GlossyContent compact>{w} semanas</GlossyContent>
+            </button>
           ))}
         </div>
       </div>

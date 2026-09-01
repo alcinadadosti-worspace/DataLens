@@ -9,6 +9,7 @@ import TierPieChart from '../components/charts/TierPieChart';
 import DailyCycleChart from '../components/charts/DailyCycleChart';
 import KpiCard from '../components/ui/KpiCard';
 import Button from '../components/ui/Button';
+import GlossyContent from '../components/ui/GlossyContent';
 
 interface DistribuicaoScreenProps {
   onNavigate: (route: string) => void;
@@ -126,29 +127,23 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 11, color: '#9B9287' }}>Ciclo:</span>
             <button
+              className={`glossy-btn${!filterCycle ? ' glossy-active' : ''}`}
               onClick={() => setFilter('cycle', null)}
-              style={{
-                padding: '3px 10px', borderRadius: 6, border: '1px solid',
-                fontSize: 11, cursor: 'pointer', fontWeight: !filterCycle ? 700 : 400,
-                borderColor: !filterCycle ? '#C9A227' : '#D8D0C0',
-                background: !filterCycle ? '#FFF8E6' : 'white',
-                color: !filterCycle ? '#C9A227' : '#3D362E',
-              }}
-            >Todos</button>
+              style={{ borderRadius: 6, fontSize: 11 }}
+            >
+              <GlossyContent compact>Todos</GlossyContent>
+            </button>
             {availableCycles.map(cycle => {
               const active = filterCycle?.includes(cycle) ?? false;
               return (
                 <button
                   key={cycle}
+                  className={`glossy-btn${active ? ' glossy-active' : ''}`}
                   onClick={() => setFilter('cycle', active ? null : cycle)}
-                  style={{
-                    padding: '3px 10px', borderRadius: 6, border: '1px solid',
-                    fontSize: 11, cursor: 'pointer', fontWeight: active ? 700 : 400,
-                    borderColor: active ? '#C9A227' : '#D8D0C0',
-                    background: active ? '#FFF8E6' : 'white',
-                    color: active ? '#C9A227' : '#3D362E',
-                  }}
-                >{cycle}</button>
+                  style={{ borderRadius: 6, fontSize: 11 }}
+                >
+                  <GlossyContent compact>{cycle}</GlossyContent>
+                </button>
               );
             })}
           </div>
@@ -163,24 +158,20 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
             return (
               <button
                 key={t.tierId}
+                className={`glossy-btn${active ? ' glossy-active' : ''}`}
                 onClick={() => toggleTier(t.tierId)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '3px 10px', borderRadius: 6, border: '1px solid',
-                  fontSize: 11, cursor: 'pointer',
-                  borderColor: active ? (style?.accent ?? '#C9A227') : '#D8D0C0',
-                  background: active ? `${style?.accent ?? '#C9A227'}18` : 'white',
-                  color: active ? (style?.accent ?? '#C9A227') : '#9B9287',
-                  fontWeight: active ? 600 : 400,
-                  transition: 'all 150ms',
-                }}
+                style={{ borderRadius: 6, fontSize: 11 }}
               >
-                <span style={{
-                  width: 6, height: 6, borderRadius: 1,
-                  background: active ? (style?.accent ?? '#C9A227') : '#D8D0C0',
-                  flexShrink: 0,
-                }} />
-                {t.label}
+                <GlossyContent
+                  compact
+                  icon={<span style={{
+                    width: 6, height: 6, borderRadius: 1,
+                    background: style?.accent ?? '#C9A227',
+                    flexShrink: 0,
+                  }} />}
+                >
+                  {t.label}
+                </GlossyContent>
               </button>
             );
           })}
@@ -189,14 +180,11 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
         {/* Clear button */}
         {hasActiveFilters && (
           <button
+            className="glossy-btn"
             onClick={() => { setFilter('cycle', null); setSelectedTiers(TIER_IDS_CHART); }}
-            style={{
-              marginLeft: 'auto', padding: '3px 10px', borderRadius: 6,
-              border: '1px solid #D8D0C0', fontSize: 11, cursor: 'pointer',
-              background: 'white', color: '#6B6258',
-            }}
+            style={{ marginLeft: 'auto', borderRadius: 6, fontSize: 11 }}
           >
-            Limpar
+            <GlossyContent compact>Limpar</GlossyContent>
           </button>
         )}
       </div>

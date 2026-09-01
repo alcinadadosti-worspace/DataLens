@@ -3,6 +3,7 @@ import FilterChip from '../ui/FilterChip';
 import { useFilterStore } from '../../store/useFilterStore';
 import { useOrderStore } from '../../store/useOrderStore';
 import { TIER_DEFINITIONS } from '../../design-system/tierStyles';
+import GlossyContent from '../ui/GlossyContent';
 
 type MultiKey = 'cycle' | 'supervisor' | 'structure' | 'city' | 'state' | 'modeloComercial' | 'meioCaptacao' | 'situacaoComercial' | 'tier';
 
@@ -162,29 +163,21 @@ const FilterBuilder: React.FC = () => {
 
       {hasAnyFilter && (
         <span
+          className="glossy-btn"
           onClick={() => filters.clearFilters()}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '6px 12px', borderRadius: 999,
-            background: 'transparent', border: '1px dashed #D8D0C0',
-            fontSize: 12, color: '#9B9287', cursor: 'pointer',
-          }}
+          style={{ borderRadius: 999, fontSize: 12 }}
         >
-          <i className="ph ph-x" style={{ fontSize: 11 }} /> Limpar
+          <GlossyContent compact icon={<i className="ph ph-x" style={{ fontSize: 11 }} />}>Limpar</GlossyContent>
         </span>
       )}
 
       {/* Add filter button */}
       <span
+        className="glossy-btn"
         onClick={() => { setOpen(o => !o); setActiveCol(null); setSearch(''); }}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '6px 14px', borderRadius: 999,
-          background: 'transparent', border: '1px dashed #D8D0C0',
-          fontSize: 13, color: '#6B6258', cursor: 'pointer',
-        }}
+        style={{ borderRadius: 999, fontSize: 13 }}
       >
-        <i className="ph ph-plus" style={{ fontSize: 12 }} /> filtro
+        <GlossyContent compact icon={<i className="ph ph-plus" style={{ fontSize: 12 }} />}>filtro</GlossyContent>
       </span>
 
       {/* Dropdown */}
@@ -208,26 +201,24 @@ const FilterBuilder: React.FC = () => {
 
             {/* Date range entry */}
             <div
+              className={`glossy-btn${activeColIsDate ? ' glossy-active' : ''}`}
               onClick={() => { setActiveCol('date'); setSearch(''); }}
-              style={{
-                padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: activeColIsDate ? '#F2EEE6' : 'transparent',
-                fontWeight: activeColIsDate ? 600 : 400,
-                color: activeColIsDate ? '#1C1814' : '#3D362E',
-              }}
-              onMouseEnter={e => { if (!activeColIsDate) e.currentTarget.style.background = '#FAF7F2'; }}
-              onMouseLeave={e => { if (!activeColIsDate) e.currentTarget.style.background = 'transparent'; }}
+              style={{ fontSize: 13 }}
             >
-              <span>Período</span>
-              {hasDateFilter
-                ? <span style={{
-                    fontSize: 10, fontWeight: 700,
-                    background: '#C9A227', color: 'white',
-                    borderRadius: 999, padding: '1px 6px',
-                  }}>✓</span>
-                : <i className="ph ph-calendar-blank" style={{ fontSize: 13, color: '#9B9287' }} />
-              }
+              <GlossyContent
+                compact
+                justify="flex-start"
+                trailing={hasDateFilter
+                  ? <span style={{
+                      fontSize: 10, fontWeight: 700, marginLeft: 'auto',
+                      background: '#C9A227', color: 'white',
+                      borderRadius: 999, padding: '1px 6px',
+                    }}>✓</span>
+                  : <i className="ph ph-calendar-blank" style={{ fontSize: 13, color: 'rgba(45,45,45,0.6)', marginLeft: 'auto' }} />
+                }
+              >
+                Período
+              </GlossyContent>
             </div>
 
             {columns.map(col => {
@@ -236,28 +227,26 @@ const FilterBuilder: React.FC = () => {
               return (
                 <div
                   key={col.id}
+                  className={`glossy-btn${isActive ? ' glossy-active' : ''}`}
                   onClick={() => openCol(col)}
-                  style={{
-                    padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    background: isActive ? '#F2EEE6' : 'transparent',
-                    fontWeight: isActive ? 600 : 400,
-                    color: isActive ? '#1C1814' : '#3D362E',
-                  }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#FAF7F2'; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                  style={{ fontSize: 13 }}
                 >
-                  <span>{col.label}</span>
-                  {selected > 0
-                    ? <span style={{
-                        fontSize: 10, fontWeight: 700,
-                        background: '#C9A227', color: 'white',
-                        borderRadius: 999, padding: '1px 6px', minWidth: 16, textAlign: 'center',
-                      }}>{selected}</span>
-                    : <span style={{ fontSize: 11, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}>
-                        {col.options.length}
-                      </span>
-                  }
+                  <GlossyContent
+                    compact
+                    justify="flex-start"
+                    trailing={selected > 0
+                      ? <span style={{
+                          fontSize: 10, fontWeight: 700, marginLeft: 'auto',
+                          background: '#C9A227', color: 'white',
+                          borderRadius: 999, padding: '1px 6px', minWidth: 16, textAlign: 'center',
+                        }}>{selected}</span>
+                      : <span style={{ fontSize: 11, color: 'rgba(45,45,45,0.55)', fontFamily: 'JetBrains Mono, monospace', marginLeft: 'auto' }}>
+                          {col.options.length}
+                        </span>
+                    }
+                  >
+                    {col.label}
+                  </GlossyContent>
                 </div>
               );
             })}
@@ -348,13 +337,11 @@ const FilterBuilder: React.FC = () => {
 
                 {hasDateFilter && (
                   <span
+                    className="glossy-btn"
                     onClick={() => { filters.setDateRange(null, null); setFromInput(''); setToInput(''); }}
-                    style={{
-                      fontSize: 12, color: '#9B9287', cursor: 'pointer',
-                      textDecoration: 'underline', textAlign: 'right',
-                    }}
+                    style={{ fontSize: 12, borderRadius: 6, alignSelf: 'flex-end' }}
                   >
-                    Limpar período
+                    <GlossyContent compact>Limpar período</GlossyContent>
                   </span>
                 )}
               </div>
@@ -394,26 +381,27 @@ const FilterBuilder: React.FC = () => {
                   return (
                     <div
                       key={opt.value}
+                      className={`glossy-btn${checked ? ' glossy-active' : ''}`}
                       onClick={() => filters.toggleFilterValue(activeColDef.id, opt.value)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                        background: checked ? '#FFF8E6' : 'transparent',
-                        color: checked ? '#1C1814' : '#3D362E',
-                      }}
-                      onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#FAF7F2'; }}
-                      onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent'; }}
+                      style={{ fontSize: 13 }}
                     >
-                      <span style={{
-                        width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                        border: `2px solid ${checked ? '#C9A227' : '#D8D0C0'}`,
-                        background: checked ? '#C9A227' : 'white',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 120ms',
-                      }}>
-                        {checked && <i className="ph ph-check" style={{ fontSize: 10, color: 'white' }} />}
-                      </span>
-                      <span style={{ fontWeight: checked ? 600 : 400 }}>{opt.label}</span>
+                      <GlossyContent
+                        compact
+                        justify="flex-start"
+                        icon={
+                          <span style={{
+                            width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                            border: `2px solid ${checked ? '#C9A227' : '#D8D0C0'}`,
+                            background: checked ? '#C9A227' : 'white',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 120ms',
+                          }}>
+                            {checked && <i className="ph ph-check" style={{ fontSize: 10, color: 'white' }} />}
+                          </span>
+                        }
+                      >
+                        {opt.label}
+                      </GlossyContent>
                     </div>
                   );
                 })}
@@ -430,10 +418,11 @@ const FilterBuilder: React.FC = () => {
                     {currentVals.length} selecionado{currentVals.length > 1 ? 's' : ''}
                   </span>
                   <span
+                    className="glossy-btn"
                     onClick={() => filters.setFilter(activeColDef.id, null)}
-                    style={{ color: '#9B9287', cursor: 'pointer', textDecoration: 'underline' }}
+                    style={{ fontSize: 12, borderRadius: 6 }}
                   >
-                    Limpar
+                    <GlossyContent compact>Limpar</GlossyContent>
                   </span>
                 </div>
               )}
