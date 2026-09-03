@@ -1,4 +1,4 @@
-import { AggregatedRow, LojaDataset, LojaMetricRow } from '../types/loja';
+import { AbcRow, AggregatedRow, LojaDataset, LojaMetricRow, PedidoHistoricoRow, VendaHoraRow } from '../types/loja';
 
 const SEM_IDENTIFICACAO = 'SEM IDENTIFICAÇÃO';
 
@@ -167,4 +167,214 @@ export function crossInsights(dataset: LojaDataset): string[] {
   }
 
   return insights;
+}
+
+// --- Curva ABC de produtos ---
+
+export interface AbcAggregatedItem {
+  codigo: string;
+  descricao: string;
+  quantidade: number;
+  faturamento: number;
+  lucro: number;
+  margem: number;
+  participacaoPct: number;
+  participacaoAcumuladaPct: number;
+  classe: 'A' | 'B' | 'C';
+  isComercial: boolean;
+  /** true quando a classificação veio de um override manual do usuário, não da heurística. */
+  isOverridden: boolean;
+}
+
+/** codigo do SKU -> comercial (true) ou não-comercial (false), definido manualmente pelo usuário. */
+export type AbcOverrides = Record<string, boolean>;
+
+/** Sacolas, caixas de presente e amostras (sufixo PRM, ou preço unitário < ~R$3) — sinalizar à parte. */
+export function isItemNaoComercial(descricao: string, faturamento: number, quantidade: number): boolean {
+  const upper = descricao.toUpperCase();
+  if (/\bPRM\b/.test(upper) || upper.includes('AMOSTRA') || upper.includes('SACOLA') || upper.includes('CAIXA PRESENTE')) return true;
+  const precoUnitario = quantidade > 0 ? faturamento / quantidade : 0;
+  return precoUnitario > 0 && precoUnitario < 3;
+}
+
+/** Override manual, quando existir para o SKU, sempre vence a heurística de texto/preço. */
+function resolveIsComercial(codigo: string, descricao: string, faturamento: number, quantidade: number, overrides: AbcOverrides): boolean {
+  if (codigo in overrides) return overrides[codigo];
+  return !isItemNaoComercial(descricao, faturamento, quantidade);
+}
+
+function classifyAbcList(rows: AbcRow[], overrides: AbcOverrides): AbcAggregatedItem[] {
+  const groups = new Map<string, { codigo: string; descricao: string; quantidade: number; faturamento: number; custo: number; lucro: number }>();
+  for (const r of rows) {
+    const key = r.codigo;
+    let g = groups.get(key);
+    if (!g) {
+      g = { codigo: r.codigo, descricao: r.descricao, quantidade: 0, faturamento: 0, custo: 0, lucro: 0 };
+      groups.set(key, g);
+    }
+    g.quantidade += r.quantidade;
+    g.faturamento += r.faturamento;
+    g.custo += r.custo;
+    g.lucro += r.lucro;
+  }
+
+  const list = Array.from(groups.values()).sort((a, b) => b.faturamento - a.faturamento);
+  const total = list.reduce((s, g) => s + g.faturamento, 0);
+  let acumulado = 0;
+
+  return list.map(g => {
+    acumulado += g.faturamento;
+    const participacaoAcumuladaPct = total > 0 ? (acumulado / total) * 100 : 0;
+    const classe: 'A' | 'B' | 'C' = participacaoAcumuladaPct <= 80 ? 'A' : participacaoAcumuladaPct <= 95 ? 'B' : 'C';
+    return {
+      codigo: g.codigo,
+      descricao: g.descricao,
+      quantidade: g.quantidade,
+      faturamento: g.faturamento,
+      lucro: g.lucro,
+      margem: g.faturamento > 0 ? (g.lucro / g.faturamento) * 100 : 0,
+      participacaoPct: total > 0 ? (g.faturamento / total) * 100 : 0,
+      participacaoAcumuladaPct,
+      classe,
+      isComercial: resolveIsComercial(g.codigo, g.descricao, g.faturamento, g.quantidade, overrides),
+      isOverridden: g.codigo in overrides,
+    };
+  });
+}
+
+/** Curva ABC da rede toda. Passe `comercialOnly` para excluir sacolas/amostras/PRM (ou marcados como não-comercial) do ranking. */
+export function classifyAbc(rows: AbcRow[], comercialOnly = false, overrides: AbcOverrides = {}): AbcAggregatedItem[] {
+  const source = comercialOnly
+    ? rows.filter(r => resolveIsComercial(r.codigo, r.descricao, r.faturamento, r.quantidade, overrides))
+    : rows;
+  return classifyAbcList(source, overrides);
+}
+
+/** Curva ABC por loja — só útil quando o arquivo veio aberto por loja (Quebra2 preenchida). */
+export function classifyAbcByLoja(rows: AbcRow[], overrides: AbcOverrides = {}): Map<string, AbcAggregatedItem[]> {
+  const byLoja = new Map<string, AbcRow[]>();
+  for (const r of rows) {
+    if (!r.lojaNome) continue;
+    const key = r.lojaNome;
+    if (!byLoja.has(key)) byLoja.set(key, []);
+    byLoja.get(key)!.push(r);
+  }
+  const result = new Map<string, AbcAggregatedItem[]>();
+  for (const [loja, lojaRows] of byLoja) {
+    result.set(loja, classifyAbcList(lojaRows, overrides));
+  }
+  return result;
+}
+
+// --- Venda por hora ---
+
+export interface HourlyBucket {
+  faixaHoraria: string;
+  receitaLiquida: number;
+  qtdBoletos: number;
+  participacaoPct: number;
+}
+
+export function hourlyDistribution(rows: VendaHoraRow[]): HourlyBucket[] {
+  const groups = new Map<string, HourlyBucket>();
+  for (const r of rows) {
+    const key = r.faixaHoraria;
+    let g = groups.get(key);
+    if (!g) {
+      g = { faixaHoraria: key, receitaLiquida: 0, qtdBoletos: 0, participacaoPct: 0 };
+      groups.set(key, g);
+    }
+    g.receitaLiquida += r.receitaLiquida;
+    g.qtdBoletos += r.qtdBoletos;
+  }
+  const list = Array.from(groups.values()).sort((a, b) => a.faixaHoraria.localeCompare(b.faixaHoraria));
+  const total = list.reduce((s, g) => s + g.receitaLiquida, 0);
+  for (const g of list) g.participacaoPct = total > 0 ? (g.receitaLiquida / total) * 100 : 0;
+  return list;
+}
+
+// --- Gestão de pedidos ---
+
+export interface PedidoRateRow {
+  key: string;
+  volumeSugestao: number;
+  volumeColocado: number;
+  volumeFaturado: number;
+  /** Volume Colocado / Volume Sugestão — quanto do sugerido foi de fato pedido. */
+  taxaColocacaoPct: number;
+  /** Volume Faturado / Volume Colocado — quanto do pedido o fornecedor entregou. */
+  taxaAtendimentoPct: number;
+}
+
+/**
+ * Agrega o histórico de colocação por loja ou por categoria e calcula as duas taxas.
+ * O "Giro" do arquivo de Visão Geral não é recalculável a partir daqui — não tentar reproduzi-lo.
+ */
+export function pedidosRates(rows: PedidoHistoricoRow[], groupBy: 'loja' | 'categoria'): PedidoRateRow[] {
+  const groups = new Map<string, { volumeSugestao: number; volumeColocado: number; volumeFaturado: number }>();
+  for (const r of rows) {
+    const key = groupBy === 'loja' ? r.lojaNome : (r.categoria ?? 'Sem categoria');
+    let g = groups.get(key);
+    if (!g) {
+      g = { volumeSugestao: 0, volumeColocado: 0, volumeFaturado: 0 };
+      groups.set(key, g);
+    }
+    g.volumeSugestao += r.volumeSugestao;
+    g.volumeColocado += r.volumeColocado;
+    g.volumeFaturado += r.volumeFaturado;
+  }
+
+  return Array.from(groups.entries()).map(([key, g]) => ({
+    key,
+    ...g,
+    taxaColocacaoPct: g.volumeSugestao > 0 ? (g.volumeColocado / g.volumeSugestao) * 100 : 0,
+    taxaAtendimentoPct: g.volumeColocado > 0 ? (g.volumeFaturado / g.volumeColocado) * 100 : 0,
+  })).sort((a, b) => b.volumeColocado - a.volumeColocado);
+}
+
+// --- Validações cruzadas dos arquivos opcionais ---
+
+export function optionalConsistencyWarnings(dataset: LojaDataset): string[] {
+  const warnings: string[] = [];
+  const TOL = 1; // % de tolerância
+
+  if (dataset.abc && dataset.vendaPorHora) {
+    const fatAbc = dataset.abc.reduce((s, r) => s + r.faturamento, 0);
+    const receitaHora = dataset.vendaPorHora.reduce((s, r) => s + r.receitaLiquida, 0);
+    if (fatAbc > 0) {
+      const diffPct = Math.abs(fatAbc - receitaHora) / fatAbc * 100;
+      if (diffPct > TOL) {
+        warnings.push(`Faturamento da Curva ABC (${fatAbc.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) diverge ${diffPct.toFixed(1)}% da receita líquida de Venda por Hora — confira se os dois arquivos cobrem o mesmo período.`);
+      }
+    }
+  }
+
+  if (dataset.pedidosHistorico && dataset.pedidosVisaoGeral) {
+    const hist = dataset.pedidosHistorico.reduce((acc, r) => ({
+      sugestao: acc.sugestao + r.volumeSugestao,
+      colocado: acc.colocado + r.volumeColocado,
+      faturado: acc.faturado + r.volumeFaturado,
+    }), { sugestao: 0, colocado: 0, faturado: 0 });
+    const geral = dataset.pedidosVisaoGeral.reduce((acc, r) => ({
+      sugestao: acc.sugestao + r.metaSugestao,
+      colocado: acc.colocado + r.volumeColocado,
+      faturado: acc.faturado + r.volumeFaturado,
+    }), { sugestao: 0, colocado: 0, faturado: 0 });
+
+    const checks: [string, number, number][] = [
+      ['sugestão', hist.sugestao, geral.sugestao],
+      ['colocado', hist.colocado, geral.colocado],
+      ['faturado', hist.faturado, geral.faturado],
+    ];
+    for (const [label, a, b] of checks) {
+      if (b > 0) {
+        const diffPct = Math.abs(a - b) / b * 100;
+        if (diffPct > TOL) {
+          warnings.push(`Volume "${label}" somado do histórico de colocação (${a.toLocaleString('pt-BR')}) diverge ${diffPct.toFixed(1)}% do total da Visão Geral do Ciclo (${b.toLocaleString('pt-BR')}).`);
+        }
+      }
+    }
+  }
+
+  return warnings;
 }

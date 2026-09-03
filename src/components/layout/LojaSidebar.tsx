@@ -11,7 +11,10 @@ const navItems = [
   { id: 'loja-consultores', label: 'Consultores',        icon: 'ph-users' },
   { id: 'loja-canais',      label: 'Canais & Formas',    icon: 'ph-share-network' },
   { id: 'loja-categorias',  label: 'Categorias',         icon: 'ph-tag' },
+  { id: 'loja-abc',         label: 'Curva ABC',          icon: 'ph-chart-bar' },
+  { id: 'loja-pedidos',     label: 'Gestão de pedidos',  icon: 'ph-package' },
   { id: 'loja-periodo',     label: 'Período',            icon: 'ph-calendar-dots' },
+  { id: 'loja-horario',     label: 'Venda por hora',     icon: 'ph-clock' },
   { id: 'loja-import',      label: 'Importar',           icon: 'ph-upload-simple' },
 ];
 

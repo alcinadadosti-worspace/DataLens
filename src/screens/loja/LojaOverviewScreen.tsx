@@ -4,8 +4,8 @@ import ChartCard from '../../components/charts/ChartCard';
 import RankingList from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
-import { computeOverallKPIs, rankLojas, consistencyCheck, crossInsights } from '../../analytics/lojaMetrics';
-import { fmtBRL, fmtBRLshort, fmtNumber } from '../../utils/formatters';
+import { computeOverallKPIs, rankLojas, consistencyCheck, crossInsights, optionalConsistencyWarnings } from '../../analytics/lojaMetrics';
+import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
 
 interface LojaOverviewScreenProps {
   onNavigate: (route: string) => void;
@@ -35,6 +35,8 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
   const ranking = rankLojas(dataset.lojas);
   const consistency = consistencyCheck(dataset);
   const insights = crossInsights(dataset);
+  const optionalWarnings = optionalConsistencyWarnings(dataset);
+  const resumoCp = dataset.resumoPerformance?.cp?.[0];
 
   const rankingItems = ranking.map(r => ({
     label: r.key,
@@ -66,6 +68,34 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
             : `Divergência de ${consistency.maxDiffPct.toFixed(1)}% entre cortes`}
         </div>
       </div>
+
+      {resumoCp && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginTop: 20 }}>
+          {resumoCp.vsMetaPEFPct !== null && (
+            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vs. Meta PEF</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: resumoCp.vsMetaPEFPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(resumoCp.vsMetaPEFPct)}</div>
+            </div>
+          )}
+          {resumoCp.vsAnoAnteriorPct !== null && (
+            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vs. Ano anterior</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: resumoCp.vsAnoAnteriorPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(resumoCp.vsAnoAnteriorPct)}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {optionalWarnings.length > 0 && (
+        <div style={{ background: '#FBF3D0', border: '1px solid #E8C547', borderRadius: 10, padding: '10px 16px', marginTop: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#5C4500', marginBottom: 6 }}>
+            {optionalWarnings.length} divergência(s) entre arquivos opcionais
+          </div>
+          {optionalWarnings.map((w, i) => (
+            <div key={i} style={{ fontSize: 11, color: '#5C4500', marginTop: 4 }}>{w}</div>
+          ))}
+        </div>
+      )}
 
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 28 }}>

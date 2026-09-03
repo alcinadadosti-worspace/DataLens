@@ -7,6 +7,9 @@ import LojaConsultoresScreen from '../screens/loja/LojaConsultoresScreen';
 import LojaCanaisFormasScreen from '../screens/loja/LojaCanaisFormasScreen';
 import LojaCategoriasScreen from '../screens/loja/LojaCategoriasScreen';
 import LojaPeriodoScreen from '../screens/loja/LojaPeriodoScreen';
+import LojaAbcScreen from '../screens/loja/LojaAbcScreen';
+import LojaPedidosScreen from '../screens/loja/LojaPedidosScreen';
+import LojaHorarioScreen from '../screens/loja/LojaHorarioScreen';
 import { useLojaStore } from '../store/useLojaStore';
 
 function LojaApp() {
@@ -30,6 +33,12 @@ function LojaApp() {
     screen = <LojaCategoriasScreen onNavigate={navigate} />;
   } else if (route === 'loja-periodo') {
     screen = <LojaPeriodoScreen onNavigate={navigate} />;
+  } else if (route === 'loja-abc') {
+    screen = <LojaAbcScreen onNavigate={navigate} />;
+  } else if (route === 'loja-pedidos') {
+    screen = <LojaPedidosScreen onNavigate={navigate} />;
+  } else if (route === 'loja-horario') {
+    screen = <LojaHorarioScreen onNavigate={navigate} />;
   }
 
   return (

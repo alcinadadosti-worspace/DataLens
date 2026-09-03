@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import Button from '../../components/ui/Button';
 import { parseLojaFiles } from '../../parsers/lojaParser';
 import { useLojaStore } from '../../store/useLojaStore';
-import { LOJA_DIMENSIONS, LOJA_DIMENSION_LABELS, LojaParseResult } from '../../types/loja';
+import { LOJA_DIMENSIONS, LOJA_DIMENSION_LABELS, LOJA_OPTIONAL_FILES, LOJA_OPTIONAL_FILE_LABELS, LojaParseResult } from '../../types/loja';
 
 interface LojaImportScreenProps {
   onComplete: () => void;
@@ -26,9 +26,9 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
   }
 
   function addFiles(incoming: FileList | File[]) {
-    const csvOnly = Array.from(incoming).filter(f => f.name.toLowerCase().endsWith('.csv'));
+    const accepted = Array.from(incoming).filter(f => /\.(csv|xlsx|xls)$/i.test(f.name));
     const merged = [...files];
-    for (const f of csvOnly) {
+    for (const f of accepted) {
       const idx = merged.findIndex(m => m.name === f.name);
       if (idx >= 0) merged[idx] = f; else merged.push(f);
     }
@@ -64,14 +64,16 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
         Importar relatório gerencial
       </h1>
       <p style={{ color: '#6B6258', fontSize: 15, marginTop: 0, marginBottom: 28 }}>
-        Arraste os <strong>7 arquivos CSV</strong> exportados do sistema de gestão (Lojas, Forma, Consultor,
-        Operador, Data, Canal e Gestão). Todos os dados são processados localmente no navegador.
+        Arraste os <strong>7 arquivos CSV obrigatórios</strong> do relatório gerencial (Lojas, Forma, Consultor,
+        Operador, Data, Canal e Gestão) e, se tiver, os arquivos <strong>opcionais</strong> (Curva ABC, Venda por
+        Hora, Gestão de Pedidos, Resumo de Performance, Receita por Canal/Categoria — csv ou xlsx). Todos os
+        dados são processados localmente no navegador.
       </p>
 
       <input
         ref={fileRef}
         type="file"
-        accept=".csv"
+        accept=".csv,.xlsx,.xls"
         multiple
         style={{ display: 'none' }}
         onChange={handleFileInput}
@@ -109,7 +111,7 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
         padding: 20, marginBottom: 20,
       }}>
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 14 }}>
-          Dimensões detectadas
+          Obrigatórios
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {LOJA_DIMENSIONS.map(dim => {
@@ -126,6 +128,40 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#1C1814' }}>{LOJA_DIMENSION_LABELS[dim]}</div>
+                  {det && (
+                    <div style={{ fontSize: 11, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {det.fileName} · {det.rowCount} linhas
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{
+        background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
+        padding: 20, marginBottom: 20,
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 14 }}>
+          Opcionais
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {LOJA_OPTIONAL_FILES.map(f => {
+            const det = result?.detectedOptional[f];
+            return (
+              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  background: det ? '#E0F2E8' : '#F2EEE2',
+                  color: det ? '#2E7D5B' : '#9B9287',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                }}>
+                  <i className={det ? 'ph-bold ph-check' : 'ph ph-circle-dashed'} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1C1814' }}>{LOJA_OPTIONAL_FILE_LABELS[f]}</div>
                   {det && (
                     <div style={{ fontSize: 11, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {det.fileName} · {det.rowCount} linhas

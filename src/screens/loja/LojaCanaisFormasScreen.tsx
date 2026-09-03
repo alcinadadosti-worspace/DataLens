@@ -4,7 +4,7 @@ import RankingList from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { aggregateByName } from '../../analytics/lojaMetrics';
-import { fmtBRLshort, fmtBRL } from '../../utils/formatters';
+import { fmtBRLshort, fmtBRL, fmtPct } from '../../utils/formatters';
 
 const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
@@ -48,6 +48,23 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
           <RankingList items={toItems(formas)} />
         </ChartCard>
       </div>
+
+      {dataset.receitaCanal && dataset.receitaCanal.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <ChartCard title="Receita por canal / UN — ciclo atual vs. anterior" subtitle="Receita_por_Canal_UN.xlsx (GMV + Omni)">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {dataset.receitaCanal.map((c, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{c.canal}</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
+                    {fmtBRLshort(c.receitaAtual)} <span style={{ color: c.variacaoPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(c.variacaoPct)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ChartCard>
+        </div>
+      )}
 
       {topCanal && topForma && (
         <div style={{ marginTop: 20 }}>
