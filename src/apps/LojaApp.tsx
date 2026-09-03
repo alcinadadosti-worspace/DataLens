@@ -4,6 +4,7 @@ import LojaSidebar from '../components/layout/LojaSidebar';
 import LojaImportScreen from '../screens/loja/LojaImportScreen';
 import LojaOverviewScreen from '../screens/loja/LojaOverviewScreen';
 import LojaConsultoresScreen from '../screens/loja/LojaConsultoresScreen';
+import LojaConsultorDetailScreen from '../screens/loja/LojaConsultorDetailScreen';
 import LojaCanaisFormasScreen from '../screens/loja/LojaCanaisFormasScreen';
 import LojaCategoriasScreen from '../screens/loja/LojaCategoriasScreen';
 import LojaPeriodoScreen from '../screens/loja/LojaPeriodoScreen';
@@ -27,6 +28,8 @@ function LojaApp() {
     screen = <LojaOverviewScreen onNavigate={navigate} />;
   } else if (route === 'loja-consultores') {
     screen = <LojaConsultoresScreen onNavigate={navigate} />;
+  } else if (route === 'loja-consultor-detail') {
+    screen = <LojaConsultorDetailScreen onNavigate={navigate} />;
   } else if (route === 'loja-canais') {
     screen = <LojaCanaisFormasScreen onNavigate={navigate} />;
   } else if (route === 'loja-categorias') {

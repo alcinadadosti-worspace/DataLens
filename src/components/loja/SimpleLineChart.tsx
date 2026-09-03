@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { fmtNumber } from '../../utils/formatters';
 
 interface SimpleLineChartProps {
   points: { label: string; value: number }[];
@@ -58,7 +59,7 @@ const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ points, height = 220,
             <line x1={padL} x2={W - padR} y1={yScale(v)} y2={yScale(v)} stroke="#F2EEE6" strokeWidth="1" />
             <text x={padL - 8} y={yScale(v) + 3} textAnchor="end"
               style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, fill: '#9B9287' }}>
-              {v >= 1e6 ? (v / 1e6).toFixed(1).replace('.', ',') + 'M' : v >= 1000 ? Math.round(v / 1e3) + 'k' : Math.round(v)}
+              {fmtNumber(Math.round(v))}
             </text>
           </g>
         ))}

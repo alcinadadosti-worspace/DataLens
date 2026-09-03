@@ -36,7 +36,7 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
   const consistency = consistencyCheck(dataset);
   const insights = crossInsights(dataset);
   const optionalWarnings = optionalConsistencyWarnings(dataset);
-  const resumoCp = dataset.resumoPerformance?.cp?.[0];
+  const receitaTotalIndicador = dataset.resumoPerformance?.cp?.find(i => i.indicador.toUpperCase().includes('RECEITA TOTAL'));
 
   const rankingItems = ranking.map(r => ({
     label: r.key,
@@ -69,18 +69,21 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
         </div>
       </div>
 
-      {resumoCp && (
+      {receitaTotalIndicador && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginTop: 20 }}>
-          {resumoCp.vsMetaPEFPct !== null && (
+          {receitaTotalIndicador.vsMetaPEFPct !== null && (
             <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vs. Meta PEF</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: resumoCp.vsMetaPEFPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(resumoCp.vsMetaPEFPct)}</div>
+              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Receita vs. Meta PEF</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: receitaTotalIndicador.vsMetaPEFPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(receitaTotalIndicador.vsMetaPEFPct)}</div>
+              {receitaTotalIndicador.metaPEF !== null && (
+                <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2 }}>Meta: {fmtBRL(receitaTotalIndicador.metaPEF)}</div>
+              )}
             </div>
           )}
-          {resumoCp.vsAnoAnteriorPct !== null && (
+          {receitaTotalIndicador.vsAnoPassadoPct !== null && (
             <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vs. Ano anterior</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: resumoCp.vsAnoAnteriorPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(resumoCp.vsAnoAnteriorPct)}</div>
+              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Receita vs. Ano anterior</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: receitaTotalIndicador.vsAnoPassadoPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(receitaTotalIndicador.vsAnoPassadoPct)}</div>
             </div>
           )}
         </div>

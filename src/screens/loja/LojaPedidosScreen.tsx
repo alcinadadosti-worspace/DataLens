@@ -3,7 +3,7 @@ import ChartCard from '../../components/charts/ChartCard';
 import RankingList from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
-import { pedidosRates, classifyAbc } from '../../analytics/lojaMetrics';
+import { pedidosRates, classifyAbc, buildLojaNomeLookup } from '../../analytics/lojaMetrics';
 import { fmtNumber, fmtPct } from '../../utils/formatters';
 
 const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
@@ -30,7 +30,8 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
     );
   }
 
-  const rates = pedidosRates(dataset.pedidosHistorico, groupBy);
+  const lojaNomeLookup = buildLojaNomeLookup(dataset.lojas);
+  const rates = pedidosRates(dataset.pedidosHistorico, groupBy, lojaNomeLookup);
   const visaoGeral = dataset.pedidosVisaoGeral?.[0];
   const giroCanais = dataset.pedidosGiroCanais ?? [];
 
@@ -100,16 +101,16 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
           <RankingList items={items} medals={false} />
         </ChartCard>
 
-        <ChartCard title="Giro por canal" subtitle="Geral vs. Loja">
+        <ChartCard title="Giro — Geral vs. Loja" subtitle="Rede toda (todos os canais) vs. só o canal físico">
           {giroCanais.length === 0 ? (
             <div style={{ color: '#9B9287', fontSize: 13 }}>Arquivo de giro por canal não importado.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {giroCanais.map((g, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
-                  <span style={{ fontWeight: 600 }}>{g.canal}</span>
+                  <span style={{ fontWeight: 600 }}>{g.escopo}</span>
                   <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
-                    Geral {fmtPct(g.giroGeral)} · Loja {fmtPct(g.giroLoja)}
+                    Giro {fmtPct(g.giroPct)} · {fmtNumber(g.volumeFaturado)}/{fmtNumber(g.volumePedido)}
                   </span>
                 </div>
               ))}

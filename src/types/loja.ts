@@ -91,11 +91,16 @@ export interface PedidoVisaoGeralRow {
   giro: number;
 }
 
-/** GestaoPedidos_Giro_Pedidos_Canais_por_Ciclo — giro por canal (Geral vs. Loja). */
+/**
+ * GestaoPedidos_Giro_Pedidos_Canais_por_Ciclo — o arquivo real traz uma linha "GERAL" (todos os
+ * canais da rede) e uma linha "LOJA" (só o canal físico), cada uma com seu próprio volume e giro
+ * — não é "por canal de venda" no sentido de forma/canal comercial, é esse recorte específico.
+ */
 export interface PedidoGiroCanalRow {
-  canal: string;
-  giroGeral: number;
-  giroLoja: number;
+  escopo: string; // "GERAL" ou "LOJA", como vem no arquivo
+  volumePedido: number;
+  volumeFaturado: number;
+  giroPct: number;
 }
 
 /** GestaoPedidos_Historico_Colocacao_Pedido — linha a linha por loja/SKU. */
@@ -146,9 +151,22 @@ export interface ResumoPerformanceRow {
   ticketMedio: number | null;
 }
 
+/**
+ * Aba CP do Resumo_de_Performance: NÃO é "uma linha por loja" — é uma linha por indicador
+ * (Receita Total, Quantidade de Boletos, Boleto Médio...), com Meta PEF/Realizado/variações
+ * em colunas. Formato bem diferente das abas PDV/CONSULTOR (essas sim, uma linha por entidade).
+ */
+export interface ResumoPerformanceIndicador {
+  indicador: string;
+  metaPEF: number | null;
+  realizado: number | null;
+  vsMetaPEFPct: number | null;
+  vsAnoPassadoPct: number | null;
+}
+
 export interface ResumoPerformanceDataset {
   periodo: string | null;
-  cp: ResumoPerformanceRow[];
+  cp: ResumoPerformanceIndicador[];
   pdv: ResumoPerformanceRow[];
   consultor: ResumoPerformanceRow[];
 }
@@ -206,4 +224,6 @@ export interface AggregatedRow {
   ticketMedio: number;
   descontoPct: number;
   participacaoPct: number;
+  /** Código(s) de loja onde essa chave aparece nos dados de origem (ex. lojas de um consultor). */
+  lojaCodigos: string[];
 }

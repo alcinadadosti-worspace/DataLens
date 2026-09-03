@@ -2,13 +2,8 @@ export function fmtBRL(n: number): string {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+/** Alias de fmtBRL — mantido por compatibilidade com o nome usado nas telas, mas sem abreviação (1,2k/1,2M): sempre escreve o valor por extenso. */
 export function fmtBRLshort(n: number): string {
-  if (n >= 1_000_000) {
-    return 'R$ ' + (n / 1_000_000).toFixed(1).replace('.', ',') + 'M';
-  }
-  if (n >= 1_000) {
-    return 'R$ ' + (n / 1_000).toFixed(1).replace('.', ',') + 'k';
-  }
   return fmtBRL(n);
 }
 

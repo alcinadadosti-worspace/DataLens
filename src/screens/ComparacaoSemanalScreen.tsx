@@ -150,9 +150,7 @@ function isCancelled(o: Order) {
 
 function yFmt(v: number, isRate = false) {
   if (isRate) return v.toFixed(0) + '%';
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
-  if (v >= 1e3) return (v / 1e3).toFixed(0) + 'k';
-  return String(Math.round(v));
+  return fmtNumber(Math.round(v));
 }
 
 function computeRankings(orders: Order[]): PeriodRankings {

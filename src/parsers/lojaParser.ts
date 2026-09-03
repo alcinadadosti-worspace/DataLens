@@ -48,13 +48,25 @@ function stripBOM(s: string): string {
 }
 
 function normalizeName(s: string): string {
-  return s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return s
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos (Ã, é, í...) antes de filtrar
+    .toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/** Corrige typos conhecidos de digitação no nome da loja de origem, só para exibição. */
+export function normalizeStoreDisplayName(nome: string): string {
+  return nome.replace(/\bCOMETICOS\b/gi, 'COSMETICOS');
 }
 
 function splitCodeName(raw: string): { codigo: string | null; nome: string } {
   const s = (raw ?? '').trim();
   const m = s.match(/^(\d+)\s*-\s*(.+)$/);
-  if (m) return { codigo: m[1], nome: m[2].trim() };
+  if (m) {
+    let nome = m[2].trim();
+    // Alguns exports repetem o código no começo do nome (ex. "24303 - 24303 ACQUA ...") — remove a repetição.
+    if (nome.startsWith(m[1] + ' ')) nome = nome.slice(m[1].length + 1).trim();
+    return { codigo: m[1], nome };
+  }
   return { codigo: null, nome: s };
 }
 
@@ -137,10 +149,21 @@ function rowsToLojaMetrics(rows: string[][]): LojaMetricRow[] {
 // --- Curva ABC (relatorioABCVenda*.csv, Latin-1, `;`) ---
 // Colunas esperadas (índice pode variar por exportação, então localizamos por header):
 // Quebra (data), Quebra2 (loja, se aberto), Código, Descrição, Quantidade, Faturamento, Custo, Lucro, Margem, Markup, Classificação
+/**
+ * Match exato primeiro, substring como fallback — hints curtos como "Loja"/"Data"/"Canal" podem
+ * colidir por substring com uma coluna não relacionada (ex. "Tipo de Loja") se ela vier antes da
+ * coluna certa; a igualdade exata evita esse falso positivo sempre que o header bate direitinho.
+ */
 function findCol(header: string[], ...names: string[]): number {
   const norm = header.map(h => normalizeName(h ?? ''));
   for (const name of names) {
-    const idx = norm.indexOf(normalizeName(name));
+    const target = normalizeName(name);
+    const idx = norm.indexOf(target);
+    if (idx >= 0) return idx;
+  }
+  for (const name of names) {
+    const target = normalizeName(name);
+    const idx = norm.findIndex(h => h.includes(target));
     if (idx >= 0) return idx;
   }
   return -1;
@@ -188,7 +211,7 @@ function rowsToVendaHora(rows: string[][]): VendaHoraRow[] {
   if (rows.length < 2) return [];
   const header = rows[0];
   const iLoja = findCol(header, 'Loja');
-  const iData = findCol(header, 'Data');
+  const iData = findCol(header, 'Data', 'Quebra');
   const iHora = findCol(header, 'Hora', 'Faixa Horária', 'Faixa Horaria');
   const iReceita = findCol(header, 'Receita líquida', 'Receita Liquida', 'Receita');
   const iBoletos = findCol(header, 'Boletos', 'Qtd Boletos');
@@ -213,8 +236,10 @@ function rowsToPedidosVisaoGeral(rows: string[][]): PedidoVisaoGeralRow[] {
   if (rows.length < 2) return [];
   const header = rows[0];
   const iLabel = 0;
-  const iMeta = findCol(header, 'Meta Sugestão', 'Meta de Sugestão', 'Volume Pedido Sugestão');
-  const iColocado = findCol(header, 'Pedido Colocado', 'Volume Colocado', 'Colocado');
+  const iMeta = findCol(header, 'Meta Sugestão', 'Meta de Sugestão', 'Volume Pedido Sugestão', 'Meta Sugestão de Pedidos');
+  // O sistema chama essa métrica de "Pedido Realizado" neste arquivo e de "Volume Colocado" no
+  // histórico linha a linha — são o mesmo conceito (quanto foi de fato pedido).
+  const iColocado = findCol(header, 'Pedido Realizado', 'Pedido Colocado', 'Volume Colocado', 'Realizado', 'Colocado');
   const iFaturado = findCol(header, 'Pedido Faturado', 'Volume Faturado', 'Faturado');
   const iVendaReal = findCol(header, 'Venda Real');
   const iGiro = findCol(header, 'Giro');
@@ -232,23 +257,30 @@ function rowsToPedidosVisaoGeral(rows: string[][]): PedidoVisaoGeralRow[] {
 }
 
 // --- GestaoPedidos_Giro_Pedidos_Canais_por_Ciclo ---
+// Estrutura real do arquivo: uma linha "GERAL" (rede toda) e uma linha "LOJA" (só canal físico),
+// cada uma com seu próprio Volume Pedido / Volume Faturado / Giro — não é "por canal comercial".
 function rowsToPedidosGiroCanal(rows: string[][]): PedidoGiroCanalRow[] {
   if (rows.length < 2) return [];
   const header = rows[0];
   const iCanal = findCol(header, 'Canal');
-  const iGeral = findCol(header, 'Geral', 'Giro Geral');
-  const iLoja = findCol(header, 'Loja', 'Giro Loja');
+  const iVolumePedido = findCol(header, 'Volume Pedido');
+  const iVolumeFaturado = findCol(header, 'Volume Faturado');
+  const iGiro = findCol(header, 'Giro');
 
   return rows.slice(1)
     .filter(r => (r[iCanal] ?? '').trim() !== '')
     .map(r => ({
-      canal: (r[iCanal] ?? '').trim(),
-      giroGeral: toPct(r[iGeral]),
-      giroLoja: toPct(r[iLoja]),
+      escopo: (r[iCanal] ?? '').trim(),
+      volumePedido: toNum(r[iVolumePedido]),
+      volumeFaturado: toNum(r[iVolumeFaturado]),
+      giroPct: toPct(r[iGiro]),
     } as PedidoGiroCanalRow));
 }
 
 // --- GestaoPedidos_Historico_Colocacao_Pedido (linha a linha por loja/SKU) ---
+// Neste arquivo a coluna LOJA traz só o código numérico (ex. "24668"), sem o nome — diferente do
+// padrão "código - nome" dos GerencialVendas*. O nome amigável é resolvido depois, cruzando com
+// dataset.lojas (ver resolveLojaNomes em lojaMetrics.ts).
 function rowsToPedidosHistorico(rows: string[][]): PedidoHistoricoRow[] {
   if (rows.length < 2) return [];
   const header = rows[0];
@@ -256,16 +288,16 @@ function rowsToPedidosHistorico(rows: string[][]): PedidoHistoricoRow[] {
   const iSku = findCol(header, 'SKU', 'Código', 'Codigo');
   const iCategoria = findCol(header, 'Categoria');
   const iSugestao = findCol(header, 'Volume Pedido Sugestão', 'Sugestão', 'Sugestao');
-  const iColocado = findCol(header, 'Volume Colocado', 'Colocado');
-  const iFaturado = findCol(header, 'Volume Faturado', 'Faturado');
+  const iColocado = findCol(header, 'Volume Pedido Colocado', 'Volume Colocado', 'Colocado');
+  const iFaturado = findCol(header, 'Volume Pedido Faturado', 'Volume Faturado', 'Faturado');
 
   return rows.slice(1)
     .filter(r => (r[iLoja] ?? '').trim() !== '')
     .map(r => {
-      const loja = splitCodeName((r[iLoja] ?? '').trim());
+      const lojaRaw = (r[iLoja] ?? '').trim();
       return {
-        lojaCodigo: loja.codigo,
-        lojaNome: loja.nome,
+        lojaCodigo: lojaRaw,
+        lojaNome: lojaRaw,
         sku: iSku >= 0 ? (r[iSku] ?? '').trim() : '',
         categoria: iCategoria >= 0 ? (r[iCategoria] ?? '').trim() || null : null,
         volumeSugestao: toNum(r[iSugestao]),

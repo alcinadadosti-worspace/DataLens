@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
 import RankingList from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
-import { aggregateByName } from '../../analytics/lojaMetrics';
+import { aggregateByName, listLojasInDimension } from '../../analytics/lojaMetrics';
 import { fmtBRLshort, fmtPct } from '../../utils/formatters';
 
 const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
+  const [lojaFiltro, setLojaFiltro] = useState<string>('');
 
   if (!dataset) {
     return (
@@ -18,7 +19,8 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
     );
   }
 
-  const categorias = aggregateByName(dataset.gestao);
+  const lojas = listLojasInDimension(dataset.gestao);
+  const categorias = aggregateByName(dataset.gestao, true, lojaFiltro || null);
   const anomalias = categorias.filter(c => c.descontoPct > 100);
   const receitaCategoria = dataset.receitaCategoria;
   const hasXlsx = !!receitaCategoria && receitaCategoria.categoria.length > 0;
@@ -43,12 +45,29 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
-        Modo Loja
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
+            Modo Loja
+          </div>
+          <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 0' }}>
+            Mix de categoria e linha de produto
+          </h1>
+        </div>
+        <select
+          value={lojaFiltro}
+          onChange={e => setLojaFiltro(e.target.value)}
+          style={{ fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1px solid #E8E2D6', background: 'white', color: '#1C1814', cursor: 'pointer' }}
+        >
+          <option value="">Todas as lojas</option>
+          {lojas.map(l => (
+            <option key={l.codigo} value={l.codigo}>{l.codigo} - {l.nome}</option>
+          ))}
+        </select>
       </div>
-      <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 24px' }}>
-        Mix de categoria e linha de produto
-      </h1>
+      <p style={{ color: '#6B6258', fontSize: 12, margin: '4px 0 24px' }}>
+        O filtro de loja se aplica ao ranking "gestão estratégica" (abaixo); a receita por categoria/subcategoria/marca do xlsx é sempre rede toda.
+      </p>
 
       {hasXlsx ? (
         <>

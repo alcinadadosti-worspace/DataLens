@@ -48,11 +48,11 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {dow.map(d => (
               <div key={d.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 64, fontSize: 12, color: '#6B6258' }}>{d.label}</div>
+                <div style={{ width: 64, fontSize: 12, color: d.label === 'Domingo' ? '#5B9BD5' : '#6B6258', fontWeight: d.label === 'Domingo' ? 600 : 400 }}>{d.label}</div>
                 <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#F2EEE6', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', width: `${Math.max((d.avgGmv / dowMax) * 100, 1.5)}%`,
-                    background: d.label === bestDow?.label ? '#B26A3C' : '#D8D0C0', borderRadius: 4,
+                    background: d.label === 'Domingo' ? '#A9CCE8' : d.label === bestDow?.label ? '#B26A3C' : '#D8D0C0', borderRadius: 4,
                   }} />
                 </div>
                 <div style={{ width: 90, textAlign: 'right', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: '#1C1814', fontWeight: 600 }}>

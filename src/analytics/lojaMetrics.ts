@@ -1,4 +1,6 @@
 import { AbcRow, AggregatedRow, LojaDataset, LojaMetricRow, PedidoHistoricoRow, VendaHoraRow } from '../types/loja';
+import { normalizeStoreDisplayName } from '../parsers/lojaParser';
+import { resolveLojaNome } from './lojaStoreAliases';
 
 const SEM_IDENTIFICACAO = 'SEM IDENTIFICAÇÃO';
 
@@ -6,15 +8,16 @@ export function isSemIdentificacao(nome: string): boolean {
   return nome.trim().toUpperCase() === SEM_IDENTIFICACAO;
 }
 
-export function aggregateByName(rows: LojaMetricRow[], excludeEmpty = true): AggregatedRow[] {
-  const groups = new Map<string, AggregatedRow>();
+export function aggregateByName(rows: LojaMetricRow[], excludeEmpty = true, lojaCodigoFilter?: string | null): AggregatedRow[] {
+  const source = lojaCodigoFilter ? rows.filter(r => r.lojaCodigo === lojaCodigoFilter) : rows;
+  const groups = new Map<string, AggregatedRow & { lojaCodigosSet: Set<string> }>();
 
-  for (const r of rows) {
+  for (const r of source) {
     if (excludeEmpty && isSemIdentificacao(r.quebraNome) && r.gmv === 0) continue;
     const key = r.quebraNome;
     let g = groups.get(key);
     if (!g) {
-      g = { key, gmv: 0, qtdBoletos: 0, receitaLiquida: 0, totalDescontos: 0, trocasValor: 0, qtdTrocas: 0, ticketMedio: 0, descontoPct: 0, participacaoPct: 0 };
+      g = { key, gmv: 0, qtdBoletos: 0, receitaLiquida: 0, totalDescontos: 0, trocasValor: 0, qtdTrocas: 0, ticketMedio: 0, descontoPct: 0, participacaoPct: 0, lojaCodigos: [], lojaCodigosSet: new Set() };
       groups.set(key, g);
     }
     g.gmv += r.gmv;
@@ -23,6 +26,7 @@ export function aggregateByName(rows: LojaMetricRow[], excludeEmpty = true): Agg
     g.totalDescontos += r.totalDescontos;
     g.trocasValor += r.trocasValor;
     g.qtdTrocas += r.qtdTrocas;
+    if (r.lojaCodigo) g.lojaCodigosSet.add(r.lojaCodigo);
   }
 
   const list = Array.from(groups.values());
@@ -32,9 +36,90 @@ export function aggregateByName(rows: LojaMetricRow[], excludeEmpty = true): Agg
     g.ticketMedio = g.qtdBoletos > 0 ? g.gmv / g.qtdBoletos : 0;
     g.descontoPct = g.receitaLiquida > 0 ? (g.totalDescontos / g.receitaLiquida) * 100 : 0;
     g.participacaoPct = totalGmv > 0 ? (g.gmv / totalGmv) * 100 : 0;
+    g.lojaCodigos = Array.from(g.lojaCodigosSet).sort();
   }
 
-  return list.sort((a, b) => b.gmv - a.gmv);
+  return list
+    .map(({ lojaCodigosSet: _lojaCodigosSet, ...rest }) => rest)
+    .sort((a, b) => b.gmv - a.gmv);
+}
+
+/** Lojas (código + nome amigável) presentes num conjunto de linhas — para popular filtros "Por loja". */
+export function listLojasInDimension(rows: LojaMetricRow[]): { codigo: string; nome: string }[] {
+  const map = new Map<string, string>();
+  for (const r of rows) {
+    if (r.lojaCodigo) map.set(r.lojaCodigo, resolveLojaNome(r.lojaCodigo, normalizeStoreDisplayName(r.lojaNome)));
+  }
+  return Array.from(map, ([codigo, nome]) => ({ codigo, nome })).sort((a, b) => a.codigo.localeCompare(b.codigo));
+}
+
+export interface ConsultorLojaBreakdown extends AggregatedRow {
+  /** Lojas onde essa pessoa vendeu, ordenadas por GMV decrescente — a primeira é a "principal". */
+  porLoja: { codigo: string; nome: string; gmv: number; qtdBoletos: number }[];
+}
+
+/**
+ * Agrega consultor/operador por pessoa, mas mantendo a quebra por loja — para saber em qual
+ * unidade cada um vendeu mais, e sinalizar quem vendeu em mais de uma loja no período.
+ */
+export function aggregateConsultoresPorLoja(rows: LojaMetricRow[], lojaCodigoFilter?: string | null): ConsultorLojaBreakdown[] {
+  const source = lojaCodigoFilter ? rows.filter(r => r.lojaCodigo === lojaCodigoFilter) : rows;
+  const byNome = new Map<string, Map<string, { gmv: number; qtdBoletos: number; receitaLiquida: number; totalDescontos: number; trocasValor: number; qtdTrocas: number }>>();
+
+  for (const r of source) {
+    if (isSemIdentificacao(r.quebraNome) && r.gmv === 0) continue;
+    const nome = r.quebraNome;
+    if (!byNome.has(nome)) byNome.set(nome, new Map());
+    const lojaMap = byNome.get(nome)!;
+    const lojaKey = r.lojaCodigo ?? '';
+    if (!lojaMap.has(lojaKey)) lojaMap.set(lojaKey, { gmv: 0, qtdBoletos: 0, receitaLiquida: 0, totalDescontos: 0, trocasValor: 0, qtdTrocas: 0 });
+    const g = lojaMap.get(lojaKey)!;
+    g.gmv += r.gmv;
+    g.qtdBoletos += r.qtdBoletos;
+    g.receitaLiquida += r.receitaLiquida;
+    g.totalDescontos += r.totalDescontos;
+    g.trocasValor += r.trocasValor;
+    g.qtdTrocas += r.qtdTrocas;
+  }
+
+  const result: ConsultorLojaBreakdown[] = [];
+  for (const [nome, lojaMap] of byNome) {
+    // Só considera lojas com código conhecido em todos os totais — uma linha sem código de loja
+    // (raro, mas possível se o campo não seguir o padrão "código - nome") não pode ser atribuída
+    // a nenhuma unidade, então fica de fora tanto do porLoja quanto dos totais da pessoa, senão
+    // GMV e desconto% ficariam inconsistentes entre si.
+    const knownEntries = Array.from(lojaMap.entries()).filter(([codigo]) => codigo !== '');
+    const porLoja = knownEntries
+      .map(([codigo, g]) => ({ codigo, nome: resolveLojaNome(codigo, codigo), gmv: g.gmv, qtdBoletos: g.qtdBoletos }))
+      .sort((a, b) => b.gmv - a.gmv);
+
+    const gmv = knownEntries.reduce((s, [, g]) => s + g.gmv, 0);
+    const qtdBoletos = knownEntries.reduce((s, [, g]) => s + g.qtdBoletos, 0);
+    const receitaLiquida = knownEntries.reduce((s, [, g]) => s + g.receitaLiquida, 0);
+    const totalDescontos = knownEntries.reduce((s, [, g]) => s + g.totalDescontos, 0);
+    const trocasValor = knownEntries.reduce((s, [, g]) => s + g.trocasValor, 0);
+    const qtdTrocas = knownEntries.reduce((s, [, g]) => s + g.qtdTrocas, 0);
+
+    result.push({
+      key: nome,
+      gmv,
+      qtdBoletos,
+      receitaLiquida,
+      totalDescontos,
+      trocasValor,
+      qtdTrocas,
+      ticketMedio: qtdBoletos > 0 ? gmv / qtdBoletos : 0,
+      descontoPct: receitaLiquida > 0 ? (totalDescontos / receitaLiquida) * 100 : 0,
+      participacaoPct: 0,
+      lojaCodigos: porLoja.map(l => l.codigo),
+      porLoja,
+    });
+  }
+
+  const total = result.reduce((s, g) => s + g.gmv, 0);
+  for (const g of result) g.participacaoPct = total > 0 ? (g.gmv / total) * 100 : 0;
+
+  return result.sort((a, b) => b.gmv - a.gmv);
 }
 
 export function computeOverallKPIs(lojasRows: LojaMetricRow[]) {
@@ -50,8 +135,39 @@ export function computeOverallKPIs(lojasRows: LojaMetricRow[]) {
   return { gmvTotal, receitaLiquidaTotal, qtdBoletosTotal, totalDescontosTotal, trocasValorTotal, ticketMedioGeral, descontoPctGeral, trocasPctGeral };
 }
 
+/**
+ * O arquivo LOJAS.csv já traz uma linha por loja (uma por código de PDV) — não agrupamos por
+ * nome aqui, porque a mesma razão social ("ACQUA DISTRIBUIDORA DE PERFUMES E COSMETICOS LTDA")
+ * se repete em várias lojas físicas diferentes; agrupar por nome mesclaria lojas distintas em
+ * uma só. A chave do ranking é o código do PDV; o nome exibido corrige o typo conhecido
+ * "COMETICOS" → "COSMETICOS" só para leitura, sem afetar a chave.
+ */
 export function rankLojas(lojasRows: LojaMetricRow[]): AggregatedRow[] {
-  return aggregateByName(lojasRows, false);
+  const list: AggregatedRow[] = lojasRows.map(r => ({
+    key: r.lojaCodigo ? `${r.lojaCodigo} - ${resolveLojaNome(r.lojaCodigo, normalizeStoreDisplayName(r.quebraNome))}` : normalizeStoreDisplayName(r.quebraNome),
+    gmv: r.gmv,
+    qtdBoletos: r.qtdBoletos,
+    receitaLiquida: r.receitaLiquida,
+    totalDescontos: r.totalDescontos,
+    trocasValor: r.trocasValor,
+    qtdTrocas: r.qtdTrocas,
+    ticketMedio: r.qtdBoletos > 0 ? r.gmv / r.qtdBoletos : 0,
+    descontoPct: r.receitaLiquida > 0 ? (r.totalDescontos / r.receitaLiquida) * 100 : 0,
+    participacaoPct: 0,
+    lojaCodigos: r.lojaCodigo ? [r.lojaCodigo] : [],
+  }));
+  const total = list.reduce((s, g) => s + g.gmv, 0);
+  for (const g of list) g.participacaoPct = total > 0 ? (g.gmv / total) * 100 : 0;
+  return list.sort((a, b) => b.gmv - a.gmv);
+}
+
+/** codigo da loja -> nome amigável (apelido do usuário, ou razão social com typo corrigido). */
+export function buildLojaNomeLookup(lojasRows: LojaMetricRow[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const r of lojasRows) {
+    if (r.lojaCodigo) map.set(r.lojaCodigo, resolveLojaNome(r.lojaCodigo, normalizeStoreDisplayName(r.quebraNome)));
+  }
+  return map;
 }
 
 function parseBRDateStr(s: string): Date | null {
@@ -310,10 +426,14 @@ export interface PedidoRateRow {
  * Agrega o histórico de colocação por loja ou por categoria e calcula as duas taxas.
  * O "Giro" do arquivo de Visão Geral não é recalculável a partir daqui — não tentar reproduzi-lo.
  */
-export function pedidosRates(rows: PedidoHistoricoRow[], groupBy: 'loja' | 'categoria'): PedidoRateRow[] {
+export function pedidosRates(rows: PedidoHistoricoRow[], groupBy: 'loja' | 'categoria', lojaNomeLookup?: Map<string, string>): PedidoRateRow[] {
   const groups = new Map<string, { volumeSugestao: number; volumeColocado: number; volumeFaturado: number }>();
   for (const r of rows) {
-    const key = groupBy === 'loja' ? r.lojaNome : (r.categoria ?? 'Sem categoria');
+    // Agrupar por código (não só pelo nome) — várias lojas físicas compartilham a mesma razão
+    // social, então agrupar só por nome mesclaria lojas distintas na mesma linha.
+    const key = groupBy === 'loja'
+      ? (r.lojaCodigo ? `${r.lojaCodigo} - ${lojaNomeLookup?.get(r.lojaCodigo) ?? r.lojaNome}` : r.lojaNome)
+      : (r.categoria ?? 'Sem categoria');
     let g = groups.get(key);
     if (!g) {
       g = { volumeSugestao: 0, volumeColocado: 0, volumeFaturado: 0 };
