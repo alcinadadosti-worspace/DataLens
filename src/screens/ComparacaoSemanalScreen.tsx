@@ -833,7 +833,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                 Ciclo A
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {availableCycles.map(c => (
                 <button key={c} className={`glossy-btn${cicloA === c ? ' glossy-active' : ''}`} onClick={() => setCicloA(c)} style={pillBtn(cicloA === c, COLOR_A)}>
                   <GlossyContent compact>{c}</GlossyContent>
@@ -853,7 +853,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                 Ciclo B
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {availableCycles.map(c => (
                 <button key={c} className={`glossy-btn${cicloB === c ? ' glossy-active' : ''}`} onClick={() => setCicloB(cicloB === c ? '' : c)} style={pillBtn(cicloB === c, COLOR_B)}>
                   <GlossyContent compact>{c}</GlossyContent>
@@ -873,7 +873,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 8 }}>
               Métrica
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {METRICS.map(m => (
                 <button
                   key={m.key}
@@ -1150,7 +1150,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       ═══════════════════════════════════════════════════════ */}
       {sectionLabel('Evolução Geral')}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {METRICS.map(m => (
             <button
               key={m.key}

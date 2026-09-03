@@ -19,7 +19,7 @@ const GlossyContent: React.FC<GlossyContentProps> = ({ icon, children, trailing,
     <span
       className="glossy-inner"
       style={{
-        ...(compact ? { padding: '0.4em' } : null),
+        ...(compact ? { padding: '0.55em 1em' } : null),
         ...(justify ? { justifyContent: justify } : null),
         ...(justify && justify !== 'center' ? { width: '100%' } : null),
       }}

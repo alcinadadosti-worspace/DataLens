@@ -141,7 +141,7 @@ const FilterBuilder: React.FC = () => {
     : [];
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', position: 'relative' }} ref={ref}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', position: 'relative' }} ref={ref}>
       {/* Active multi-select chips */}
       {activeChips.map(chip => (
         <FilterChip
@@ -191,7 +191,7 @@ const FilterBuilder: React.FC = () => {
         }}>
 
           {/* Left: category list */}
-          <div style={{ width: 180, borderRight: '1px solid #F2EEE6', padding: '8px 0' }}>
+          <div style={{ width: 180, borderRight: '1px solid #F2EEE6', padding: '8px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{
               fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
               textTransform: 'uppercase', color: '#6B6258', padding: '6px 14px 8px',
@@ -373,7 +373,7 @@ const FilterBuilder: React.FC = () => {
               </div>
 
               {/* Options list */}
-              <div style={{ maxHeight: 240, overflowY: 'auto', padding: '6px 0' }}>
+              <div style={{ maxHeight: 240, overflowY: 'auto', padding: '6px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {filteredOptions.length === 0 ? (
                   <div style={{ padding: '12px 14px', fontSize: 13, color: '#9B9287' }}>Nenhum resultado</div>
                 ) : filteredOptions.map(opt => {

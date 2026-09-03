@@ -124,7 +124,7 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
 
         {/* Cycle filter */}
         {availableCycles.length > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 11, color: '#9B9287' }}>Ciclo:</span>
             <button
               className={`glossy-btn${!filterCycle ? ' glossy-active' : ''}`}
@@ -150,7 +150,7 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
         )}
 
         {/* Tier toggle chips */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: '#9B9287' }}>Tier:</span>
           {tierPieData.map(t => {
             const style = TIER_STYLES[t.tierId];

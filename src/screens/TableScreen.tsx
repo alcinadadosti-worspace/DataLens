@@ -626,7 +626,7 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
             Pedidos
           </h1>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 12 }}>
           <Button
             variant="secondary" size="sm"
             icon={<i className="ph ph-file-csv" style={{ fontSize: 14 }} />}
