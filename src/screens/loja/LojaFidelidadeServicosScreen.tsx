@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
 import RankingChart from '../../components/loja/RankingChart';
-import { RankingItem } from '../../components/loja/RankingList';
+import { RankingItem, BreakdownRow } from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import { useLojaStore } from '../../store/useLojaStore';
@@ -73,6 +73,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
           value: r.gmv,
           valueLabel: fmtBRL(r.gmv),
           meta: `${r.qtdCompletos}/${r.qtdRealizados} completos${r.qtdMeta > 0 ? ` · ${fmtPct(r.atingimentoPct).replace('+', '')} da meta` : ''}`,
+          lojaCodigo: r.pdvCodigo,
         }))
     : [];
 
@@ -92,6 +93,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
           value: r.conversaoPct,
           valueLabel: fmtPct(r.conversaoPct).replace('+', ''),
           meta: `${r.clientesConvertidos}/${r.clientesAtendidos} atendidos · ${fmtBRL(r.receita)}`,
+          lojaCodigo: r.pdvCodigo ?? undefined,
         }))
     : [];
 
@@ -103,6 +105,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
           value: r.receitaTotal,
           valueLabel: fmtBRL(r.receitaTotal),
           meta: `Botik: ${fmtBRL(r.receitaBotik)}`,
+          lojaCodigo: r.pdvCodigo ?? undefined,
         }))
     : [];
 
@@ -112,6 +115,57 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
 
   const totalServicosGmv = servicos ? servicos.pdv.reduce((s, r) => s + r.gmv, 0) : 0;
   const totalServicosCompletos = servicos ? servicos.pdv.reduce((s, r) => s + r.qtdCompletos, 0) : 0;
+
+  // Painéis de detalhe (tela cheia): quebra por colaborador de uma loja, na mesma métrica do gráfico.
+  function getServicosBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !servicos) return null;
+    const map = new Map<string, number>();
+    for (const r of servicos.consultor) {
+      if (r.pdvCodigo !== item.lojaCodigo) continue;
+      map.set(r.consultor, (map.get(r.consultor) ?? 0) + r.gmv);
+    }
+    if (map.size === 0) return null;
+    const total = item.value > 0 ? item.value : Array.from(map.values()).reduce((s, v) => s + v, 0);
+    return Array.from(map.entries())
+      .map(([nome, gmv]) => ({ label: nome, value: gmv, valueLabel: fmtBRL(gmv), pct: total > 0 ? (gmv / total) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+  }
+
+  function getCuidadosBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !cuidadosFaciais) return null;
+    const map = new Map<string, number>();
+    for (const r of cuidadosFaciais.consultor) {
+      if (r.pdvCodigo !== item.lojaCodigo) continue;
+      map.set(r.nome, (map.get(r.nome) ?? 0) + r.receitaTotal);
+    }
+    if (map.size === 0) return null;
+    const total = item.value > 0 ? item.value : Array.from(map.values()).reduce((s, v) => s + v, 0);
+    return Array.from(map.entries())
+      .map(([nome, v]) => ({ label: nome, value: v, valueLabel: fmtBRL(v), pct: total > 0 ? (v / total) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+  }
+
+  function getDigitalBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !lojaDigital) return null;
+    const map = new Map<string, { convertidos: number; atendidos: number }>();
+    for (const r of lojaDigital.consultor) {
+      if (r.pdvCodigo !== item.lojaCodigo) continue;
+      const cur = map.get(r.nome) ?? { convertidos: 0, atendidos: 0 };
+      cur.convertidos += r.clientesConvertidos;
+      cur.atendidos += r.clientesAtendidos;
+      map.set(r.nome, cur);
+    }
+    if (map.size === 0) return null;
+    const totalConvertidos = Array.from(map.values()).reduce((s, v) => s + v.convertidos, 0);
+    return Array.from(map.entries())
+      .map(([nome, v]) => ({
+        label: nome,
+        value: v.convertidos,
+        valueLabel: `${v.convertidos}/${v.atendidos} convertidos`,
+        pct: totalConvertidos > 0 ? (v.convertidos / totalConvertidos) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -189,7 +243,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
             hint="% de clientes atendidos via WhatsApp/canais digitais que converteram em venda, por loja."
             subtitle="% de clientes atendidos que converteram em venda"
           >
-            <RankingChart items={digitalItems} />
+            <RankingChart items={digitalItems} getBreakdown={getDigitalBreakdown} />
           </ChartCard>
         )}
 
@@ -199,7 +253,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
             hint="GMV — Gross Merchandise Value gerado por serviços de beleza (maquiagem, cuidados faciais, cabelo...) em cada loja."
             subtitle="Maquiagem, cuidados faciais, cabelo etc."
           >
-            <RankingChart items={servicosPdvItems} />
+            <RankingChart items={servicosPdvItems} getBreakdown={getServicosBreakdown} />
           </ChartCard>
         )}
 
@@ -219,7 +273,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
             hint="Receita gerada pelo recorte de produtos Botik/Cuidados Faciais, loja a loja."
             subtitle="Receita total do bloco Botik dentro da loja"
           >
-            <RankingChart items={cuidadosItems} />
+            <RankingChart items={cuidadosItems} getBreakdown={getCuidadosBreakdown} />
           </ChartCard>
         )}
       </div>

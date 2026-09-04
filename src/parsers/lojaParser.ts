@@ -71,10 +71,13 @@ function splitCodeName(raw: string): { codigo: string | null; nome: string } {
   const s = (raw ?? '').trim();
   const m = s.match(/^(\d+)\s*-\s*(.+)$/);
   if (m) {
+    // Zeros à esquerda ("024303") não batem com os códigos usados em LOJA_APELIDOS/resto do app
+    // ("24303") — a curva ABC exporta assim, os demais arquivos não.
+    const codigo = m[1].replace(/^0+(?=\d)/, '');
     let nome = m[2].trim();
     // Alguns exports repetem o código no começo do nome (ex. "24303 - 24303 ACQUA ...") — remove a repetição.
-    if (nome.startsWith(m[1] + ' ')) nome = nome.slice(m[1].length + 1).trim();
-    return { codigo: m[1], nome };
+    if (nome.startsWith(codigo + ' ')) nome = nome.slice(codigo.length + 1).trim();
+    return { codigo, nome };
   }
   return { codigo: null, nome: s };
 }

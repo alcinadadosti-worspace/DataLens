@@ -455,17 +455,23 @@ export function classifyAbc(rows: AbcRow[], comercialOnly = false, overrides: Ab
 }
 
 /** Curva ABC por loja — só útil quando o arquivo veio aberto por loja (Quebra2 preenchida). */
+/**
+ * Agrupa por código de loja, não pelo nome cru — a razão social que vem no CSV ("ACQUA
+ * DISTRIBUIDORA DE PERFUMES E COSMETICOS LTDA") se repete igual em todas as lojas físicas, então
+ * agrupar por nome misturava lojas diferentes numa só chave (ou pior, dava a impressão de que era
+ * a mesma loja em toda parte). O nome exibido usa o apelido amigável, como no resto do app.
+ */
 export function classifyAbcByLoja(rows: AbcRow[], overrides: AbcOverrides = {}): Map<string, AbcAggregatedItem[]> {
   const byLoja = new Map<string, AbcRow[]>();
   for (const r of rows) {
-    if (!r.lojaNome) continue;
-    const key = r.lojaNome;
-    if (!byLoja.has(key)) byLoja.set(key, []);
-    byLoja.get(key)!.push(r);
+    if (!r.lojaCodigo) continue;
+    if (!byLoja.has(r.lojaCodigo)) byLoja.set(r.lojaCodigo, []);
+    byLoja.get(r.lojaCodigo)!.push(r);
   }
   const result = new Map<string, AbcAggregatedItem[]>();
-  for (const [loja, lojaRows] of byLoja) {
-    result.set(loja, classifyAbcList(lojaRows, overrides));
+  for (const [codigo, lojaRows] of byLoja) {
+    const nome = resolveLojaNome(codigo, normalizeStoreDisplayName(lojaRows[0].lojaNome ?? codigo));
+    result.set(`${codigo} - ${nome}`, classifyAbcList(lojaRows, overrides));
   }
   return result;
 }

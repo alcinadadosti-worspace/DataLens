@@ -9,6 +9,16 @@ export interface RankingItem {
   meta?: string;
   /** Meta PEF (ou outro alvo) associada a esse item, quando existir — habilita a view de colunas empilhadas com fundo de meta no RankingChart. */
   metaTarget?: number;
+  /** Código de loja, quando esse item representa uma unidade — habilita a quebra por colaborador no painel de detalhe em tela cheia. */
+  lojaCodigo?: string;
+}
+
+/** Uma linha da quebra por colaborador mostrada no painel de detalhe (tela cheia) de um item que representa uma loja. */
+export interface BreakdownRow {
+  label: string;
+  value: number;
+  valueLabel: string;
+  pct: number;
 }
 
 interface RankingListProps {

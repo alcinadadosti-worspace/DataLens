@@ -5,7 +5,7 @@ import {
   Treemap, FunnelChart, Funnel, LabelList,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
 } from 'recharts';
-import RankingList, { RankingItem } from './RankingList';
+import RankingList, { RankingItem, BreakdownRow } from './RankingList';
 import { TIER_STYLES } from '../../design-system/tierStyles';
 import { fmtNumber } from '../../utils/formatters';
 
@@ -65,6 +65,12 @@ interface RankingChartProps {
   emptyMessage?: string;
   /** Máximo de fatias/pontos nas views agregadas (pizza, treemap, funil, radar, linha, nuvem) — o resto vira "Outros". */
   maxSlices?: number;
+  /**
+   * Quando o item clicado representa uma loja (tem `lojaCodigo`), essa função retorna a quebra por
+   * colaborador — exibida no painel de detalhe em tela cheia, junto com a % de cada um na métrica
+   * mostrada. Retornar null/lista vazia esconde a seção.
+   */
+  getBreakdown?: (item: RankingItem) => BreakdownRow[] | null;
 }
 
 // --- Barras verticais ------------------------------------------------
@@ -200,6 +206,11 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
   }
 
   const svgSize = Math.min(height - 70, 300);
+  // Diâmetro real (em px) do furo do doughnut — o rótulo central precisa caber exatamente aí
+  // dentro, senão passa por cima das fatias quando o gráfico é pequeno (fora da tela cheia).
+  const holeDiameterPx = (rInner * 2 * svgSize) / size;
+  const centerValueFontSize = Math.max(10, Math.min(20, holeDiameterPx * 0.19));
+  const centerLabelFontSize = Math.max(8, Math.min(11, holeDiameterPx * 0.1));
 
   return (
     <div ref={containerRef} style={{ position: 'relative', minHeight: height }}>
@@ -224,9 +235,14 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
           })}
         </svg>
         {style === 'doughnut' && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</div>
-            <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(total)}</div>
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: holeDiameterPx, height: holeDiameterPx,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none', overflow: 'hidden', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: centerLabelFontSize, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</div>
+            <div style={{ fontSize: centerValueFontSize, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.15 }}>{fmtNumber(total)}</div>
           </div>
         )}
       </div>
@@ -430,8 +446,8 @@ const WordCloudView: React.FC<{ items: RankingItem[]; maxSlices: number; onSelec
 
 // --- Painel de detalhe (tela cheia) ------------------------------------------------
 
-const DetailPanel: React.FC<{ item: RankingItem | null }> = ({ item }) => (
-  <div style={{ width: 300, flexShrink: 0, borderLeft: '1px solid #E8E2D6', padding: 24, overflowY: 'auto' }}>
+const DetailPanel: React.FC<{ item: RankingItem | null; breakdown: BreakdownRow[] | null }> = ({ item, breakdown }) => (
+  <div style={{ width: 320, flexShrink: 0, borderLeft: '1px solid #E8E2D6', padding: 24, overflowY: 'auto' }}>
     <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 14 }}>
       Detalhe
     </div>
@@ -460,6 +476,27 @@ const DetailPanel: React.FC<{ item: RankingItem | null }> = ({ item }) => (
             </div>
           </div>
         )}
+        {breakdown && breakdown.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9B9287', marginBottom: 12 }}>
+              Colaboradores dessa unidade
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {breakdown.map((b, i) => (
+                <div key={i}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.label}</span>
+                    <span style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{b.valueLabel}</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: '#F2EEE6', overflow: 'hidden', marginTop: 5 }}>
+                    <div style={{ height: '100%', width: `${Math.max(b.pct, 1.5)}%`, background: '#B26A3C', borderRadius: 3 }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: '#9B9287', marginTop: 3 }}>{b.pct.toFixed(1).replace('.', ',')}% da métrica</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </>
     )}
   </div>
@@ -467,7 +504,7 @@ const DetailPanel: React.FC<{ item: RankingItem | null }> = ({ item }) => (
 
 // --- Componente principal ------------------------------------------------
 
-const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, emptyMessage = 'Sem dados', maxSlices = 8 }) => {
+const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, emptyMessage = 'Sem dados', maxSlices = 8, getBreakdown }) => {
   const [category, setCategory] = useState<Category>('bar');
   const [barStyle, setBarStyle] = useState<BarStyle>('horizontal');
   const [pieStyle, setPieStyle] = useState<PieStyle>('pie');
@@ -611,7 +648,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
               <div style={{ flex: 1, padding: 24, overflow: 'auto' }}>
                 {renderBody(460, setSelected)}
               </div>
-              <DetailPanel item={selected} />
+              <DetailPanel item={selected} breakdown={selected && getBreakdown ? getBreakdown(selected) : null} />
             </div>
           </div>
         </div>

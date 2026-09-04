@@ -6,7 +6,8 @@ import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import InfoHint from '../../components/ui/InfoHint';
 import { useLojaStore } from '../../store/useLojaStore';
-import { computeOverallKPIs, rankLojas, consistencyCheck, crossInsights, optionalConsistencyWarnings } from '../../analytics/lojaMetrics';
+import { computeOverallKPIs, rankLojas, consistencyCheck, crossInsights, optionalConsistencyWarnings, aggregateConsultoresPorLoja } from '../../analytics/lojaMetrics';
+import { RankingItem, BreakdownRow } from '../../components/loja/RankingList';
 import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
 
 interface LojaOverviewScreenProps {
@@ -50,13 +51,26 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
     }
   }
 
-  const rankingItems = ranking.map(r => ({
+  const rankingItems: RankingItem[] = ranking.map(r => ({
     label: r.key,
     value: r.gmv,
     valueLabel: fmtBRLshort(r.gmv),
     meta: `${r.participacaoPct.toFixed(1).replace('.', ',')}% · ${fmtNumber(r.qtdBoletos)} boletos`,
     metaTarget: r.lojaCodigos[0] ? metaPorLoja.get(r.lojaCodigos[0]) : undefined,
+    lojaCodigo: r.lojaCodigos[0],
   }));
+
+  // Painel de detalhe (tela cheia) de uma loja: quem são os consultores dela e quanto cada um
+  // participa do GMV daquela loja — a métrica mostrada nesse ranking.
+  function getLojaBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !dataset) return null;
+    const consultores = aggregateConsultoresPorLoja(dataset.consultor, item.lojaCodigo);
+    if (consultores.length === 0) return null;
+    const total = item.value > 0 ? item.value : consultores.reduce((s, c) => s + c.gmv, 0);
+    return consultores
+      .map(c => ({ label: c.key, value: c.gmv, valueLabel: fmtBRLshort(c.gmv), pct: total > 0 ? (c.gmv / total) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+  }
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -184,10 +198,10 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 24 }}>
         <ChartCard
           title="Ranking de lojas"
-          hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu. Na visão de colunas empilhadas (botão de barras, 3º clique), a Meta PEF de cada loja aparece como referência de fundo, quando o Resumo de Performance foi importado."
+          hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu. Na visão de colunas empilhadas (botão de barras, 3º clique), a Meta PEF de cada loja aparece como referência de fundo, quando o Resumo de Performance foi importado. Em tela cheia, clique numa loja para ver os consultores dela e a participação de cada um no GMV."
           subtitle="Por GMV — 1º ao último lugar"
         >
-          <RankingChart items={rankingItems} />
+          <RankingChart items={rankingItems} getBreakdown={getLojaBreakdown} />
         </ChartCard>
 
         <ChartCard
