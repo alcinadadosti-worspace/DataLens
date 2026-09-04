@@ -24,7 +24,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
 
   if (!agg) {
     return (
-      <div style={{ padding: '16px 0', color: '#9B9287', fontSize: 13 }}>
+      <div style={{ padding: '16px 0', color: 'var(--loja-text-muted, #9B9287)', fontSize: 13 }}>
         Não foi possível encontrar dados para "{nome}".
       </div>
     );
@@ -49,7 +49,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
   return (
     <div style={{ padding: '20px 4px 4px' }}>
       {agg.lojaCodigos.length > 0 && (
-        <p style={{ color: '#6B6258', fontSize: 13, marginTop: 0, marginBottom: 16 }}>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 13, marginTop: 0, marginBottom: 16 }}>
           Unidade{agg.lojaCodigos.length > 1 ? 's' : ''}: {agg.lojaCodigos.map(c => `${c}${lojaNomeLookup.get(c) ? ' - ' + lojaNomeLookup.get(c) : ''}`).join(', ')}
         </p>
       )}
@@ -110,11 +110,11 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
           }
         >
           {!lojaCodigo ? (
-            <div style={{ color: '#9B9287', fontSize: 13, lineHeight: 1.6 }}>
+            <div style={{ color: 'var(--loja-text-muted, #9B9287)', fontSize: 13, lineHeight: 1.6 }}>
               Não foi possível identificar a loja de {nome} no período.
             </div>
           ) : buckets.length === 0 ? (
-            <div style={{ color: '#9B9287', fontSize: 13, lineHeight: 1.6 }}>
+            <div style={{ color: 'var(--loja-text-muted, #9B9287)', fontSize: 13, lineHeight: 1.6 }}>
               O arquivo <strong>relatorioVendaPorHora</strong> não foi importado, ou não tem dados para essa loja.
             </div>
           ) : (
@@ -127,7 +127,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
                   valueLabel: fmtBRLshort(b.receitaLiquida),
                 }))}
               />
-              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 12, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 12, lineHeight: 1.5 }}>
                 Este é o padrão de horário <strong>da loja inteira</strong> (todos os vendedores){multiLoja ? ', a unidade onde ' + nome + ' mais vendeu' : ''} —
                 os arquivos de origem não trazem venda por hora quebrada por consultor/operador individual, então não é
                 possível isolar só as vendas de {nome} por faixa horária.
@@ -146,12 +146,12 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
               subtitle="Funil de atendimento via WhatsApp/digital"
             >
               {extras.lojaDigital.map((r, i) => (
-                <div key={i} style={{ fontSize: 13, borderBottom: i < extras.lojaDigital.length - 1 ? '1px solid #F2EEE2' : 'none', paddingBottom: 10, marginBottom: 10 }}>
+                <div key={i} style={{ fontSize: 13, borderBottom: i < extras.lojaDigital.length - 1 ? '1px solid var(--loja-bg-subtle, #F2EEE2)' : 'none', paddingBottom: 10, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
                     <span>{lojaNomeLookup.get(r.pdvCodigo ?? '') ?? r.pdvCodigo}</span>
                     <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRL(r.receita)}</span>
                   </div>
-                  <div style={{ color: '#6B6258', fontSize: 12, marginTop: 2 }}>
+                  <div style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 12, marginTop: 2 }}>
                     {r.clientesConvertidos}/{r.clientesAtendidos} convertidos ({fmtPct(r.conversaoPct).replace('+', '')}) · TME (tempo médio de espera/atendimento) {r.tmeAjustado}
                   </div>
                 </div>
@@ -167,9 +167,9 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {extras.servicos.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--loja-bg-subtle, #F2EEE2)', paddingBottom: 8 }}>
                     <span style={{ fontWeight: 600 }}>{r.servico}</span>
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--loja-text-secondary, #6B6258)' }}>
                       {r.qtdCompletos}/{r.qtdRealizados} · {fmtBRL(r.gmv)}
                     </span>
                   </div>
@@ -185,7 +185,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
               subtitle="Receita gerada nesse recorte"
             >
               <div style={{ fontSize: 24, fontWeight: 700 }}>{fmtBRL(cuidadosTotal)}</div>
-              <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--loja-text-secondary, #6B6258)', marginTop: 4 }}>
                 dos quais {fmtBRL(cuidadosBotik)} em produtos Botik ({cuidadosTotal > 0 ? ((cuidadosBotik / cuidadosTotal) * 100).toFixed(0) : 0}%)
               </div>
             </ChartCard>

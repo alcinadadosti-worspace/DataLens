@@ -1,0 +1,107 @@
+/* Tokens de cor do Modo Loja — tema claro (padrão) e escuro. Cada var tem um fallback no próprio
+   valor hex original em todo lugar que a usa, então componentes compartilhados com o app original
+   (ChartCard, KpiCard...) continuam com a aparência de sempre fora do Modo Loja, onde essas
+   variáveis não existem. */
+
+[data-loja-theme='light'] {
+  --loja-bg: #FAF7F2;
+  --loja-surface: #FFFFFF;
+  --loja-surface-translucent: rgba(255, 255, 255, 0.85);
+  --loja-bg-subtle: #F2EEE2;
+  --loja-bg-track: #F2EEE6;
+  --loja-border: #E8E2D6;
+  --loja-border-soft: rgba(28, 24, 20, 0.08);
+  --loja-border-strong: #D8D0C0;
+  --loja-ink: #1C1814;
+  --loja-text-strong: #3D362E;
+  --loja-text-secondary: #6B6258;
+  --loja-text-muted: #9B9287;
+  --loja-accent: #B26A3C;
+  --loja-accent-gold: #C9A227;
+  --loja-success: #2E7D5B;
+  --loja-success-bg: #E0F2E8;
+  --loja-success-bg-strong: #9FD4B8;
+  --loja-success-text-strong: #0E3A2A;
+  --loja-danger: #B83A3A;
+  --loja-danger-bg: #FBE5E9;
+  --loja-danger-border: #F0A8B3;
+  --loja-danger-text: #8A1426;
+  --loja-danger-text-strong: #5C0F1A;
+  --loja-warning-bg: #FBF3D0;
+  --loja-warning-border: #E8C547;
+  --loja-warning-text: #5C4500;
+  --loja-warning-text-strong: #8A6D00;
+  color-scheme: light;
+}
+
+[data-loja-theme='dark'] {
+  --loja-bg: #17130F;
+  --loja-surface: #211C17;
+  --loja-surface-translucent: rgba(23, 19, 15, 0.82);
+  --loja-bg-subtle: #2A241C;
+  --loja-bg-track: #2F281F;
+  --loja-border: #3A332A;
+  --loja-border-soft: rgba(245, 240, 230, 0.10);
+  --loja-border-strong: #4A4033;
+  --loja-ink: #F5F0E6;
+  --loja-text-strong: #E4DCC9;
+  --loja-text-secondary: #B9AD98;
+  --loja-text-muted: #8C806C;
+  --loja-accent: #D9905C;
+  --loja-accent-gold: #E3BE4E;
+  --loja-success: #4FBE87;
+  --loja-success-bg: #1D3A2A;
+  --loja-success-bg-strong: #2E5C41;
+  --loja-success-text-strong: #B7F0CE;
+  --loja-danger: #E2646B;
+  --loja-danger-bg: #3D2126;
+  --loja-danger-border: #6B333C;
+  --loja-danger-text: #F2A9AF;
+  --loja-danger-text-strong: #F7C6CB;
+  --loja-warning-bg: #362D18;
+  --loja-warning-border: #7A6220;
+  --loja-warning-text: #E6C765;
+  --loja-warning-text-strong: #F0DB93;
+  color-scheme: dark;
+}
+
+[data-loja-theme] {
+  background: var(--loja-bg);
+  min-height: 100vh;
+}
+
+[data-loja-theme] * {
+  transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease;
+}
+
+/* A troca de tema em si (círculo se expandindo a partir do botão) usa a View Transitions API —
+   só existe em navegadores Chromium; nos demais, a troca é instantânea (sem esse efeito), sem
+   quebrar nada. */
+@supports (view-transition-name: root) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-old(root) {
+    z-index: 1;
+  }
+
+  ::view-transition-new(root) {
+    z-index: 2;
+  }
+
+  [data-loja-theme-animating='true']::view-transition-new(root) {
+    animation: loja-theme-reveal 550ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes loja-theme-reveal {
+    from {
+      clip-path: circle(0px at var(--loja-theme-origin-x, 50%) var(--loja-theme-origin-y, 50%));
+    }
+    to {
+      clip-path: circle(var(--loja-theme-radius, 150%) at var(--loja-theme-origin-x, 50%) var(--loja-theme-origin-y, 50%));
+    }
+  }
+}

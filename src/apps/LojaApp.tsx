@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import '../design-system/lojaTheme.css';
 import LojaTopBar from '../components/layout/LojaTopBar';
 import LojaSidebar from '../components/layout/LojaSidebar';
+import LiquidGridBackground from '../components/ui/LiquidGridBackground';
+import ScrollProgress from '../components/ui/ScrollProgress';
+import ScreenTransition from '../components/ui/ScreenTransition';
 import LojaImportScreen from '../screens/loja/LojaImportScreen';
 import LojaOverviewScreen from '../screens/loja/LojaOverviewScreen';
 import LojaConsultoresScreen from '../screens/loja/LojaConsultoresScreen';
@@ -12,9 +16,11 @@ import LojaPedidosScreen from '../screens/loja/LojaPedidosScreen';
 import LojaHorarioScreen from '../screens/loja/LojaHorarioScreen';
 import LojaFidelidadeServicosScreen from '../screens/loja/LojaFidelidadeServicosScreen';
 import { useLojaStore } from '../store/useLojaStore';
+import { useLojaThemeStore } from '../store/useLojaThemeStore';
 
 function LojaApp() {
   const hasDataset = useLojaStore(s => !!s.dataset);
+  const theme = useLojaThemeStore(s => s.theme);
   const [route, setRoute] = useState(hasDataset ? 'loja-overview' : 'loja-import');
 
   function navigate(r: string) {
@@ -45,11 +51,17 @@ function LojaApp() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FAF7F2' }}>
-      <LojaTopBar onNavigate={navigate} />
-      <LojaSidebar active={route} onNavigate={navigate} />
-      <div style={{ marginLeft: 264, marginTop: 64 }}>
-        {screen}
+    <div data-loja-theme={theme} style={{ minHeight: '100vh', position: 'relative' }}>
+      <LiquidGridBackground />
+      <ScrollProgress />
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <LojaTopBar onNavigate={navigate} />
+        <LojaSidebar active={route} onNavigate={navigate} />
+        <div style={{ marginLeft: 264, marginTop: 64 }}>
+          <ScreenTransition routeKey={route}>
+            {screen}
+          </ScreenTransition>
+        </div>
       </div>
     </div>
   );

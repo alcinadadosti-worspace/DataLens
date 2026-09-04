@@ -17,9 +17,9 @@ const CLASS_HINT: Record<'A' | 'B' | 'C', string> = {
 };
 
 const CLASS_COLOR: Record<'A' | 'B' | 'C', { bg: string; color: string }> = {
-  A: { bg: '#E0F2E8', color: '#2E7D5B' },
-  B: { bg: '#FBF3D0', color: '#8A6D00' },
-  C: { bg: '#F2EEE2', color: '#6B6258' },
+  A: { bg: 'var(--loja-success-bg, #E0F2E8)', color: 'var(--loja-success, #2E7D5B)' },
+  B: { bg: 'var(--loja-warning-bg, #FBF3D0)', color: 'var(--loja-warning-text-strong, #8A6D00)' },
+  C: { bg: 'var(--loja-bg-subtle, #F2EEE2)', color: 'var(--loja-text-secondary, #6B6258)' },
 };
 
 function parseComercialFlag(raw: string): boolean {
@@ -44,7 +44,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a curva ABC.</p>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a curva ABC.</p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
@@ -53,7 +53,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
   if (!dataset.abc || dataset.abc.length === 0) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>
           O arquivo <strong>relatorioABCVenda</strong> não foi importado neste lote — curva ABC indisponível.
         </p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
@@ -126,7 +126,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
           title="Curva ABC de produtos"
           hint="ABC é a classificação de produtos pela importância no faturamento acumulado: Classe A (essenciais), B (intermediários) e C (cauda longa)."
         />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#3D362E', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--loja-text-strong, #3D362E)', cursor: 'pointer' }}>
           <input type="checkbox" checked={comercialOnly} onChange={e => setComercialOnly(e.target.checked)} />
           Excluir sacolas/amostras/PRM
         </label>
@@ -139,8 +139,8 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
               Classe {c}
               <InfoHint text={CLASS_HINT[c]} />
             </div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: '#1C1814', marginTop: 4 }}>{counts[c]}</div>
-            <div style={{ fontSize: 12, color: '#6B6258' }}>SKUs</div>
+            <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--loja-ink, #1C1814)', marginTop: 4 }}>{counts[c]}</div>
+            <div style={{ fontSize: 12, color: 'var(--loja-text-secondary, #6B6258)' }}>SKUs</div>
           </div>
         ))}
       </div>
@@ -153,22 +153,22 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {topItems.length === 0 ? (
-              <div style={{ padding: '24px 0', textAlign: 'center', color: '#9B9287', fontSize: 13 }}>Sem dados</div>
+              <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--loja-text-muted, #9B9287)', fontSize: 13 }}>Sem dados</div>
             ) : topItems.map((a, i) => (
               <div key={a.codigo} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0, fontSize: 11, fontWeight: 700,
                   fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: '#F2EEE2', color: '#6B6258',
+                  background: 'var(--loja-bg-subtle, #F2EEE2)', color: 'var(--loja-text-secondary, #6B6258)',
                 }}>{i + 1}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {a.descricao || a.codigo}
-                    <span style={{ fontWeight: 400, color: '#9B9287', marginLeft: 6, fontSize: 12 }}>{a.codigo}</span>
+                    <span style={{ fontWeight: 400, color: 'var(--loja-text-muted, #9B9287)', marginLeft: 6, fontSize: 12 }}>{a.codigo}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: '#9B9287' }}>
+                  <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)' }}>
                     Classe {a.classe} · {a.participacaoAcumuladaPct.toFixed(0)}% acum.
-                    {a.isOverridden && <span style={{ color: '#B26A3C', marginLeft: 6 }}>· classificação manual</span>}
+                    {a.isOverridden && <span style={{ color: 'var(--loja-accent, #B26A3C)', marginLeft: 6 }}>· classificação manual</span>}
                   </div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
@@ -178,9 +178,9 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
                   onClick={() => toggleOverride(a)}
                   title={a.isOverridden ? (overrides[a.codigo] ? 'Marcado manualmente como comercial — clique para marcar não-comercial' : 'Marcado manualmente como não-comercial — clique para voltar ao automático') : 'Marcar classificação manualmente'}
                   style={{
-                    flexShrink: 0, width: 26, height: 26, borderRadius: '50%', border: '1px solid #E8E2D6',
-                    background: a.isOverridden ? (overrides[a.codigo] ? '#E0F2E8' : '#F2EEE2') : 'white',
-                    color: a.isOverridden ? (overrides[a.codigo] ? '#2E7D5B' : '#6B6258') : '#9B9287',
+                    flexShrink: 0, width: 26, height: 26, borderRadius: '50%', border: '1px solid var(--loja-border, #E8E2D6)',
+                    background: a.isOverridden ? (overrides[a.codigo] ? 'var(--loja-success-bg, #E0F2E8)' : 'var(--loja-bg-subtle, #F2EEE2)') : 'var(--loja-surface, #FFFFFF)',
+                    color: a.isOverridden ? (overrides[a.codigo] ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-text-secondary, #6B6258)') : 'var(--loja-text-muted, #9B9287)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
                   }}
                 >
@@ -197,16 +197,16 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
           subtitle="Risco de precificação (margem < 20%)"
         >
           {riscoMargem.length === 0 ? (
-            <div style={{ color: '#6B6258', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <i className="ph ph-check-circle" style={{ color: '#2E7D5B', fontSize: 18 }} />
+            <div style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <i className="ph ph-check-circle" style={{ color: 'var(--loja-success, #2E7D5B)', fontSize: 18 }} />
               Nenhum item de Classe A com margem abaixo de 20%.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {riscoMargem.map((a, i) => (
-                <div key={i} style={{ background: '#FBE5E9', border: '1px solid #F0A8B3', borderRadius: 10, padding: '10px 14px' }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#5C0F1A' }}>{a.descricao || a.codigo}</div>
-                  <div style={{ fontSize: 12, color: '#8A1426', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
+                <div key={i} style={{ background: 'var(--loja-danger-bg, #FBE5E9)', border: '1px solid var(--loja-danger-border, #F0A8B3)', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--loja-danger-text-strong, #5C0F1A)' }}>{a.descricao || a.codigo}</div>
+                  <div style={{ fontSize: 12, color: 'var(--loja-danger-text, #8A1426)', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
                     Margem {a.margem.toFixed(1).replace('.', ',')}% · {fmtBRLshort(a.faturamento)}
                   </div>
                 </div>
@@ -223,7 +223,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
           subtitle="Corrija exceções da heurística automática (sufixo PRM / preço < R$3) sem depender de um novo arquivo-fonte"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: '#3D362E' }}>
+            <span style={{ fontSize: 13, color: 'var(--loja-text-strong, #3D362E)' }}>
               {overrideCount === 0 ? 'Nenhum SKU classificado manualmente ainda.' : `${overrideCount} SKU(s) com classificação manual.`}
             </span>
             <input ref={refFileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImportReferenceList} />
@@ -239,12 +239,12 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
               </Button>
             )}
           </div>
-          <div style={{ fontSize: 11, color: '#9B9287', marginTop: 10 }}>
+          <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 10 }}>
             Formato esperado: colunas <code>codigo,comercial</code> (S/N) — uma linha por SKU. A lista é salva no
             navegador e reaplicada automaticamente em futuras importações.
           </div>
           {importMsg && (
-            <div style={{ fontSize: 12, color: '#2E7D5B', marginTop: 8 }}>{importMsg}</div>
+            <div style={{ fontSize: 12, color: 'var(--loja-success, #2E7D5B)', marginTop: 8 }}>{importMsg}</div>
           )}
         </ChartCard>
       </div>

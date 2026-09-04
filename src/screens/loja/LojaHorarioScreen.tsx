@@ -13,7 +13,7 @@ const LojaHorarioScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver o padrão por horário.</p>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver o padrão por horário.</p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
@@ -22,7 +22,7 @@ const LojaHorarioScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
   if (!dataset.vendaPorHora || dataset.vendaPorHora.length === 0) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>
           O arquivo <strong>relatorioVendaPorHora</strong> não foi importado — distribuição por horário indisponível.
         </p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
@@ -65,8 +65,8 @@ const LojaHorarioScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
             hint="Interpretação automática do horário de pico, para embasar decisões de escala de equipe e janelas de promoção."
             subtitle="Para embasar decisões de escala e promoção"
           >
-            <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#3D362E', lineHeight: 1.6 }}>
-              <i className="ph ph-lightbulb" style={{ color: '#C9A227', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
+            <div style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--loja-text-strong, #3D362E)', lineHeight: 1.6 }}>
+              <i className="ph ph-lightbulb" style={{ color: 'var(--loja-accent-gold, #C9A227)', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
               <span>
                 A faixa <strong>{pico.faixaHoraria}</strong> concentra o pico de receita líquida
                 ({pico.participacaoPct.toFixed(1).replace('.', ',')}% do total), com {fmtNumber(pico.qtdBoletos)} boletos.

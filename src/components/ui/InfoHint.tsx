@@ -15,7 +15,7 @@ const InfoHint: React.FC<InfoHintProps> = ({ text, size = 14 }) => {
       onMouseLeave={() => setHovered(false)}
       style={{ position: 'relative', display: 'inline-flex', verticalAlign: 'middle', marginLeft: 6, cursor: 'help' }}
     >
-      <i className="ph ph-info" style={{ fontSize: size, color: '#9B9287' }} />
+      <i className="ph ph-info" style={{ fontSize: size, color: 'var(--loja-text-muted, #9B9287)' }} />
       {hovered && (
         <div
           role="tooltip"
@@ -24,8 +24,8 @@ const InfoHint: React.FC<InfoHintProps> = ({ text, size = 14 }) => {
             bottom: 'calc(100% + 8px)',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: '#1C1814',
-            color: '#FAF7F2',
+            background: 'var(--loja-ink, #1C1814)',
+            color: 'var(--loja-bg, #FAF7F2)',
             borderRadius: 11,
             padding: '11px 14px',
             fontSize: 13,
@@ -46,7 +46,7 @@ const InfoHint: React.FC<InfoHintProps> = ({ text, size = 14 }) => {
           <div style={{
             position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
             width: 0, height: 0,
-            borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #1C1814',
+            borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid var(--loja-ink, #1C1814)',
           }} />
         </div>
       )}

@@ -15,7 +15,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver as categorias.</p>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver as categorias.</p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
@@ -63,7 +63,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
         <select
           value={lojaFiltro}
           onChange={e => setLojaFiltro(e.target.value)}
-          style={{ fontSize: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid #E8E2D6', background: 'white', color: '#1C1814', cursor: 'pointer' }}
+          style={{ fontSize: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid var(--loja-border, #E8E2D6)', background: 'var(--loja-surface, #FFFFFF)', color: 'var(--loja-ink, #1C1814)', cursor: 'pointer' }}
         >
           <option value="">Todas as lojas</option>
           {lojas.map(l => (
@@ -71,7 +71,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
           ))}
         </select>
       </div>
-      <p style={{ color: '#6B6258', fontSize: 12, margin: '4px 0 24px' }}>
+      <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 12, margin: '4px 0 24px' }}>
         O filtro de loja se aplica ao ranking "gestão estratégica" (abaixo); a receita por categoria/subcategoria/marca do xlsx é sempre rede toda.
       </p>
 
@@ -92,9 +92,9 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {maioresVariacoes.map((c, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--loja-bg-subtle, #F2EEE2)', paddingBottom: 8 }}>
                     <span style={{ fontWeight: 600 }}>{c.nome}</span>
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', color: c.variacaoPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', color: c.variacaoPct >= 0 ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-danger, #B83A3A)' }}>
                       {fmtPct(c.variacaoPct)}
                     </span>
                   </div>
@@ -137,10 +137,10 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {botikPorLoja.map((r, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--loja-bg-subtle, #F2EEE2)', paddingBottom: 8 }}>
                       <span style={{ fontWeight: 600 }}>{resolveLojaNome(r.pdvCodigo, r.nome)}</span>
-                      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
-                        {fmtBRLshort(r.receitaBotik)} <span style={{ color: '#9B9287' }}>({botikLinha.receitaAtual > 0 ? ((r.receitaBotik / botikLinha.receitaAtual) * 100).toFixed(0) : 0}%)</span>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--loja-text-secondary, #6B6258)' }}>
+                        {fmtBRLshort(r.receitaBotik)} <span style={{ color: 'var(--loja-text-muted, #9B9287)' }}>({botikLinha.receitaAtual > 0 ? ((r.receitaBotik / botikLinha.receitaAtual) * 100).toFixed(0) : 0}%)</span>
                       </span>
                     </div>
                   ))}
@@ -150,7 +150,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
           )}
         </>
       ) : (
-        <div style={{ background: '#FBF3D0', border: '1px solid #E8C547', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 12, color: '#5C4500' }}>
+        <div style={{ background: 'var(--loja-warning-bg, #FBF3D0)', border: '1px solid var(--loja-warning-border, #E8C547)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 12, color: 'var(--loja-warning-text, #5C4500)' }}>
           Arquivo Receita_por_Cat_Sub_Mar.xlsx não importado — mostrando visão sem comparativo anual, a partir do CSV de gestão estratégica por loja.
         </div>
       )}
@@ -170,16 +170,16 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
           subtitle="Desconto acima da receita líquida"
         >
           {anomalias.length === 0 ? (
-            <div style={{ color: '#6B6258', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <i className="ph ph-check-circle" style={{ color: '#2E7D5B', fontSize: 18 }} />
+            <div style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <i className="ph ph-check-circle" style={{ color: 'var(--loja-success, #2E7D5B)', fontSize: 18 }} />
               Nenhuma anomalia de desconto encontrada.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {anomalias.map((a, i) => (
-                <div key={i} style={{ background: '#FBE5E9', border: '1px solid #F0A8B3', borderRadius: 10, padding: '10px 14px' }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#5C0F1A' }}>{a.key}</div>
-                  <div style={{ fontSize: 12, color: '#8A1426', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
+                <div key={i} style={{ background: 'var(--loja-danger-bg, #FBE5E9)', border: '1px solid var(--loja-danger-border, #F0A8B3)', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--loja-danger-text-strong, #5C0F1A)' }}>{a.key}</div>
+                  <div style={{ fontSize: 12, color: 'var(--loja-danger-text, #8A1426)', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
                     Desconto {a.descontoPct.toFixed(0)}% da receita líquida
                   </div>
                 </div>

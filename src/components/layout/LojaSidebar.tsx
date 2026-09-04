@@ -24,8 +24,8 @@ const LojaSidebar: React.FC<LojaSidebarProps> = ({ active, onNavigate }) => {
     <div style={{
       position: 'fixed',
       top: 64, bottom: 0, left: 0, width: 264,
-      background: '#FAF7F2',
-      borderRight: '1px solid rgba(28,24,20,0.08)',
+      background: 'var(--loja-bg, #FAF7F2)',
+      borderRight: '1px solid var(--loja-border-soft, rgba(28,24,20,0.08))',
       padding: '22px 14px',
       overflowY: 'auto',
       display: 'flex',

@@ -14,7 +14,7 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a série temporal.</p>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a série temporal.</p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
@@ -45,7 +45,7 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
         hint="GMV — Gross Merchandise Value: valor total vendido em cada dia do ciclo, somando todas as lojas."
         subtitle="Somado entre as 6 lojas do grupo"
       >
-        <SimpleLineChart points={points} color="#B26A3C" formatValue={fmtBRLshort} />
+        <SimpleLineChart points={points} color="var(--loja-accent, #B26A3C)" formatValue={fmtBRLshort} />
       </ChartCard>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 20 }}>
@@ -71,16 +71,16 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {bestDay && (
-              <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#3D362E', lineHeight: 1.5 }}>
-                <i className="ph ph-star" style={{ color: '#C9A227', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
+              <div style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--loja-text-strong, #3D362E)', lineHeight: 1.5 }}>
+                <i className="ph ph-star" style={{ color: 'var(--loja-accent-gold, #C9A227)', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
                 <span>
                   O melhor dia do ciclo foi <strong>{bestDay.dateLabel}</strong>, com {fmtBRL(bestDay.gmv)} em GMV.
                 </span>
               </div>
             )}
             {bestDow && (
-              <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#3D362E', lineHeight: 1.5 }}>
-                <i className="ph ph-calendar-check" style={{ color: '#C9A227', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
+              <div style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--loja-text-strong, #3D362E)', lineHeight: 1.5 }}>
+                <i className="ph ph-calendar-check" style={{ color: 'var(--loja-accent-gold, #C9A227)', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
                 <span>
                   <strong>{bestDow.label}</strong> é o dia da semana com maior média de GMV, indicando o pico de fluxo do grupo.
                 </span>

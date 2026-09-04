@@ -20,11 +20,11 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, color: '#D8D0C0', marginBottom: 16 }}>
+        <div style={{ fontSize: 48, color: 'var(--loja-border-strong, #D8D0C0)', marginBottom: 16 }}>
           <i className="ph ph-storefront" />
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Nenhum dado importado</h2>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>
           Importe os 7 arquivos CSV do relatório gerencial para ver o ranking.
         </p>
         <Button variant="primary" size="lg" icon={<i className="ph ph-upload-simple" style={{ fontSize: 18 }} />} onClick={() => onNavigate('loja-import')}>
@@ -82,8 +82,8 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
         />
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          fontSize: 11, color: consistency.ok ? '#2E7D5B' : '#B83A3A',
-          background: consistency.ok ? '#E0F2E8' : '#FBE5E9',
+          fontSize: 11, color: consistency.ok ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-danger, #B83A3A)',
+          background: consistency.ok ? 'var(--loja-success-bg, #E0F2E8)' : 'var(--loja-danger-bg, #FBE5E9)',
           padding: '5px 10px', borderRadius: 8, fontFamily: 'JetBrains Mono, monospace',
         }}>
           <i className={consistency.ok ? 'ph-bold ph-check-circle' : 'ph-bold ph-warning-circle'} />
@@ -97,24 +97,24 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       {receitaTotalIndicador && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginTop: 20 }}>
           {receitaTotalIndicador.vsMetaPEFPct !== null && (
-            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+            <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
                 Receita vs. Meta PEF
                 <InfoHint text="PEF é a metodologia de meta usada internamente pelo sistema de origem (Resumo de Performance). Este indicador compara a receita realizada contra a meta PEF definida para o ciclo." />
               </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: receitaTotalIndicador.vsMetaPEFPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(receitaTotalIndicador.vsMetaPEFPct)}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: receitaTotalIndicador.vsMetaPEFPct >= 0 ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-danger, #B83A3A)' }}>{fmtPct(receitaTotalIndicador.vsMetaPEFPct)}</div>
               {receitaTotalIndicador.metaPEF !== null && (
-                <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2 }}>Meta: {fmtBRL(receitaTotalIndicador.metaPEF)}</div>
+                <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 2 }}>Meta: {fmtBRL(receitaTotalIndicador.metaPEF)}</div>
               )}
             </div>
           )}
           {receitaTotalIndicador.vsAnoPassadoPct !== null && (
-            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+            <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
                 Receita vs. Ano anterior
                 <InfoHint text="Comparação da receita deste ciclo com o mesmo período do ano anterior." />
               </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: receitaTotalIndicador.vsAnoPassadoPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(receitaTotalIndicador.vsAnoPassadoPct)}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: receitaTotalIndicador.vsAnoPassadoPct >= 0 ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-danger, #B83A3A)' }}>{fmtPct(receitaTotalIndicador.vsAnoPassadoPct)}</div>
             </div>
           )}
         </div>
@@ -123,45 +123,45 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       {(kpis.fidelidadePenetracaoPctGeral > 0 || dataset.fidelidade || dataset.cuidadosFaciais) && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 20 }}>
           {kpis.fidelidadePenetracaoPctGeral > 0 && (
-            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+            <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
                 Boletos de cliente Fidelidade
                 <InfoHint text="% dos boletos (cupons de venda) que pertencem a clientes cadastrados no programa Fidelidade — dado que já vinha nos CSVs obrigatórios, mas não era exibido em nenhuma tela." />
               </div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{kpis.fidelidadePenetracaoPctGeral.toFixed(1).replace('.', ',')}%</div>
-              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2 }}>média ponderada por boletos, {fmtNumber(kpis.qtdBoletosTotal)} boletos no ciclo</div>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 2 }}>média ponderada por boletos, {fmtNumber(kpis.qtdBoletosTotal)} boletos no ciclo</div>
             </div>
           )}
           {dataset.fidelidade && dataset.fidelidade.cp.length > 0 && (
-            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+            <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
                 % que concluiu o desafio Fidelidade
                 <InfoHint text="Dos boletos de cliente Fidelidade, quantos concluíram o 'desafio' do programa (uma ação/meta específica) — vem do arquivo ProgramaFidelidade." />
               </div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{dataset.fidelidade.cp[0].penetracaoPct.toFixed(1).replace('.', ',')}%</div>
-              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2 }}>dentre os boletos de cliente Fidelidade</div>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 2 }}>dentre os boletos de cliente Fidelidade</div>
             </div>
           )}
           {dataset.cuidadosFaciais && dataset.cuidadosFaciais.participacaoPct !== null && (
-            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+            <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
                 Cuidados Faciais + Botik no GMV
                 <InfoHint text="GMV — Gross Merchandise Value (valor total transacionado). % do GMV da rede que veio dos produtos da linha Botik e da categoria Cuidados Faciais." />
               </div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{dataset.cuidadosFaciais.participacaoPct.toFixed(1).replace('.', ',')}%</div>
-              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2 }}>do GMV total da rede no ciclo</div>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 2 }}>do GMV total da rede no ciclo</div>
             </div>
           )}
         </div>
       )}
 
       {optionalWarnings.length > 0 && (
-        <div style={{ background: '#FBF3D0', border: '1px solid #E8C547', borderRadius: 10, padding: '10px 16px', marginTop: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#5C4500', marginBottom: 6 }}>
+        <div style={{ background: 'var(--loja-warning-bg, #FBF3D0)', border: '1px solid var(--loja-warning-border, #E8C547)', borderRadius: 10, padding: '10px 16px', marginTop: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--loja-warning-text, #5C4500)', marginBottom: 6 }}>
             {optionalWarnings.length} divergência(s) entre arquivos opcionais
           </div>
           {optionalWarnings.map((w, i) => (
-            <div key={i} style={{ fontSize: 11, color: '#5C4500', marginTop: 4 }}>{w}</div>
+            <div key={i} style={{ fontSize: 11, color: 'var(--loja-warning-text, #5C4500)', marginTop: 4 }}>{w}</div>
           ))}
         </div>
       )}
@@ -211,13 +211,13 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {insights.map((text, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#3D362E', lineHeight: 1.5 }}>
-                <i className="ph ph-lightbulb" style={{ color: '#C9A227', fontSize: 15, flexShrink: 0, marginTop: 1 }} />
+              <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--loja-text-strong, #3D362E)', lineHeight: 1.5 }}>
+                <i className="ph ph-lightbulb" style={{ color: 'var(--loja-accent-gold, #C9A227)', fontSize: 15, flexShrink: 0, marginTop: 1 }} />
                 <span>{text}</span>
               </div>
             ))}
             {insights.length === 0 && (
-              <div style={{ color: '#9B9287', fontSize: 13 }}>Sem insights disponíveis.</div>
+              <div style={{ color: 'var(--loja-text-muted, #9B9287)', fontSize: 13 }}>Sem insights disponíveis.</div>
             )}
           </div>
         </ChartCard>

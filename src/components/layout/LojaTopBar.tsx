@@ -1,5 +1,6 @@
 import React from 'react';
 import Button from '../ui/Button';
+import ThemeToggleButton from '../ui/ThemeToggleButton';
 import { useLojaStore } from '../../store/useLojaStore';
 import { useAppModeStore } from '../../store/useAppModeStore';
 
@@ -16,9 +17,9 @@ const LojaTopBar: React.FC<LojaTopBarProps> = ({ onNavigate }) => {
       position: 'fixed',
       top: 0, left: 0, right: 0,
       height: 64,
-      background: 'rgba(255,255,255,0.85)',
+      background: 'var(--loja-surface-translucent, rgba(255,255,255,0.85))',
       backdropFilter: 'blur(8px)',
-      borderBottom: '1px solid #E8E2D6',
+      borderBottom: '1px solid var(--loja-border, #E8E2D6)',
       display: 'flex',
       alignItems: 'center',
       padding: '0 24px',
@@ -28,17 +29,17 @@ const LojaTopBar: React.FC<LojaTopBarProps> = ({ onNavigate }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
           width: 36, height: 36, borderRadius: 9,
-          background: 'linear-gradient(135deg, #1C1814 0%, #3D362E 100%)',
+          background: 'linear-gradient(135deg, var(--loja-ink, #1C1814) 0%, var(--loja-text-strong, #3D362E) 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'Fraunces, serif', color: '#FAF7F2', fontSize: 20, fontWeight: 600,
+          fontFamily: 'Fraunces, serif', color: 'var(--loja-bg, #FAF7F2)', fontSize: 20, fontWeight: 600,
         }}>
           D
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-          <div style={{ fontFamily: 'Fraunces, serif', fontSize: 19, fontWeight: 500, letterSpacing: '-0.01em' }}>
+          <div style={{ fontFamily: 'Fraunces, serif', fontSize: 19, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--loja-ink, #1C1814)' }}>
             DataLens
           </div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#B26A3C' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--loja-accent, #B26A3C)' }}>
             Modo Loja
           </div>
         </div>
@@ -48,11 +49,13 @@ const LojaTopBar: React.FC<LojaTopBarProps> = ({ onNavigate }) => {
 
       {dataset && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-          <div style={{ fontSize: 13, color: '#1C1814', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+          <div style={{ fontSize: 13, color: 'var(--loja-ink, #1C1814)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
             {dataset.lojas.length} lojas · importado em {dataset.importedAt.toLocaleDateString('pt-BR')}
           </div>
         </div>
       )}
+
+      <ThemeToggleButton />
 
       <Button
         variant="secondary"

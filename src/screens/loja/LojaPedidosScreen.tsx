@@ -15,7 +15,7 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a gestão de pedidos.</p>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a gestão de pedidos.</p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
@@ -24,7 +24,7 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
   if (!dataset.pedidosHistorico || dataset.pedidosHistorico.length === 0) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>
           O arquivo <strong>GestaoPedidos_Historico_Colocacao_Pedido</strong> não foi importado — gestão de pedidos indisponível.
         </p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
@@ -73,29 +73,29 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
 
       {visaoGeral && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
-          <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+          <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '16px 18px' }}>
+            <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
               Meta sugestão
               <InfoHint text="Volume que o sistema sugeriu pedir no ciclo, com base no histórico de vendas e estoque." />
             </div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{fmtNumber(visaoGeral.metaSugestao)}</div>
           </div>
-          <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+          <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '16px 18px' }}>
+            <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
               Volume colocado
               <InfoHint text="Volume que de fato foi pedido ao fornecedor, podendo diferir da sugestão do sistema." />
             </div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{fmtNumber(visaoGeral.volumeColocado)}</div>
           </div>
-          <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+          <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '16px 18px' }}>
+            <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
               Volume faturado
               <InfoHint text="Volume que o fornecedor efetivamente entregou/faturou do que foi colocado no pedido." />
             </div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{fmtNumber(visaoGeral.volumeFaturado)}</div>
           </div>
-          <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+          <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '16px 18px' }}>
+            <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
               Giro do ciclo
               <InfoHint text="Indicador de giro de estoque do ciclo — quão rápido o estoque reposto foi vendido." />
             </div>
@@ -124,13 +124,13 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
           subtitle="Rede toda (todos os canais) vs. só o canal físico"
         >
           {giroCanais.length === 0 ? (
-            <div style={{ color: '#9B9287', fontSize: 13 }}>Arquivo de giro por canal não importado.</div>
+            <div style={{ color: 'var(--loja-text-muted, #9B9287)', fontSize: 13 }}>Arquivo de giro por canal não importado.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {giroCanais.map((g, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--loja-bg-subtle, #F2EEE2)', paddingBottom: 8 }}>
                   <span style={{ fontWeight: 600 }}>{g.escopo}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--loja-text-secondary, #6B6258)' }}>
                     Giro {fmtPct(g.giroPct)} · {fmtNumber(g.volumeFaturado)}/{fmtNumber(g.volumePedido)}
                   </span>
                 </div>
@@ -149,9 +149,9 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {classeARisco.map((r, i) => (
-                <div key={i} style={{ background: '#FBE5E9', border: '1px solid #F0A8B3', borderRadius: 10, padding: '10px 14px' }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#5C0F1A' }}>{r.key}</div>
-                  <div style={{ fontSize: 12, color: '#8A1426', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
+                <div key={i} style={{ background: 'var(--loja-danger-bg, #FBE5E9)', border: '1px solid var(--loja-danger-border, #F0A8B3)', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--loja-danger-text-strong, #5C0F1A)' }}>{r.key}</div>
+                  <div style={{ fontSize: 12, color: 'var(--loja-danger-text, #8A1426)', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
                     Taxa de atendimento {r.taxaAtendimentoPct.toFixed(0)}% — contém produto de Classe A
                   </div>
                 </div>

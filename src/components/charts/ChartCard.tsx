@@ -13,8 +13,8 @@ interface ChartCardProps {
 const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action, hint }) => {
   return (
     <div style={{
-      background: 'white',
-      border: '1px solid #E8E2D6',
+      background: 'var(--loja-surface, #FFFFFF)',
+      border: '1px solid var(--loja-border, #E8E2D6)',
       borderRadius: 16,
       padding: 24,
       boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
@@ -31,7 +31,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action
             fontWeight: 600,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            color: '#6B6258',
+            color: 'var(--loja-text-secondary, #6B6258)',
             display: 'flex',
             alignItems: 'center',
           }}>
@@ -39,7 +39,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action
             {hint && <InfoHint text={hint} size={14} />}
           </div>
           {subtitle && (
-            <div style={{ fontSize: 14, color: '#3D362E', marginTop: 5 }}>{subtitle}</div>
+            <div style={{ fontSize: 14, color: 'var(--loja-text-strong, #3D362E)', marginTop: 5 }}>{subtitle}</div>
           )}
         </div>
         {action}

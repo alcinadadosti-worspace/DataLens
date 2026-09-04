@@ -65,7 +65,7 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
         hint="Arraste os arquivos exportados do sistema gerencial (CSV e xlsx) — tudo é processado localmente no navegador, nada é enviado para um servidor."
       />
       <div style={{ marginBottom: 6 }} />
-      <p style={{ color: '#6B6258', fontSize: 15, marginTop: 0, marginBottom: 28 }}>
+      <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginTop: 0, marginBottom: 28 }}>
         Arraste os <strong>7 arquivos CSV obrigatórios</strong> do relatório gerencial (Lojas, Forma, Consultor,
         Operador, Data, Canal e Gestão) e, se tiver, os arquivos <strong>opcionais</strong> (Curva ABC, Venda por
         Hora, Gestão de Pedidos, Resumo de Performance, Receita por Canal/Categoria — csv ou xlsx). Todos os
@@ -87,32 +87,32 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
         onDrop={handleDrop}
         onClick={() => fileRef.current?.click()}
         style={{
-          border: `2px dashed ${drag ? '#1C1814' : '#D8D0C0'}`,
+          border: `2px dashed ${drag ? 'var(--loja-ink, #1C1814)' : 'var(--loja-border-strong, #D8D0C0)'}`,
           borderRadius: 20, padding: 40,
-          background: drag ? '#FAF7F2' : 'white',
+          background: drag ? 'var(--loja-bg, #FAF7F2)' : 'var(--loja-surface, #FFFFFF)',
           textAlign: 'center',
           cursor: 'pointer',
           transition: 'all 200ms cubic-bezier(0.22, 1, 0.36, 1)',
           marginBottom: 24,
         }}
       >
-        <div style={{ fontSize: 40, color: '#9B9287', marginBottom: 10 }}>
+        <div style={{ fontSize: 40, color: 'var(--loja-text-muted, #9B9287)', marginBottom: 10 }}>
           <i className={loading ? 'ph ph-spinner' : 'ph ph-cloud-arrow-up'} />
         </div>
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
           {loading ? 'Processando arquivos...' : 'Arraste os arquivos aqui'}
         </div>
-        <div style={{ fontSize: 13, color: '#6B6258' }}>
-          ou <span style={{ color: '#1C1814', fontWeight: 600, textDecoration: 'underline' }}>selecione do computador</span>
+        <div style={{ fontSize: 13, color: 'var(--loja-text-secondary, #6B6258)' }}>
+          ou <span style={{ color: 'var(--loja-ink, #1C1814)', fontWeight: 600, textDecoration: 'underline' }}>selecione do computador</span>
         </div>
       </div>
 
       {/* Checklist */}
       <div style={{
-        background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
+        background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14,
         padding: 20, marginBottom: 20,
       }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--loja-text-secondary, #6B6258)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
           Obrigatórios
           <InfoHint text="Os 7 arquivos CSV do relatório gerencial (Lojas, Forma, Consultor, Operador, Data, Canal, Gestão) — sem eles o Modo Loja não consegue montar o ranking." />
         </div>
@@ -123,16 +123,16 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
               <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                  background: det ? '#E0F2E8' : '#F2EEE2',
-                  color: det ? '#2E7D5B' : '#9B9287',
+                  background: det ? 'var(--loja-success-bg, #E0F2E8)' : 'var(--loja-bg-subtle, #F2EEE2)',
+                  color: det ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-text-muted, #9B9287)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
                 }}>
                   <i className={det ? 'ph-bold ph-check' : 'ph ph-circle-dashed'} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1C1814' }}>{LOJA_DIMENSION_LABELS[dim]}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--loja-ink, #1C1814)' }}>{LOJA_DIMENSION_LABELS[dim]}</div>
                   {det && (
-                    <div style={{ fontSize: 11, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {det.fileName} · {det.rowCount} linhas
                     </div>
                   )}
@@ -144,10 +144,10 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
       </div>
 
       <div style={{
-        background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
+        background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14,
         padding: 20, marginBottom: 20,
       }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--loja-text-secondary, #6B6258)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
           Opcionais
           <InfoHint text="Arquivos extras que enriquecem outras telas (curva ABC, venda por hora, gestão de pedidos, Fidelidade, Loja Digital, Serviços em loja, Cuidados Faciais...) — o Modo Loja funciona sem eles, só mostra menos." />
         </div>
@@ -158,16 +158,16 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
               <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                  background: det ? '#E0F2E8' : '#F2EEE2',
-                  color: det ? '#2E7D5B' : '#9B9287',
+                  background: det ? 'var(--loja-success-bg, #E0F2E8)' : 'var(--loja-bg-subtle, #F2EEE2)',
+                  color: det ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-text-muted, #9B9287)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
                 }}>
                   <i className={det ? 'ph-bold ph-check' : 'ph ph-circle-dashed'} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1C1814' }}>{LOJA_OPTIONAL_FILE_LABELS[f]}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--loja-ink, #1C1814)' }}>{LOJA_OPTIONAL_FILE_LABELS[f]}</div>
                   {det && (
-                    <div style={{ fontSize: 11, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {det.fileName} · {det.rowCount} linhas
                     </div>
                   )}
@@ -179,20 +179,20 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
       </div>
 
       {result && result.errors.length > 0 && (
-        <div style={{ background: '#FBF3D0', border: '1px solid #E8C547', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#5C4500', marginBottom: 6 }}>
+        <div style={{ background: 'var(--loja-warning-bg, #FBF3D0)', border: '1px solid var(--loja-warning-border, #E8C547)', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--loja-warning-text, #5C4500)', marginBottom: 6 }}>
             {result.errors.length} aviso(s)
           </div>
           {result.errors.map((e, i) => (
-            <div key={i} style={{ fontSize: 11, color: '#5C4500', fontFamily: 'JetBrains Mono, monospace' }}>{e}</div>
+            <div key={i} style={{ fontSize: 11, color: 'var(--loja-warning-text, #5C4500)', fontFamily: 'JetBrains Mono, monospace' }}>{e}</div>
           ))}
         </div>
       )}
 
       {canProceed && (
-        <div style={{ background: '#E0F2E8', border: '1px solid #9FD4B8', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <i className="ph ph-bold ph-check-circle" style={{ color: '#2E7D5B', fontSize: 18 }} />
-          <div style={{ fontSize: 13, color: '#0E3A2A' }}>
+        <div style={{ background: 'var(--loja-success-bg, #E0F2E8)', border: '1px solid var(--loja-success-bg-strong, #9FD4B8)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <i className="ph ph-bold ph-check-circle" style={{ color: 'var(--loja-success, #2E7D5B)', fontSize: 18 }} />
+          <div style={{ fontSize: 13, color: 'var(--loja-success-text-strong, #0E3A2A)' }}>
             Todos os arquivos foram reconhecidos. Pronto para gerar o ranking.
           </div>
         </div>

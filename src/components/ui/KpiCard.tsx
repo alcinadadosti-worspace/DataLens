@@ -14,7 +14,7 @@ interface KpiCardProps {
 
 const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection, meta, tooltip, hint }) => {
   const [hovered, setHovered] = useState(false);
-  const deltaColor = deltaDirection === 'down' ? '#B83A3A' : '#2E7D5B';
+  const deltaColor = deltaDirection === 'down' ? 'var(--loja-danger, #B83A3A)' : 'var(--loja-success, #2E7D5B)';
   const arrow = deltaDirection === 'down' ? '↓' : '↑';
 
   return (
@@ -22,8 +22,8 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: 'white',
-        border: '1px solid #E8E2D6',
+        background: 'var(--loja-surface, #FFFFFF)',
+        border: '1px solid var(--loja-border, #E8E2D6)',
         borderRadius: 16,
         padding: 22,
         boxShadow: hovered && tooltip ? '0 4px 14px rgba(28,24,20,0.1)' : '0 2px 6px rgba(28,24,20,0.05)',
@@ -39,7 +39,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
         fontWeight: 600,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
-        color: '#6B6258',
+        color: 'var(--loja-text-secondary, #6B6258)',
         display: 'flex',
         alignItems: 'center',
       }}>
@@ -64,7 +64,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
           gap: 5,
         }}>
           {arrow} {delta}
-          {meta && <span style={{ color: '#6B6258', fontWeight: 400 }}>{meta}</span>}
+          {meta && <span style={{ color: 'var(--loja-text-secondary, #6B6258)', fontWeight: 400 }}>{meta}</span>}
         </div>
       )}
       {tooltip && (
@@ -72,8 +72,8 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
           position: 'absolute',
           bottom: 'calc(100% + 8px)',
           left: 0,
-          background: '#1C1814',
-          color: '#FAF7F2',
+          background: 'var(--loja-ink, #1C1814)',
+          color: 'var(--loja-bg, #FAF7F2)',
           borderRadius: 10,
           padding: '11px 15px',
           fontSize: 13,
@@ -95,7 +95,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
             height: 0,
             borderLeft: '5px solid transparent',
             borderRight: '5px solid transparent',
-            borderTop: '5px solid #1C1814',
+            borderTop: '5px solid var(--loja-ink, #1C1814)',
           }} />
         </div>
       )}

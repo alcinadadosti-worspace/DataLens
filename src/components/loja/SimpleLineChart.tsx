@@ -8,7 +8,7 @@ interface SimpleLineChartProps {
   formatValue?: (n: number) => string;
 }
 
-const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ points, height = 220, color = '#1C1814', formatValue }) => {
+const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ points, height = 220, color = 'var(--loja-ink, #1C1814)', formatValue }) => {
   const [hovered, setHovered] = useState<number | null>(null);
   if (points.length === 0) return null;
 
@@ -38,7 +38,7 @@ const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ points, height = 220,
           top: 0,
           left: `${((padL + hovered * xStep) / W) * 100}%`,
           transform: 'translate(-50%, -100%)',
-          background: '#1C1814', color: '#FAF7F2', borderRadius: 8,
+          background: 'var(--loja-ink, #1C1814)', color: 'var(--loja-bg, #FAF7F2)', borderRadius: 8,
           padding: '6px 10px', fontSize: 11, whiteSpace: 'nowrap',
           pointerEvents: 'none', zIndex: 10,
         }}>
@@ -56,9 +56,9 @@ const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ points, height = 220,
 
         {ticks.map((v, i) => (
           <g key={i}>
-            <line x1={padL} x2={W - padR} y1={yScale(v)} y2={yScale(v)} stroke="#F2EEE6" strokeWidth="1" />
+            <line x1={padL} x2={W - padR} y1={yScale(v)} y2={yScale(v)} stroke="var(--loja-bg-track, #F2EEE6)" strokeWidth="1" />
             <text x={padL - 8} y={yScale(v) + 3} textAnchor="end"
-              style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, fill: '#9B9287' }}>
+              style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, fill: 'var(--loja-text-muted, #9B9287)' }}>
               {fmtNumber(Math.round(v))}
             </text>
           </g>
@@ -67,7 +67,7 @@ const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ points, height = 220,
         {points.map((p, i) => (
           i % labelEvery === 0 && (
             <text key={i} x={padL + i * xStep} y={H - 8} textAnchor="middle"
-              style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 9, fill: '#6B6258' }}>
+              style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 9, fill: 'var(--loja-text-secondary, #6B6258)' }}>
               {p.label}
             </text>
           )
@@ -81,7 +81,7 @@ const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ points, height = 220,
             key={i}
             cx={padL + i * xStep} cy={yScale(p.value)}
             r={hovered === i ? 5 : 3}
-            fill={hovered === i ? color : 'white'}
+            fill={hovered === i ? color : 'var(--loja-surface, #FFFFFF)'}
             stroke={color} strokeWidth="2"
             style={{ cursor: 'pointer', transition: 'r 150ms' }}
             onMouseEnter={() => setHovered(i)}

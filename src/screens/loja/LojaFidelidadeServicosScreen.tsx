@@ -30,7 +30,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver fidelidade e serviços em loja.</p>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver fidelidade e serviços em loja.</p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
@@ -46,7 +46,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
   if (!hasAny) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>
           Nenhum arquivo de Fidelidade, Serviços, Loja Digital ou Cuidados Faciais foi importado ainda.
         </p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
@@ -182,9 +182,9 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
               onClick={() => setTab(t)}
               style={{
                 fontSize: 14, padding: '10px 16px', borderRadius: 9, cursor: 'pointer',
-                border: `1px solid ${tab === t ? '#1C1814' : '#E8E2D6'}`,
-                background: tab === t ? '#1C1814' : 'white',
-                color: tab === t ? 'white' : '#1C1814', fontWeight: 600,
+                border: `1px solid ${tab === t ? 'var(--loja-ink, #1C1814)' : 'var(--loja-border, #E8E2D6)'}`,
+                background: tab === t ? 'var(--loja-ink, #1C1814)' : 'var(--loja-surface, #FFFFFF)',
+                color: tab === t ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-ink, #1C1814)', fontWeight: 600,
               }}
             >
               {t === 'lojas' ? 'Por loja' : 'Por consultor'}
@@ -201,7 +201,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
             hint="Dos boletos de cliente Fidelidade, % que concluiu o 'desafio' do programa — uma ação/meta específica, diferente de simplesmente ser cliente cadastrado."
           >
             <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em' }}>{fmtPct(penetracaoRede).replace('+', '')}</div>
-            <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: 'var(--loja-text-secondary, #6B6258)', marginTop: 4 }}>
               {fmtNumber(totalDesafio ?? 0)} de {fmtNumber(totalBoletosFid ?? 0)} boletos com desafio concluído
             </div>
           </ChartCard>
@@ -211,7 +211,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
               hint="GMV — Gross Merchandise Value: valor total vendido a partir de serviços de beleza (maquiagem, cuidados faciais, cabelo...) prestados em loja."
             >
               <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em' }}>{fmtBRL(totalServicosGmv)}</div>
-              <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>{fmtNumber(totalServicosCompletos)} serviços completos</div>
+              <div style={{ fontSize: 12, color: 'var(--loja-text-secondary, #6B6258)', marginTop: 4 }}>{fmtNumber(totalServicosCompletos)} serviços completos</div>
             </ChartCard>
           )}
           {cuidadosFaciais && cuidadosFaciais.participacaoPct !== null && (
@@ -220,7 +220,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
               hint="GMV — Gross Merchandise Value. % do GMV da rede que veio da linha de produtos Botik e da categoria Cuidados Faciais."
             >
               <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em' }}>{fmtPct(cuidadosFaciais.participacaoPct).replace('+', '')}</div>
-              <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>do GMV total da rede no ciclo</div>
+              <div style={{ fontSize: 12, color: 'var(--loja-text-secondary, #6B6258)', marginTop: 4 }}>do GMV total da rede no ciclo</div>
             </ChartCard>
           )}
         </div>
@@ -285,8 +285,8 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
             hint="Insight conectando a penetração do programa Fidelidade com o desempenho de serviços em loja."
             subtitle="Fidelidade vs. serviços em loja"
           >
-            <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#3D362E', lineHeight: 1.6, marginTop: 12 }}>
-              <i className="ph ph-lightbulb" style={{ color: '#C9A227', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
+            <div style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--loja-text-strong, #3D362E)', lineHeight: 1.6, marginTop: 12 }}>
+              <i className="ph ph-lightbulb" style={{ color: 'var(--loja-accent-gold, #C9A227)', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
               <span>
                 Lojas com penetração de Fidelidade alta tendem a ter clientes mais recorrentes — vale cruzar com o
                 ranking de serviços em loja: quem oferece mais serviços (maquiagem, cuidados faciais) costuma reter

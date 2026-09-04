@@ -15,7 +15,7 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver canais e formas de pagamento.</p>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver canais e formas de pagamento.</p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
@@ -46,7 +46,7 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
         <select
           value={lojaFiltro}
           onChange={e => setLojaFiltro(e.target.value)}
-          style={{ fontSize: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid #E8E2D6', background: 'white', color: '#1C1814', cursor: 'pointer' }}
+          style={{ fontSize: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid var(--loja-border, #E8E2D6)', background: 'var(--loja-surface, #FFFFFF)', color: 'var(--loja-ink, #1C1814)', cursor: 'pointer' }}
         >
           <option value="">Todas as lojas</option>
           {lojas.map(l => (
@@ -82,10 +82,10 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {dataset.receitaCanal.map((c, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--loja-bg-subtle, #F2EEE2)', paddingBottom: 8 }}>
                   <span style={{ fontWeight: 600 }}>{c.canal}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
-                    {fmtBRLshort(c.receitaAtual)} <span style={{ color: c.variacaoPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(c.variacaoPct)}</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--loja-text-secondary, #6B6258)' }}>
+                    {fmtBRLshort(c.receitaAtual)} <span style={{ color: c.variacaoPct >= 0 ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-danger, #B83A3A)' }}>{fmtPct(c.variacaoPct)}</span>
                   </span>
                 </div>
               ))}
@@ -103,9 +103,9 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[...dataset.lojaDigital.pdv].sort((a, b) => b.receita - a.receita).map((r, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--loja-bg-subtle, #F2EEE2)', paddingBottom: 8 }}>
                   <span style={{ fontWeight: 600 }}>{resolveLojaNome(r.pdvCodigo ?? r.nome, r.nome)}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--loja-text-secondary, #6B6258)' }}>
                     {r.clientesConvertidos}/{r.clientesAtendidos} convertidos ({fmtPct(r.conversaoPct).replace('+', '')}) · {fmtBRLshort(r.receita)}
                   </span>
                 </div>
@@ -122,8 +122,8 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
           hint="Cruza o canal de venda líder com a forma de pagamento mais usada, para apontar diferenças de perfil de cliente entre canais."
           subtitle="Canal vs. forma de pagamento"
         >
-          <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#3D362E', lineHeight: 1.6, marginTop: 12 }}>
-            <i className="ph ph-lightbulb" style={{ color: '#C9A227', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
+          <div style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--loja-text-strong, #3D362E)', lineHeight: 1.6, marginTop: 12 }}>
+            <i className="ph ph-lightbulb" style={{ color: 'var(--loja-accent-gold, #C9A227)', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
             <span>
               O canal <strong>{topCanal.key}</strong> ({fmtBRL(topCanal.gmv)}) concentra a maior parte do faturamento,
               recebido majoritariamente via <strong>{topForma.key}</strong> ({topForma.participacaoPct.toFixed(1).replace('.', ',')}% do total).

@@ -20,7 +20,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver os consultores.</p>
+        <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver os consultores.</p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
@@ -47,7 +47,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
   const renderList = (list: typeof agg, medals: boolean) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {list.length === 0 ? (
-        <div style={{ padding: '24px 0', textAlign: 'center', color: '#9B9287', fontSize: 13 }}>Sem dados</div>
+        <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--loja-text-muted, #9B9287)', fontSize: 13 }}>Sem dados</div>
       ) : list.map((r, i) => {
         const isOpen = expanded === r.key;
         return (
@@ -57,14 +57,14 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
                 padding: '6px 8px', borderRadius: 8, transition: 'background 150ms',
-                background: isOpen ? '#F2EEE2' : 'transparent',
+                background: isOpen ? 'var(--loja-bg-subtle, #F2EEE2)' : 'transparent',
               }}
-              onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = '#F2EEE2'; }}
+              onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'var(--loja-bg-subtle, #F2EEE2)'; }}
               onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent'; }}
             >
               <div style={{
                 width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                background: medals && i < 3 ? '#FBF3D0' : '#F2EEE2', color: medals && i < 3 ? '#8A6D00' : '#6B6258',
+                background: medals && i < 3 ? 'var(--loja-warning-bg, #FBF3D0)' : 'var(--loja-bg-subtle, #F2EEE2)', color: medals && i < 3 ? 'var(--loja-warning-text-strong, #8A6D00)' : 'var(--loja-text-secondary, #6B6258)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 12, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
               }}>
@@ -75,7 +75,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
                   <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.key}
                     {r.porLoja.length > 0 && (
-                      <span style={{ fontWeight: 400, color: '#9B9287', marginLeft: 6, fontSize: 11 }}>
+                      <span style={{ fontWeight: 400, color: 'var(--loja-text-muted, #9B9287)', marginLeft: 6, fontSize: 11 }}>
                         · {unidadeLabel(r)}
                       </span>
                     )}
@@ -84,12 +84,12 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
                     {fmtBRLshort(r.gmv)}
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: '#9B9287' }}>{fmtNumber(r.qtdBoletos)} boletos</div>
+                <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)' }}>{fmtNumber(r.qtdBoletos)} boletos</div>
               </div>
-              <i className={`ph ${isOpen ? 'ph-caret-up' : 'ph-caret-down'}`} style={{ color: '#D8D0C0', fontSize: 14, flexShrink: 0 }} />
+              <i className={`ph ${isOpen ? 'ph-caret-up' : 'ph-caret-down'}`} style={{ color: 'var(--loja-border-strong, #D8D0C0)', fontSize: 14, flexShrink: 0 }} />
             </div>
             {isOpen && (
-              <div style={{ borderLeft: '2px solid #E8E2D6', marginLeft: 21, paddingLeft: 20 }}>
+              <div style={{ borderLeft: '2px solid var(--loja-border, #E8E2D6)', marginLeft: 21, paddingLeft: 20 }}>
                 <ConsultorDetailPanel dataset={dataset} nome={r.key} view={view} />
               </div>
             )}
@@ -114,8 +114,8 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
             value={lojaFiltro}
             onChange={e => setLojaFiltro(e.target.value)}
             style={{
-              fontSize: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid #E8E2D6',
-              background: 'white', color: '#1C1814', cursor: 'pointer',
+              fontSize: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid var(--loja-border, #E8E2D6)',
+              background: 'var(--loja-surface, #FFFFFF)', color: 'var(--loja-ink, #1C1814)', cursor: 'pointer',
             }}
           >
             <option value="">Todas as lojas</option>
@@ -123,7 +123,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
               <option key={l.codigo} value={l.codigo}>{l.codigo} - {l.nome}</option>
             ))}
           </select>
-          <div style={{ display: 'flex', gap: 6, background: '#F2EEE2', borderRadius: 10, padding: 4 }}>
+          <div style={{ display: 'flex', gap: 6, background: 'var(--loja-bg-subtle, #F2EEE2)', borderRadius: 10, padding: 4 }}>
             {(['consultor', 'operador'] as View[]).map(v => (
               <button
                 key={v}
@@ -140,7 +140,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
           </Button>
         </div>
       </div>
-      <p style={{ color: '#6B6258', fontSize: 13, marginTop: 4, marginBottom: 24 }}>
+      <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 13, marginTop: 4, marginBottom: 24 }}>
         Consultor e Operador refletem a mesma pessoa em papéis diferentes do sistema — as visões são quase idênticas.
         Clique em um nome para expandir o detalhe individual.
       </p>
@@ -180,16 +180,16 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
             subtitle="Vendas efetuadas em outras unidades"
           >
             {multiLoja.length === 0 ? (
-              <div style={{ color: '#6B6258', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <i className="ph ph-check-circle" style={{ color: '#2E7D5B', fontSize: 18 }} />
+              <div style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <i className="ph ph-check-circle" style={{ color: 'var(--loja-success, #2E7D5B)', fontSize: 18 }} />
                 Nenhum {view === 'consultor' ? 'consultor' : 'operador'} com vendas em mais de uma unidade neste ciclo.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {multiLoja.map((r, i) => (
-                  <div key={r.key + i} style={{ background: '#FBF3D0', border: '1px solid #E8C547', borderRadius: 10, padding: '10px 14px' }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: '#5C4500' }}>{r.key}</div>
-                    <div style={{ fontSize: 12, color: '#7A5C00', marginTop: 4 }}>
+                  <div key={r.key + i} style={{ background: 'var(--loja-warning-bg, #FBF3D0)', border: '1px solid var(--loja-warning-border, #E8C547)', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--loja-warning-text, #5C4500)' }}>{r.key}</div>
+                    <div style={{ fontSize: 12, color: 'var(--loja-warning-text-strong, #7A5C00)', marginTop: 4 }}>
                       Principal: <strong>{r.porLoja[0].nome}</strong> ({fmtBRLshort(r.porLoja[0].gmv)}) — também vendeu em{' '}
                       {r.porLoja.slice(1).map((l, j) => (
                         <span key={l.codigo}>
