@@ -1,5 +1,9 @@
 import * as XLSX from 'xlsx';
-import { ReceitaCanalRow, ReceitaCategoriaDataset, ReceitaCategoriaRow, ResumoPerformanceDataset, ResumoPerformanceIndicador, ResumoPerformanceRow } from '../types/loja';
+import {
+  ReceitaCanalRow, ReceitaCategoriaDataset, ReceitaCategoriaRow, ResumoPerformanceDataset, ResumoPerformanceIndicador, ResumoPerformanceRow,
+  ServicosDataset, ServicoPdvRow, ServicoConsultorRow, FidelidadeDataset, FidelidadeRow, LojaDigitalDataset, LojaDigitalRow,
+  CuidadosFaciaisDataset, CuidadosFaciaisRow,
+} from '../types/loja';
 import { toNum, toPct } from './lojaNumberUtils';
 
 function isTotalRow(nome: string): boolean {
@@ -270,5 +274,197 @@ export function parseReceitaCategoriaXlsx(workbook: XLSX.WorkBook): ReceitaCateg
     subcategoria: parseReceitaRows(findSheet(workbook, 'SUBCATEGORIA')),
     linha: parseReceitaRows(findSheet(workbook, 'LINHA')),
     marca: parseReceitaRows(findSheet(workbook, 'MARCA')),
+  };
+}
+
+// --- Servicos_em_loja.xlsx ---
+
+function parseServicosPdv(sheet: XLSX.WorkSheet | null): ServicoPdvRow[] {
+  if (!sheet) return [];
+  const rows = sheetToRows(sheet);
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iPdv = findColByName(header, 'PDV');
+  const iHabilitador = findColByName(header, 'HABILITADOR');
+  const iUn = findColByName(header, 'UN');
+  const iRealizados = findColByName(header, 'QT. SERVICOS REALIZADOS', 'SERVICOS REALIZADOS');
+  const iIncompletos = findColByName(header, 'QT. SERVICOS INCOMPLETO', 'SERVICOS INCOMPLETO');
+  const iCompletos = findColByName(header, 'QT. SERVICOS COMPLETOS', 'SERVICOS COMPLETOS');
+  const iMeta = findColByName(header, 'QT. META');
+  const iAtingimento = findColByName(header, 'ATINGIMENTO');
+  const iGmv = findColByName(header, 'GMV');
+
+  return rows.slice(1)
+    .filter(r => String(r[iPdv] ?? '').trim() !== '')
+    .map(r => ({
+      pdvCodigo: String(r[iPdv] ?? '').trim(),
+      habilitador: iHabilitador >= 0 ? String(r[iHabilitador] ?? '').trim() : '',
+      un: iUn >= 0 ? String(r[iUn] ?? '').trim() : '',
+      qtdRealizados: toNum(r[iRealizados]),
+      qtdIncompletos: toNum(r[iIncompletos]),
+      qtdCompletos: toNum(r[iCompletos]),
+      qtdMeta: toNum(r[iMeta]),
+      atingimentoPct: toPct(r[iAtingimento]),
+      gmv: toNum(r[iGmv]),
+    } as ServicoPdvRow));
+}
+
+function parseServicosConsultor(sheet: XLSX.WorkSheet | null): ServicoConsultorRow[] {
+  if (!sheet) return [];
+  const rows = sheetToRows(sheet);
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iConsultor = findColByName(header, 'CONSULTOR');
+  const iPdv = findColByName(header, 'PDV');
+  const iServico = findColByName(header, 'SERVICO', 'SERVIÇO');
+  const iRealizados = findColByName(header, 'QT. SERVICOS REALIZADOS', 'SERVICOS REALIZADOS');
+  const iSemCheckIn = findColByName(header, 'QT. SERVICOS SEM CHECK IN', 'SEM CHECK IN');
+  const iCompletos = findColByName(header, 'QT. SERVICOS COMPLETOS', 'SERVICOS COMPLETOS');
+  const iGmv = findColByName(header, 'GMV');
+
+  return rows.slice(1)
+    .filter(r => String(r[iConsultor] ?? '').trim() !== '')
+    .map(r => ({
+      consultor: String(r[iConsultor] ?? '').trim(),
+      pdvCodigo: iPdv >= 0 ? String(r[iPdv] ?? '').trim() : '',
+      servico: iServico >= 0 ? String(r[iServico] ?? '').trim() : '',
+      qtdRealizados: toNum(r[iRealizados]),
+      qtdSemCheckIn: toNum(r[iSemCheckIn]),
+      qtdCompletos: toNum(r[iCompletos]),
+      gmv: toNum(r[iGmv]),
+    } as ServicoConsultorRow));
+}
+
+export function parseServicosXlsx(workbook: XLSX.WorkBook): ServicosDataset {
+  return {
+    pdv: parseServicosPdv(findSheet(workbook, 'PDV')),
+    consultor: parseServicosConsultor(findSheet(workbook, 'CONSULTANT', 'CONSULTOR')),
+  };
+}
+
+// --- ProgramaFidelidade_..._boleto_Fidelidade.xlsx ---
+
+function parseFidelidadeRows(sheet: XLSX.WorkSheet | null): FidelidadeRow[] {
+  if (!sheet) return [];
+  const rows = sheetToRows(sheet);
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iNome = 0;
+  const iDesafio = findColByName(header, 'Qnt de boleto com desafios concluídos', 'Desafios Concluídos');
+  const iBoletos = findColByName(header, 'Qnt de boletos Fidelidade');
+  const iPenetracao = findColByName(header, '% Penetração Desafio Fidelidade', 'Penetração Desafio Fidelidade');
+
+  return rows.slice(1)
+    .filter(r => String(r[iNome] ?? '').trim() !== '')
+    .map(r => ({
+      nome: String(r[iNome] ?? '').trim(),
+      qtdBoletosDesafio: toNum(r[iDesafio]),
+      qtdBoletosFidelidade: toNum(r[iBoletos]),
+      penetracaoPct: toPct(r[iPenetracao]),
+    } as FidelidadeRow));
+}
+
+export function parseFidelidadeXlsx(workbook: XLSX.WorkBook): FidelidadeDataset {
+  return {
+    cp: parseFidelidadeRows(findSheet(workbook, 'CP')),
+    pdv: parseFidelidadeRows(findSheet(workbook, 'PDV')),
+    consultor: parseFidelidadeRows(findSheet(workbook, 'CONSULTOR')),
+  };
+}
+
+// --- LojaDigital_Performance_por_Pdv_Consultor.xlsx ---
+// Aba PDV traz "Clientes Encaminhados" (não existe na aba Consultor(a), que só existe a partir do
+// atendimento). Aba Consultor(a) traz uma coluna PDV extra (o consultor pode atender + de uma loja).
+function parseLojaDigitalRows(sheet: XLSX.WorkSheet | null, hasPdvCol: boolean, hasEncaminhados: boolean): LojaDigitalRow[] {
+  if (!sheet) return [];
+  const rows = sheetToRows(sheet);
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iNome = 0;
+  const iPdv = hasPdvCol ? findColByName(header, 'PDV') : -1;
+  const iEncaminhados = hasEncaminhados ? findColByName(header, 'CLIENTES ENCAMINHADOS') : -1;
+  const iAtendidos = findColByName(header, 'CLIENTES ATENDIDOS');
+  const iTme = findColByName(header, 'TME AJUSTADO', 'TME');
+  const iConvertidos = findColByName(header, 'CLIENTES CONVERTIDOS');
+  const iConversao = findColByName(header, '% CONVERSÃO', 'CONVERSÃO');
+  const iReceita = findColByName(header, 'RECEITA (R$)', 'RECEITA');
+  const iBoletoMedio = findColByName(header, 'BOLETO MEDIO (R$)', 'BOLETO MEDIO');
+
+  return rows.slice(1)
+    .filter(r => {
+      const nome = String(r[iNome] ?? '').trim();
+      return nome !== '' && nome.toUpperCase() !== 'TODOS';
+    })
+    .map(r => ({
+      nome: String(r[iNome] ?? '').trim(),
+      pdvCodigo: iPdv >= 0 ? (String(r[iPdv] ?? '').trim() || null) : String(r[iNome] ?? '').trim(),
+      clientesEncaminhados: iEncaminhados >= 0 ? toNum(r[iEncaminhados]) : null,
+      clientesAtendidos: toNum(r[iAtendidos]),
+      tmeAjustado: iTme >= 0 ? String(r[iTme] ?? '').trim() : '',
+      clientesConvertidos: toNum(r[iConvertidos]),
+      conversaoPct: toPct(r[iConversao]),
+      receita: toNum(r[iReceita]),
+      boletoMedio: toNum(r[iBoletoMedio]),
+    } as LojaDigitalRow));
+}
+
+export function parseLojaDigitalXlsx(workbook: XLSX.WorkBook): LojaDigitalDataset {
+  return {
+    pdv: parseLojaDigitalRows(findSheet(workbook, 'PDV'), false, true),
+    consultor: parseLojaDigitalRows(findSheet(workbook, 'CONSULTOR'), true, false),
+  };
+}
+
+// --- Loja_cuidados_faciais_iaf.xlsx ---
+// Receita de Cuidados Faciais + Botik dentro do GMV total, quebrada por PDV/consultor. As abas
+// PDV/CONSULTOR trazem blocos TOTAL / BOTIK / DEMAIS MARCAS lado a lado (grupo mesclado na linha
+// acima do header real); as duas primeiras linhas de dado ("RECEITA TOTAL" e "RECEITA CUIDADOS
+// FACIAIS + BOTIK") são agregados de rede, não entidades — distinguidas por não terem código
+// numérico de PDV.
+function isAggregateLabel(nome: string): boolean {
+  const u = nome.trim().toUpperCase();
+  return u === '' || u === 'TOTAL' || u === 'RECEITA TOTAL' || u === 'RECEITA CUIDADOS FACIAIS + BOTIK';
+}
+
+function parseCuidadosFaciaisEntitySheet(sheet: XLSX.WorkSheet | null, hasPdvCol: boolean): CuidadosFaciaisRow[] {
+  if (!sheet) return [];
+  const rows = sheetToRows(sheet);
+  if (rows.length < 3) return [];
+  const groupRowIdx = findHeaderRowIndex(rows, 'TOTAL', 'BOTIK');
+  const groupRow = rows[groupRowIdx];
+  const dataRows = rows.slice(groupRowIdx + 2); // pula linha de grupo + linha de rótulo
+
+  const iNome = 0;
+  const iPdv = hasPdvCol ? 1 : -1;
+  const totalCol = findColByName(groupRow, 'TOTAL');
+  const botikCol = findColByName(groupRow, 'BOTIK');
+  const demaisCol = findColByName(groupRow, 'DEMAIS MARCAS');
+
+  return dataRows
+    .filter(r => !isAggregateLabel(String(r[iNome] ?? '')))
+    .map(r => ({
+      nome: String(r[iNome] ?? '').trim(),
+      pdvCodigo: iPdv >= 0 ? (String(r[iPdv] ?? '').trim() || null) : String(r[iNome] ?? '').trim(),
+      receitaTotal: totalCol >= 0 ? toNum(r[totalCol]) : 0,
+      receitaBotik: botikCol >= 0 ? toNum(r[botikCol]) : 0,
+      receitaDemaisMarcas: demaisCol >= 0 ? toNum(r[demaisCol]) : 0,
+    } as CuidadosFaciaisRow));
+}
+
+function parseCuidadosFaciaisParticipacao(sheet: XLSX.WorkSheet | null): number | null {
+  if (!sheet) return null;
+  const rows = sheetToRows(sheet);
+  if (rows.length < 3) return null;
+  const headerIdx = findHeaderRowIndex(rows, 'INDICADORES');
+  const dataRows = rows.slice(headerIdx + 1);
+  const row = dataRows.find(r => String(r[0] ?? '').trim().toUpperCase() === 'RECEITA CUIDADOS FACIAIS + BOTIK' && String(r[1] ?? '').trim() === '');
+  return row ? toPct(row[2]) : null;
+}
+
+export function parseCuidadosFaciaisXlsx(workbook: XLSX.WorkBook): CuidadosFaciaisDataset {
+  return {
+    participacaoPct: parseCuidadosFaciaisParticipacao(findSheet(workbook, 'CP')),
+    pdv: parseCuidadosFaciaisEntitySheet(findSheet(workbook, 'PDV'), false),
+    consultor: parseCuidadosFaciaisEntitySheet(findSheet(workbook, 'CONSULTOR'), true),
   };
 }

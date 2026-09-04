@@ -31,7 +31,11 @@ export type LojaOptionalFile =
   | 'pedidosHistorico'
   | 'resumoPerformance'
   | 'receitaCanal'
-  | 'receitaCategoria';
+  | 'receitaCategoria'
+  | 'servicos'
+  | 'fidelidade'
+  | 'lojaDigital'
+  | 'cuidadosFaciais';
 
 export const LOJA_OPTIONAL_FILES: LojaOptionalFile[] = [
   'abc',
@@ -42,6 +46,10 @@ export const LOJA_OPTIONAL_FILES: LojaOptionalFile[] = [
   'resumoPerformance',
   'receitaCanal',
   'receitaCategoria',
+  'servicos',
+  'fidelidade',
+  'lojaDigital',
+  'cuidadosFaciais',
 ];
 
 export const LOJA_OPTIONAL_FILE_LABELS: Record<LojaOptionalFile, string> = {
@@ -53,6 +61,10 @@ export const LOJA_OPTIONAL_FILE_LABELS: Record<LojaOptionalFile, string> = {
   resumoPerformance: 'Resumo de performance (indicadores)',
   receitaCanal: 'Receita por canal / UN',
   receitaCategoria: 'Receita por categoria/subcategoria/marca',
+  servicos: 'Serviços em loja',
+  fidelidade: 'Programa Fidelidade — penetração de boleto',
+  lojaDigital: 'Loja Digital — performance por PDV/consultor',
+  cuidadosFaciais: 'Cuidados Faciais + Botik — receita por PDV/consultor',
 };
 
 /** Curva ABC (relatorioABCVenda*.csv) — uma linha por SKU x data (agregar por SKU para o ranking). */
@@ -171,6 +183,85 @@ export interface ResumoPerformanceDataset {
   consultor: ResumoPerformanceRow[];
 }
 
+/** Servicos_em_loja.xlsx — aba PDV: totais de serviços realizados/completos por loja. */
+export interface ServicoPdvRow {
+  pdvCodigo: string;
+  habilitador: string;
+  un: string;
+  qtdRealizados: number;
+  qtdIncompletos: number;
+  qtdCompletos: number;
+  qtdMeta: number;
+  atingimentoPct: number;
+  gmv: number;
+}
+
+/** Servicos_em_loja.xlsx — aba CONSULTANT: uma linha por consultor x tipo de serviço. */
+export interface ServicoConsultorRow {
+  consultor: string;
+  pdvCodigo: string;
+  servico: string;
+  qtdRealizados: number;
+  qtdSemCheckIn: number;
+  qtdCompletos: number;
+  gmv: number;
+}
+
+export interface ServicosDataset {
+  pdv: ServicoPdvRow[];
+  consultor: ServicoConsultorRow[];
+}
+
+/** ProgramaFidelidade_..._boleto_Fidelidade.xlsx — penetração do desafio Fidelidade nos boletos. */
+export interface FidelidadeRow {
+  nome: string;
+  qtdBoletosDesafio: number;
+  qtdBoletosFidelidade: number;
+  penetracaoPct: number;
+}
+
+export interface FidelidadeDataset {
+  cp: FidelidadeRow[]; // rede toda (uma linha, "CP ...")
+  pdv: FidelidadeRow[];
+  consultor: FidelidadeRow[];
+}
+
+/** LojaDigital_Performance_por_Pdv_Consultor.xlsx — funil de atendimento digital (WhatsApp/etc). */
+export interface LojaDigitalRow {
+  nome: string;
+  pdvCodigo: string | null;
+  clientesEncaminhados: number | null;
+  clientesAtendidos: number;
+  tmeAjustado: string;
+  clientesConvertidos: number;
+  conversaoPct: number;
+  receita: number;
+  boletoMedio: number;
+}
+
+export interface LojaDigitalDataset {
+  pdv: LojaDigitalRow[];
+  consultor: LojaDigitalRow[];
+}
+
+/**
+ * Loja_cuidados_faciais_iaf.xlsx — receita de Cuidados Faciais + Botik dentro do GMV total,
+ * quebrada por PDV/consultor. Cada linha traz blocos TOTAL / BOTIK / DEMAIS MARCAS lado a lado.
+ */
+export interface CuidadosFaciaisRow {
+  nome: string;
+  pdvCodigo: string | null;
+  receitaTotal: number;
+  receitaBotik: number;
+  receitaDemaisMarcas: number;
+}
+
+export interface CuidadosFaciaisDataset {
+  participacaoPct: number | null; // % da receita total que é Cuidados Faciais + Botik (rede toda, aba CP)
+  pdv: CuidadosFaciaisRow[];
+  consultor: CuidadosFaciaisRow[];
+}
+
 export interface LojaDataset {
   lojas: LojaMetricRow[];
   forma: LojaMetricRow[];
@@ -191,6 +282,10 @@ export interface LojaDataset {
   resumoPerformance?: ResumoPerformanceDataset;
   receitaCanal?: ReceitaCanalRow[];
   receitaCategoria?: ReceitaCategoriaDataset;
+  servicos?: ServicosDataset;
+  fidelidade?: FidelidadeDataset;
+  lojaDigital?: LojaDigitalDataset;
+  cuidadosFaciais?: CuidadosFaciaisDataset;
   optionalFileNames?: Partial<Record<LojaOptionalFile, string>>;
 }
 

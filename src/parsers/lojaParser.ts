@@ -4,7 +4,10 @@ import {
   LojaDimension, LojaDataset, LojaMetricRow, LojaParseResult, LOJA_DIMENSIONS, LOJA_DIMENSION_LABELS,
   LojaOptionalFile, AbcRow, VendaHoraRow, PedidoVisaoGeralRow, PedidoGiroCanalRow, PedidoHistoricoRow,
 } from '../types/loja';
-import { parseResumoPerformanceXlsx, parseReceitaCanalXlsx, parseReceitaCategoriaXlsx } from './lojaXlsxParser';
+import {
+  parseResumoPerformanceXlsx, parseReceitaCanalXlsx, parseReceitaCategoriaXlsx,
+  parseServicosXlsx, parseFidelidadeXlsx, parseLojaDigitalXlsx, parseCuidadosFaciaisXlsx,
+} from './lojaXlsxParser';
 import { toNum, toPct } from './lojaNumberUtils';
 
 const FILENAME_HINTS: Record<LojaDimension, string> = {
@@ -37,10 +40,16 @@ const OPTIONAL_CSV_FILENAME_HINTS: Partial<Record<LojaOptionalFile, string>> = {
   pedidosHistorico: 'GESTAOPEDIDOS_HISTORICO_COLOCACAO',
 };
 
-const XLSX_FILENAME_HINTS: Record<'resumoPerformance' | 'receitaCanal' | 'receitaCategoria', string> = {
+type LojaXlsxKind = 'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' | 'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais';
+
+const XLSX_FILENAME_HINTS: Record<LojaXlsxKind, string> = {
   resumoPerformance: 'RESUMO_DE_PERFORMANCE',
   receitaCanal: 'RECEITA_POR_CANAL',
   receitaCategoria: 'RECEITA_POR_CAT',
+  servicos: 'SERVICOS_EM_LOJA',
+  fidelidade: 'PROGRAMA_FIDELIDADE',
+  lojaDigital: 'LOJA_DIGITAL',
+  cuidadosFaciais: 'CUIDADOS_FACIAIS',
 };
 
 function stripBOM(s: string): string {
@@ -92,10 +101,10 @@ function detectOptionalCsv(fileName: string): LojaOptionalFile | null {
   return null;
 }
 
-function detectOptionalXlsx(fileName: string): 'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' | null {
+function detectOptionalXlsx(fileName: string): LojaXlsxKind | null {
   const upperName = normalizeName(fileName);
   for (const [key, hint] of Object.entries(XLSX_FILENAME_HINTS)) {
-    if (upperName.includes(normalizeName(hint))) return key as 'resumoPerformance' | 'receitaCanal' | 'receitaCategoria';
+    if (upperName.includes(normalizeName(hint))) return key as LojaXlsxKind;
   }
   return null;
 }
@@ -317,7 +326,8 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
 
   const optional: Partial<Pick<LojaDataset,
     'abc' | 'vendaPorHora' | 'pedidosVisaoGeral' | 'pedidosGiroCanais' | 'pedidosHistorico' |
-    'resumoPerformance' | 'receitaCanal' | 'receitaCategoria'>> = {};
+    'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' |
+    'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais'>> = {};
 
   for (const file of files) {
     const isXlsx = /\.xlsx?$/i.test(file.name);
@@ -326,7 +336,7 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
       if (isXlsx) {
         const xlsxKind = detectOptionalXlsx(file.name);
         if (!xlsxKind) {
-          errors.push(`${file.name}: arquivo xlsx não reconhecido (esperado Resumo de Performance, Receita por Canal ou Receita por Categoria)`);
+          errors.push(`${file.name}: arquivo xlsx não reconhecido (esperado Resumo de Performance, Receita por Canal, Receita por Categoria, Serviços em Loja, Programa Fidelidade, Loja Digital ou Cuidados Faciais)`);
           continue;
         }
         const buffer = await file.arrayBuffer();
@@ -338,9 +348,21 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
         } else if (xlsxKind === 'receitaCanal') {
           optional.receitaCanal = parseReceitaCanalXlsx(workbook);
           detectedOptional.receitaCanal = { fileName: file.name, rowCount: optional.receitaCanal.length };
-        } else {
+        } else if (xlsxKind === 'receitaCategoria') {
           optional.receitaCategoria = parseReceitaCategoriaXlsx(workbook);
           detectedOptional.receitaCategoria = { fileName: file.name, rowCount: optional.receitaCategoria.categoria.length };
+        } else if (xlsxKind === 'servicos') {
+          optional.servicos = parseServicosXlsx(workbook);
+          detectedOptional.servicos = { fileName: file.name, rowCount: optional.servicos.pdv.length + optional.servicos.consultor.length };
+        } else if (xlsxKind === 'fidelidade') {
+          optional.fidelidade = parseFidelidadeXlsx(workbook);
+          detectedOptional.fidelidade = { fileName: file.name, rowCount: optional.fidelidade.pdv.length + optional.fidelidade.consultor.length };
+        } else if (xlsxKind === 'lojaDigital') {
+          optional.lojaDigital = parseLojaDigitalXlsx(workbook);
+          detectedOptional.lojaDigital = { fileName: file.name, rowCount: optional.lojaDigital.pdv.length + optional.lojaDigital.consultor.length };
+        } else {
+          optional.cuidadosFaciais = parseCuidadosFaciaisXlsx(workbook);
+          detectedOptional.cuidadosFaciais = { fileName: file.name, rowCount: optional.cuidadosFaciais.pdv.length + optional.cuidadosFaciais.consultor.length };
         }
         optionalFileNames![xlsxKind] = file.name;
         continue;

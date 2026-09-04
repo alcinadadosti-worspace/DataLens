@@ -15,6 +15,7 @@ const navItems = [
   { id: 'loja-pedidos',     label: 'Gestão de pedidos',  icon: 'ph-package' },
   { id: 'loja-periodo',     label: 'Período',            icon: 'ph-calendar-dots' },
   { id: 'loja-horario',     label: 'Venda por hora',     icon: 'ph-clock' },
+  { id: 'loja-fidelidade-servicos', label: 'Fidelidade & serviços', icon: 'ph-heart' },
   { id: 'loja-import',      label: 'Importar',           icon: 'ph-upload-simple' },
 ];
 
