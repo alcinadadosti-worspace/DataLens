@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import '../design-system/lojaTheme.css';
 import LojaTopBar from '../components/layout/LojaTopBar';
 import LojaSidebar from '../components/layout/LojaSidebar';
 import ScrollProgress from '../components/ui/ScrollProgress';
+import GradualBlur from '../components/ui/GradualBlur';
 import LojaImportScreen from '../screens/loja/LojaImportScreen';
 import LojaOverviewScreen from '../screens/loja/LojaOverviewScreen';
 import LojaConsultoresScreen from '../screens/loja/LojaConsultoresScreen';
@@ -53,8 +55,19 @@ function LojaApp() {
       <ScrollProgress />
       <LojaTopBar onNavigate={navigate} />
       <LojaSidebar active={route} onNavigate={navigate} />
-      <div style={{ marginLeft: 264, marginTop: 64 }}>
-        {screen}
+      <div style={{ marginLeft: 264, marginTop: 64, position: 'relative' }}>
+        <GradualBlur key={route} position="top" height="4.5rem" strength={2.2} divCount={6} curve="bezier" animated duration="0.5s" zIndex={30} />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={route}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {screen}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

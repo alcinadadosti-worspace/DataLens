@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import InfoHint from '../ui/InfoHint';
 import { useBorderGlowHandler } from '../ui/useBorderGlow';
 import '../../design-system/borderGlow.css';
@@ -16,17 +16,21 @@ interface ChartCardProps {
 
 const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action, hint, glow }) => {
   const onPointerMove = useBorderGlowHandler();
+  const [hovered, setHovered] = useState(false);
 
   return (
     <div
       onPointerMove={glow ? onPointerMove : undefined}
+      onMouseEnter={glow ? () => setHovered(true) : undefined}
+      onMouseLeave={glow ? () => setHovered(false) : undefined}
       className={glow ? 'loja-glow-card' : undefined}
       style={{
         background: 'var(--loja-surface, #FFFFFF)',
         border: '1px solid var(--loja-border, #E8E2D6)',
         borderRadius: 16,
         padding: 24,
-        boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
+        boxShadow: glow && hovered ? '0 12px 30px rgba(0,0,0,0.14)' : '0 2px 6px rgba(28,24,20,0.05)',
+        transition: glow ? 'box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1)' : undefined,
       }}
     >
       {glow && <span className="loja-glow-edge" />}

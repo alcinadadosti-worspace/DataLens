@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { TIER_STYLES } from '../../design-system/tierStyles';
 
 export interface RankingItem {
@@ -47,10 +48,16 @@ const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMe
         const pct = Math.max((item.value / max) * 100, 1.5);
 
         return (
-          <div
+          <motion.div
             key={item.label + i}
             onClick={onItemClick ? () => onItemClick(item, i) : undefined}
-            style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: onItemClick ? 'pointer' : 'default' }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 14, cursor: onItemClick ? 'pointer' : 'default',
+              borderRadius: 10, padding: '4px 6px', margin: '-4px -6px',
+            }}
+            whileHover={onItemClick ? { backgroundColor: 'var(--loja-bg-subtle, #F2EEE2)', x: 2 } : { x: 2 }}
+            whileTap={onItemClick ? { scale: 0.985 } : undefined}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           >
             <div style={{
               width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
@@ -73,14 +80,18 @@ const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMe
                 </div>
               </div>
               <div style={{ height: 9, borderRadius: 4, background: 'var(--loja-bg-track, #F2EEE6)', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', width: `${pct}%`, borderRadius: 4,
-                  background: isMedal ? badgeColor : 'var(--loja-border-strong, #D8D0C0)',
-                  transition: 'width 300ms cubic-bezier(0.22, 1, 0.36, 1)',
-                }} />
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  style={{
+                    height: '100%', borderRadius: 4,
+                    background: isMedal ? badgeColor : 'var(--loja-border-strong, #D8D0C0)',
+                  }}
+                />
               </div>
             </div>
-          </div>
+          </motion.div>
         );
       })}
     </div>

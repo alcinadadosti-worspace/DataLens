@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import GlossyContent from '../ui/GlossyContent';
 
 interface LojaSidebarProps {
@@ -35,12 +36,15 @@ const LojaSidebar: React.FC<LojaSidebarProps> = ({ active, onNavigate }) => {
       {navItems.map(item => {
         const isActive = active === item.id;
         return (
-          <div
+          <motion.div
             key={item.id}
             className={`glossy-btn${isActive ? ' glossy-active' : ''}`}
             onClick={() => onNavigate(item.id)}
             title={item.hint}
             style={{ borderRadius: 11, fontSize: 15 }}
+            whileHover={{ scale: 1.025, x: 2 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
           >
             <GlossyContent
               justify="flex-start"
@@ -48,7 +52,7 @@ const LojaSidebar: React.FC<LojaSidebarProps> = ({ active, onNavigate }) => {
             >
               {item.label}
             </GlossyContent>
-          </div>
+          </motion.div>
         );
       })}
     </div>

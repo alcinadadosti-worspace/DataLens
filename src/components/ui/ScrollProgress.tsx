@@ -7,7 +7,7 @@ import { motion, useScroll, useSpring } from 'framer-motion';
  */
 const ScrollProgress: React.FC = () => {
   const { scrollYProgress } = useScroll();
-  const smooth = useSpring(scrollYProgress, { stiffness: 110, damping: 22, mass: 0.25 });
+  const smooth = useSpring(scrollYProgress, { stiffness: 60, damping: 18, mass: 0.5 });
 
   return (
     <div

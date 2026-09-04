@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import ChartCard from '../../components/charts/ChartCard';
 import Button from '../../components/ui/Button';
 import GlossyContent from '../../components/ui/GlossyContent';
@@ -52,15 +53,16 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
         const isOpen = expanded === r.key;
         return (
           <div key={r.key + i}>
-            <div
+            <motion.div
               onClick={() => toggleExpand(r.key)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-                padding: '6px 8px', borderRadius: 8, transition: 'background 150ms',
+                padding: '6px 8px', borderRadius: 8,
                 background: isOpen ? 'var(--loja-bg-subtle, #F2EEE2)' : 'transparent',
               }}
-              onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'var(--loja-bg-subtle, #F2EEE2)'; }}
-              onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent'; }}
+              whileHover={{ backgroundColor: 'var(--loja-bg-subtle, #F2EEE2)', x: 2 }}
+              whileTap={{ scale: 0.985 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             >
               <div style={{
                 width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
@@ -86,13 +88,28 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)' }}>{fmtNumber(r.qtdBoletos)} boletos</div>
               </div>
-              <i className={`ph ${isOpen ? 'ph-caret-up' : 'ph-caret-down'}`} style={{ color: 'var(--loja-border-strong, #D8D0C0)', fontSize: 14, flexShrink: 0 }} />
-            </div>
-            {isOpen && (
-              <div style={{ borderLeft: '2px solid var(--loja-border, #E8E2D6)', marginLeft: 21, paddingLeft: 20 }}>
-                <ConsultorDetailPanel dataset={dataset} nome={r.key} view={view} />
-              </div>
-            )}
+              <motion.i
+                className="ph ph-caret-down"
+                animate={{ rotate: isOpen ? 180 : 0 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-block', color: 'var(--loja-border-strong, #D8D0C0)', fontSize: 14, flexShrink: 0 }}
+              />
+            </motion.div>
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div style={{ borderLeft: '2px solid var(--loja-border, #E8E2D6)', marginLeft: 21, paddingLeft: 20 }}>
+                    <ConsultorDetailPanel dataset={dataset} nome={r.key} view={view} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}
@@ -145,32 +162,49 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
         Clique em um nome para expandir o detalhe individual.
       </p>
 
-      {showAll ? (
-        <ChartCard glow
-          title="Todas as pessoas"
-          hint="Ranking completo por GMV — Gross Merchandise Value, o valor total vendido no ciclo — de todos os consultores/operadores, não só os 5 melhores e os 5 piores."
-          subtitle={`${allSorted.length} pessoa(s) no ciclo, por GMV`}
-        >
-          {renderList(allSorted, true)}
-        </ChartCard>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-          <ChartCard glow
-            title="Consultores que mais desempenharam"
-            hint="As 5 pessoas com maior GMV (Gross Merchandise Value — valor total vendido) no ciclo atual."
-            subtitle="Maior GMV no ciclo"
+      <AnimatePresence mode="wait">
+        {showAll ? (
+          <motion.div
+            key="all"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           >
-            {renderList(top, true)}
-          </ChartCard>
-          <ChartCard glow
-            title="Atenção"
-            hint="As 5 pessoas com menor GMV (Gross Merchandise Value — valor total vendido) no ciclo — candidatas a apoio ou treinamento."
-            subtitle="Menor GMV no ciclo"
+            <ChartCard glow
+              title="Todas as pessoas"
+              hint="Ranking completo por GMV — Gross Merchandise Value, o valor total vendido no ciclo — de todos os consultores/operadores, não só os 5 melhores e os 5 piores."
+              subtitle={`${allSorted.length} pessoa(s) no ciclo, por GMV`}
+            >
+              {renderList(allSorted, true)}
+            </ChartCard>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="topbottom"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}
           >
-            {renderList(bottom, false)}
-          </ChartCard>
-        </div>
-      )}
+            <ChartCard glow
+              title="Consultores que mais desempenharam"
+              hint="As 5 pessoas com maior GMV (Gross Merchandise Value — valor total vendido) no ciclo atual."
+              subtitle="Maior GMV no ciclo"
+            >
+              {renderList(top, true)}
+            </ChartCard>
+            <ChartCard glow
+              title="Atenção"
+              hint="As 5 pessoas com menor GMV (Gross Merchandise Value — valor total vendido) no ciclo — candidatas a apoio ou treinamento."
+              subtitle="Menor GMV no ciclo"
+            >
+              {renderList(bottom, false)}
+            </ChartCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {!lojaFiltro && (
         <div style={{ marginTop: 20 }}>

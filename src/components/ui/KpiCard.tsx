@@ -33,12 +33,13 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
         border: '1px solid var(--loja-border, #E8E2D6)',
         borderRadius: 16,
         padding: 22,
-        boxShadow: hovered && tooltip ? '0 4px 14px rgba(28,24,20,0.1)' : '0 2px 6px rgba(28,24,20,0.05)',
+        boxShadow: hovered && (tooltip || glow) ? '0 10px 26px rgba(0,0,0,0.13)' : '0 2px 6px rgba(28,24,20,0.05)',
         display: 'flex',
         flexDirection: 'column',
         gap: 5,
         position: 'relative',
-        transition: 'box-shadow 200ms',
+        transition: 'box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
+        transform: glow && hovered ? 'translateY(-2px)' : 'translateY(0)',
       }}
     >
       {glow && <span className="loja-glow-edge" />}

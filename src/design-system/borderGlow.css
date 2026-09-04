@@ -3,6 +3,20 @@
    escuro). Só ativa quando o elemento tem a classe `loja-glow-card` — os outros usos de ChartCard/
    KpiCard (fora do Modo Loja) nunca ganham essa classe, então continuam exatamente como sempre. */
 
+/* Registrar o tipo dessas custom properties é o que permite ao navegador INTERPOLAR o valor delas
+   (em vez de só trocar de um pro outro de uma vez) — sem isso, o brilho "pula" de ângulo a cada
+   movimento do mouse em vez de acompanhar suavemente. */
+@property --cursor-angle {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 45deg;
+}
+@property --edge-proximity {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
 .loja-glow-card {
   --edge-proximity: 0;
   --cursor-angle: 45deg;
@@ -11,6 +25,12 @@
   --glow-padding: 22px;
   position: relative;
   isolation: isolate;
+  transition: --cursor-angle 0.22s cubic-bezier(0.22, 1, 0.36, 1), --edge-proximity 0.22s ease-out,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease-out;
+}
+
+.loja-glow-card:hover {
+  transform: translateY(-2px);
 }
 
 .loja-glow-card::before {
@@ -31,7 +51,7 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: calc((var(--edge-proximity) - var(--color-sensitivity)) / (100 - var(--color-sensitivity)));
-  transition: opacity 0.3s ease-out;
+  transition: opacity 0.35s ease-out;
   pointer-events: none;
   z-index: 2;
 }
@@ -39,7 +59,7 @@
 .loja-glow-card:not(:hover)::before,
 .loja-glow-card:not(:hover) > .loja-glow-edge {
   opacity: 0;
-  transition: opacity 0.6s ease-in-out;
+  transition: opacity 0.7s ease-in-out;
 }
 
 .loja-glow-card > .loja-glow-edge {
@@ -51,7 +71,7 @@
   z-index: 1;
   mask-image: conic-gradient(from var(--cursor-angle) at center, black 2.5%, transparent 12%, transparent 88%, black 97.5%);
   opacity: calc((var(--edge-proximity) - var(--edge-sensitivity)) / (100 - var(--edge-sensitivity)));
-  transition: opacity 0.3s ease-out;
+  transition: opacity 0.35s ease-out;
   mix-blend-mode: plus-lighter;
 }
 

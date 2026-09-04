@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Bar, Cell, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -273,14 +274,32 @@ const TreemapCell: React.FC<any> = ({ x, y, width, height, item, fill, onSelect 
   // recursar pras folhas) — esse nó não tem os campos que colocamos em `data` (item, fill), só
   // geometria. Sem folhas próprias pra desenhar, não há o que renderizar aqui.
   if (!item || width == null || height == null || width < 1 || height < 1) return null;
-  const showLabel = width > 54 && height > 30;
+
+  // Antes disso, células menores que ~54x30 ficavam totalmente sem texto — em rankings com um
+  // item dominante (ex. a loja #1 concentra boa parte do GMV), a maioria das outras células cai
+  // abaixo desse tamanho e "sumia" a informação. Agora o texto só é omitido em células realmente
+  // minúsculas, com fonte e nº de linhas se ajustando ao espaço disponível.
+  const tiny = width < 20 || height < 15;
+  const compact = !tiny && (width < 72 || height < 42);
+  const labelFontSize = compact ? 10 : 12;
+  const valueFontSize = compact ? 9 : 11;
+  const maxChars = Math.max(3, Math.floor((width - 10) / (labelFontSize * 0.62)));
+  const showValueLine = !compact || height > 30;
+
   return (
     <g onClick={onSelect ? () => onSelect(item) : undefined} style={{ cursor: onSelect ? 'pointer' : 'default' }}>
       <rect x={x} y={y} width={width} height={height} style={{ fill, stroke: 'var(--loja-bg, #FAF7F2)', strokeWidth: 2 }} />
-      {showLabel && (
+      <title>{`${item.label}: ${item.valueLabel}`}</title>
+      {!tiny && (
         <>
-          <text x={x + 8} y={y + 19} fontSize={12} fontWeight={600} fill="#fff">{truncateLabel(item.label, Math.max(4, Math.floor(width / 7)))}</text>
-          <text x={x + 8} y={y + 35} fontSize={11} fill="rgba(255,255,255,0.85)">{item.valueLabel}</text>
+          <text x={x + 6} y={y + labelFontSize + 6} fontSize={labelFontSize} fontWeight={600} fill="#fff">
+            {truncateLabel(item.label, maxChars)}
+          </text>
+          {showValueLine && (
+            <text x={x + 6} y={y + labelFontSize + valueFontSize + 10} fontSize={valueFontSize} fill="rgba(255,255,255,0.85)">
+              {item.valueLabel}
+            </text>
+          )}
         </>
       )}
     </g>
@@ -552,7 +571,8 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
   const toolbar = (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
       <div style={{ display: 'flex', gap: 3, background: 'var(--loja-bg-subtle, #F2EEE2)', borderRadius: 9, padding: 4 }}>
-        <button
+        <motion.button
+          whileTap={{ scale: 0.9 }}
           onClick={() => handleCategoryClick('bar')}
           title={BAR_META[barStyle].label + ' — clique de novo para alternar'}
           style={{
@@ -560,12 +580,13 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
             width: 32, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
             background: category === 'bar' ? 'var(--loja-ink, #1C1814)' : 'transparent',
             color: category === 'bar' ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-text-secondary, #6B6258)',
-            transition: 'background 150ms, color 150ms',
+            transition: 'background 220ms cubic-bezier(0.22, 1, 0.36, 1), color 220ms cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
           <i className={`ph ${BAR_META[barStyle].icon}`} style={{ fontSize: 16 }} />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.9 }}
           onClick={() => handleCategoryClick('pie')}
           title={PIE_META[pieStyle].label + ' — clique de novo para alternar'}
           style={{
@@ -573,12 +594,13 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
             width: 32, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
             background: category === 'pie' ? 'var(--loja-ink, #1C1814)' : 'transparent',
             color: category === 'pie' ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-text-secondary, #6B6258)',
-            transition: 'background 150ms, color 150ms',
+            transition: 'background 220ms cubic-bezier(0.22, 1, 0.36, 1), color 220ms cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
           <i className={`ph ${PIE_META[pieStyle].icon}`} style={{ fontSize: 16 }} />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.9 }}
           onClick={() => handleCategoryClick('mais')}
           title={MAIS_META[maisStyle].label + ' — clique de novo para alternar'}
           style={{
@@ -586,13 +608,14 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
             width: 32, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
             background: category === 'mais' ? 'var(--loja-ink, #1C1814)' : 'transparent',
             color: category === 'mais' ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-text-secondary, #6B6258)',
-            transition: 'background 150ms, color 150ms',
+            transition: 'background 220ms cubic-bezier(0.22, 1, 0.36, 1), color 220ms cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
           <i className={`ph ${MAIS_META[maisStyle].icon}`} style={{ fontSize: 16 }} />
-        </button>
+        </motion.button>
       </div>
-      <button
+      <motion.button
+          whileTap={{ scale: 0.9 }}
         onClick={openFullscreen}
         title="Tela cheia — clique numa parte do gráfico para ver os detalhes ao lado"
         style={{
@@ -602,7 +625,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
         }}
       >
         <i className="ph ph-arrows-out" style={{ fontSize: 15 }} />
-      </button>
+      </motion.button>
     </div>
   );
 
@@ -620,16 +643,25 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>{toolbar}</div>
       {renderBody(300)}
 
+      <AnimatePresence>
       {fullscreen && (
-        <div
+        <motion.div
           onClick={() => { setFullscreen(false); setSelected(null); }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
           style={{
             position: 'fixed', inset: 0, background: 'rgba(28,24,20,0.6)', zIndex: 1000,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
           }}
         >
-          <div
+          <motion.div
             onClick={e => e.stopPropagation()}
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             style={{
               background: 'var(--loja-bg, #FAF7F2)', borderRadius: 20, width: 'min(1200px, 100%)', height: 'min(760px, 100%)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.4)',
@@ -637,12 +669,13 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--loja-border, #E8E2D6)', flexShrink: 0 }}>
               {toolbar}
-              <button
+              <motion.button
+          whileTap={{ scale: 0.9 }}
                 onClick={() => { setFullscreen(false); setSelected(null); }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--loja-text-secondary, #6B6258)', fontSize: 20 }}
               >
                 <i className="ph ph-x" />
-              </button>
+              </motion.button>
             </div>
             <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
               <div style={{ flex: 1, padding: 24, overflow: 'auto' }}>
@@ -650,9 +683,10 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
               </div>
               <DetailPanel item={selected} breakdown={selected && getBreakdown ? getBreakdown(selected) : null} />
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 };
