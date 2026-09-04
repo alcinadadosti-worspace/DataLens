@@ -110,7 +110,7 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>
-        <ChartCard
+        <ChartCard glow
           title={`Taxa de colocação e atendimento — ${groupBy === 'loja' ? 'por loja' : 'por categoria'}`}
           hint="Colocação: % do volume sugerido que de fato foi pedido. Atendimento: % do volume pedido que o fornecedor entregou. Volume ordenado do maior colocado ao menor."
           subtitle="Colocação = Colocado/Sugestão · Atendimento = Faturado/Colocado"
@@ -118,7 +118,7 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
           <RankingChart items={items} medals={false} />
         </ChartCard>
 
-        <ChartCard
+        <ChartCard glow
           title="Giro — Geral vs. Loja"
           hint="Compara o giro de estoque da rede toda (todos os canais de venda) com o giro apenas do canal loja física."
           subtitle="Rede toda (todos os canais) vs. só o canal físico"
@@ -142,7 +142,7 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
 
       {groupBy === 'categoria' && classeARisco.length > 0 && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Risco de ruptura"
             hint="Categorias que contêm produto Classe A (essencial no faturamento, ver Curva ABC) e baixa taxa de atendimento do fornecedor — risco real de faltar produto importante em loja."
             subtitle="Categoria com produto Classe A e baixa taxa de atendimento do fornecedor"

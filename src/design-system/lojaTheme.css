@@ -67,6 +67,7 @@
 
 [data-loja-theme] {
   background: var(--loja-bg);
+  color: var(--loja-ink);
   min-height: 100vh;
 }
 

@@ -146,7 +146,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
       </p>
 
       {showAll ? (
-        <ChartCard
+        <ChartCard glow
           title="Todas as pessoas"
           hint="Ranking completo por GMV — Gross Merchandise Value, o valor total vendido no ciclo — de todos os consultores/operadores, não só os 5 melhores e os 5 piores."
           subtitle={`${allSorted.length} pessoa(s) no ciclo, por GMV`}
@@ -155,14 +155,14 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
         </ChartCard>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Consultores que mais desempenharam"
             hint="As 5 pessoas com maior GMV (Gross Merchandise Value — valor total vendido) no ciclo atual."
             subtitle="Maior GMV no ciclo"
           >
             {renderList(top, true)}
           </ChartCard>
-          <ChartCard
+          <ChartCard glow
             title="Atenção"
             hint="As 5 pessoas com menor GMV (Gross Merchandise Value — valor total vendido) no ciclo — candidatas a apoio ou treinamento."
             subtitle="Menor GMV no ciclo"
@@ -174,7 +174,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
 
       {!lojaFiltro && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Avisos"
             hint="Pessoas que aparecem vendendo em mais de uma loja no mesmo ciclo — pode ser cobertura de folga, loja compartilhada, ou erro de lançamento."
             subtitle="Vendas efetuadas em outras unidades"

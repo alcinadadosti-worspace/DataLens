@@ -168,26 +168,26 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
 
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 28 }}>
-        <KpiCard
+        <KpiCard glow
           eyebrow="GMV do grupo"
           hint="GMV — Gross Merchandise Value: valor total vendido por toda a rede no ciclo, antes de descontos e trocas."
           value={fmtBRLshort(kpis.gmvTotal)}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(kpis.gmvTotal)}</span>}
         />
-        <KpiCard
+        <KpiCard glow
           eyebrow="Ticket médio geral"
           hint="GMV total dividido pela quantidade de boletos — o valor médio de cada venda fechada na rede."
           value={fmtBRLshort(kpis.ticketMedioGeral)}
           meta={`${fmtNumber(kpis.qtdBoletosTotal)} boletos`}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(kpis.ticketMedioGeral)}</span>}
         />
-        <KpiCard
+        <KpiCard glow
           eyebrow="Receita líquida"
           hint="Receita já descontando trocas e devoluções — o valor que efetivamente ficou com a rede."
           value={fmtBRLshort(kpis.receitaLiquidaTotal)}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(kpis.receitaLiquidaTotal)}</span>}
         />
-        <KpiCard
+        <KpiCard glow
           eyebrow="% Desconto sobre receita"
           hint="Total de descontos concedidos dividido pela receita líquida — quanto do valor vendido foi abatido em desconto."
           value={kpis.descontoPctGeral.toFixed(1).replace('.', ',') + '%'}
@@ -196,7 +196,7 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 24 }}>
-        <ChartCard
+        <ChartCard glow
           title="Ranking de lojas"
           hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu. Na visão de colunas empilhadas (botão de barras, 3º clique), a Meta PEF de cada loja aparece como referência de fundo, quando o Resumo de Performance foi importado. Em tela cheia, clique numa loja para ver os consultores dela e a participação de cada um no GMV."
           subtitle="Por GMV — 1º ao último lugar"
@@ -204,7 +204,7 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
           <RankingChart items={rankingItems} getBreakdown={getLojaBreakdown} />
         </ChartCard>
 
-        <ChartCard
+        <ChartCard glow
           title="Leitura cruzada"
           hint="Insights automáticos conectando as diferentes dimensões dos dados (canal, forma de pagamento, categoria, lojas e os arquivos opcionais importados)."
           subtitle="Insights conectando as dimensões"

@@ -1,5 +1,7 @@
 import React from 'react';
 import InfoHint from '../ui/InfoHint';
+import { useBorderGlowHandler } from '../ui/useBorderGlow';
+import '../../design-system/borderGlow.css';
 
 interface ChartCardProps {
   title: string;
@@ -8,17 +10,26 @@ interface ChartCardProps {
   action?: React.ReactNode;
   /** Texto do hover que explica o que o título quer dizer (e a sigla, se houver uma). */
   hint?: string;
+  /** Contorno que acompanha o cursor perto da borda (BorderGlow, Modo Loja only) — default off, não afeta o app original. */
+  glow?: boolean;
 }
 
-const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action, hint }) => {
+const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action, hint, glow }) => {
+  const onPointerMove = useBorderGlowHandler();
+
   return (
-    <div style={{
-      background: 'var(--loja-surface, #FFFFFF)',
-      border: '1px solid var(--loja-border, #E8E2D6)',
-      borderRadius: 16,
-      padding: 24,
-      boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
-    }}>
+    <div
+      onPointerMove={glow ? onPointerMove : undefined}
+      className={glow ? 'loja-glow-card' : undefined}
+      style={{
+        background: 'var(--loja-surface, #FFFFFF)',
+        border: '1px solid var(--loja-border, #E8E2D6)',
+        borderRadius: 16,
+        padding: 24,
+        boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
+      }}
+    >
+      {glow && <span className="loja-glow-edge" />}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',

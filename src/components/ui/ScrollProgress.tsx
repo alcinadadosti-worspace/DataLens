@@ -13,7 +13,7 @@ const ScrollProgress: React.FC = () => {
     <div
       aria-hidden="true"
       style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: 4,
+        position: 'fixed', top: 0, left: 264, bottom: 0, width: 4,
         zIndex: 70, pointerEvents: 'none',
         background: 'rgba(120, 20, 20, 0.12)',
       }}

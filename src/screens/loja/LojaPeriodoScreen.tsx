@@ -40,7 +40,7 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
       />
       <div style={{ marginBottom: 24 }} />
 
-      <ChartCard
+      <ChartCard glow
         title="GMV por dia"
         hint="GMV — Gross Merchandise Value: valor total vendido em cada dia do ciclo, somando todas as lojas."
         subtitle="Somado entre as 6 lojas do grupo"
@@ -49,7 +49,7 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
       </ChartCard>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 20 }}>
-        <ChartCard
+        <ChartCard glow
           title="Média por dia da semana"
           hint="GMV médio de cada dia da semana (segunda, terça...) ao longo do ciclo — mostra em que dias o movimento costuma ser mais forte."
           subtitle="Comportamento sazonal"
@@ -64,7 +64,7 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
           />
         </ChartCard>
 
-        <ChartCard
+        <ChartCard glow
           title="Leitura do período"
           hint="Destaques automáticos do ciclo: o melhor dia individual e o dia da semana com maior média de GMV."
           subtitle="Destaques do ciclo"

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import InfoHint from './InfoHint';
+import { useBorderGlowHandler } from './useBorderGlow';
+import '../../design-system/borderGlow.css';
 
 interface KpiCardProps {
   eyebrow: string;
@@ -10,10 +12,13 @@ interface KpiCardProps {
   tooltip?: React.ReactNode;
   /** Texto do hover que explica o que o indicador quer dizer (e a sigla, se houver uma). */
   hint?: string;
+  /** Contorno que acompanha o cursor perto da borda (BorderGlow, Modo Loja only) — default off, não afeta o app original. */
+  glow?: boolean;
 }
 
-const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection, meta, tooltip, hint }) => {
+const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection, meta, tooltip, hint, glow }) => {
   const [hovered, setHovered] = useState(false);
+  const onPointerMove = useBorderGlowHandler();
   const deltaColor = deltaDirection === 'down' ? 'var(--loja-danger, #B83A3A)' : 'var(--loja-success, #2E7D5B)';
   const arrow = deltaDirection === 'down' ? '↓' : '↑';
 
@@ -21,6 +26,8 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onPointerMove={glow ? onPointerMove : undefined}
+      className={glow ? 'loja-glow-card' : undefined}
       style={{
         background: 'var(--loja-surface, #FFFFFF)',
         border: '1px solid var(--loja-border, #E8E2D6)',
@@ -34,6 +41,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
         transition: 'box-shadow 200ms',
       }}
     >
+      {glow && <span className="loja-glow-edge" />}
       <div style={{
         fontSize: 12,
         fontWeight: 600,

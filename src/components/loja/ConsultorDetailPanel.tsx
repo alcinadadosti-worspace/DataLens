@@ -55,24 +55,24 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        <KpiCard
+        <KpiCard glow
           eyebrow="GMV no ciclo"
           hint="GMV — Gross Merchandise Value: valor total vendido por essa pessoa no ciclo, antes de descontos e trocas."
           value={fmtBRLshort(agg.gmv)}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(agg.gmv)}</span>}
         />
-        <KpiCard
+        <KpiCard glow
           eyebrow="Boletos"
           hint="Quantidade de boletos (cupons/recibos de venda) fechados por essa pessoa no ciclo."
           value={fmtNumber(agg.qtdBoletos)}
         />
-        <KpiCard
+        <KpiCard glow
           eyebrow="Ticket médio"
           hint="GMV dividido pela quantidade de boletos — quanto, em média, cada venda fechada por essa pessoa valeu."
           value={fmtBRLshort(agg.ticketMedio)}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(agg.ticketMedio)}</span>}
         />
-        <KpiCard
+        <KpiCard glow
           eyebrow="% Desconto sobre receita"
           hint="Total de descontos concedidos dividido pela receita líquida — quanto do valor vendido foi abatido em desconto."
           value={agg.descontoPct.toFixed(1).replace('.', ',') + '%'}
@@ -82,14 +82,14 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
 
       {agg.qtdBoletos > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 14 }}>
-          <KpiCard
+          <KpiCard glow
             eyebrow="Boletos de cliente Fidelidade"
             hint="% dos boletos dessa pessoa que pertencem a clientes cadastrados no programa Fidelidade (dado que já vinha no CSV, mas não era exibido em nenhuma tela)."
             value={agg.fidelidadePenetracaoPct.toFixed(1).replace('.', ',') + '%'}
             meta={`${fmtNumber(agg.qtdBoletos)} boletos no ciclo`}
           />
           {extras.fidelidade && (
-            <KpiCard
+            <KpiCard glow
               eyebrow="% concluiu desafio Fidelidade"
               hint="Dos boletos de cliente Fidelidade, quantos concluíram o 'desafio' Fidelidade (uma ação/meta específica do programa) — vem do arquivo ProgramaFidelidade novo."
               value={extras.fidelidade.penetracaoPct.toFixed(1).replace('.', ',') + '%'}
@@ -100,7 +100,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
       )}
 
       <div style={{ marginTop: 20 }}>
-        <ChartCard
+        <ChartCard glow
           title="Padrão de horário"
           hint="Distribuição da receita líquida por faixa de horário do dia, na loja onde essa pessoa mais vendeu — mostra em que horário o movimento é mais forte."
           subtitle={
@@ -140,7 +140,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
       {hasExtras && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
           {extras.lojaDigital.length > 0 && (
-            <ChartCard
+            <ChartCard glow
               title="Loja Digital"
               hint="Funil de atendimento via WhatsApp/canais digitais dessa pessoa: quantos clientes foram atendidos, quantos converteram em venda, e o tempo de resposta."
               subtitle="Funil de atendimento via WhatsApp/digital"
@@ -160,7 +160,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
           )}
 
           {extras.servicos.length > 0 && (
-            <ChartCard
+            <ChartCard glow
               title="Serviços em loja"
               hint="Serviços de beleza (maquiagem, cuidados faciais, cabelo...) realizados por essa pessoa, e quantos deles foram convertidos em venda (GMV)."
               subtitle={`${fmtNumber(servicosTotalCompletos)} serviços completos · ${fmtBRL(servicosTotalGmv)} em GMV`}
@@ -179,7 +179,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
           )}
 
           {extras.cuidadosFaciais.length > 0 && (
-            <ChartCard
+            <ChartCard glow
               title="Cuidados Faciais + Botik"
               hint="Receita gerada por essa pessoa nesse recorte específico de produtos (linha Botik e categoria Cuidados Faciais)."
               subtitle="Receita gerada nesse recorte"

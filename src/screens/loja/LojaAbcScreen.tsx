@@ -146,7 +146,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 24 }}>
-        <ChartCard
+        <ChartCard glow
           title="Top produtos por faturamento"
           hint="Os produtos (SKUs) que mais faturaram no período, com a classe ABC de cada um e o % acumulado no ranking."
           subtitle={comercialOnly ? 'Somente itens comerciais — clique no ícone para corrigir a classificação' : 'Todos os itens, incluindo sacolas/amostras'}
@@ -191,7 +191,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
           </div>
         </ChartCard>
 
-        <ChartCard
+        <ChartCard glow
           title="Classe A com margem baixa"
           hint="Produtos essenciais (Classe A) vendidos com margem de lucro abaixo de 20% — risco de estar vendendo muito volume com pouco lucro."
           subtitle="Risco de precificação (margem < 20%)"
@@ -217,7 +217,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
       </div>
 
       <div style={{ marginTop: 20 }}>
-        <ChartCard
+        <ChartCard glow
           title="Classificação manual de itens"
           hint="PRM é o sufixo usado pelo sistema de origem para identificar brindes/amostras. Aqui você corrige, item a item, se algo foi classificado errado pela heurística automática."
           subtitle="Corrija exceções da heurística automática (sufixo PRM / preço < R$3) sem depender de um novo arquivo-fonte"
@@ -251,7 +251,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
 
       {hasLojaBreakdown && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Top produtos por loja"
             hint="Mesmo ranking de faturamento por produto, agora aberto loja a loja — só aparece quando o arquivo de origem já vem quebrado por loja."
             subtitle="Disponível porque o arquivo veio aberto por loja (Quebra2 preenchida)"

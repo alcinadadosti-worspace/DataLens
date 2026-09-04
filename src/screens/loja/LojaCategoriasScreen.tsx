@@ -78,14 +78,14 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
       {hasXlsx ? (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>
-            <ChartCard
+            <ChartCard glow
               title="Receita por categoria"
               hint="Receita de cada categoria de produto no ciclo atual, comparada com o mesmo ciclo do ano anterior (Receita_por_Cat_Sub_Mar.xlsx)."
               subtitle="Ciclo atual, com variação vs. ano anterior (Receita_por_Cat_Sub_Mar)"
             >
               <RankingChart items={xlsxItems} />
             </ChartCard>
-            <ChartCard
+            <ChartCard glow
               title="Maiores variações"
               hint="Categorias com a maior mudança percentual (para cima ou para baixo) na receita, comparando com o ano anterior."
               subtitle="Positivas e negativas vs. ano anterior"
@@ -105,7 +105,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
           {(receitaCategoria!.subcategoria.length > 0 || receitaCategoria!.marca.length > 0) && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
               {receitaCategoria!.subcategoria.length > 0 && (
-                <ChartCard
+                <ChartCard glow
                   title="Top subcategorias"
                   hint="As subcategorias (recorte mais fino que categoria) com maior receita no ciclo."
                   subtitle="Por receita no ciclo"
@@ -116,7 +116,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
                 </ChartCard>
               )}
               {receitaCategoria!.marca.length > 0 && (
-                <ChartCard
+                <ChartCard glow
                   title="Top marcas"
                   hint="As marcas de produto com maior receita no ciclo."
                   subtitle="Por receita no ciclo"
@@ -130,7 +130,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
           )}
           {botikLinha && botikPorLoja.length > 0 && (
             <div style={{ marginTop: 20 }}>
-              <ChartCard
+              <ChartCard glow
                 title={`Linha "BOTIK" — de onde vem a receita`}
                 hint="Botik é uma linha/marca de produto. Esse total bate exatamente com o arquivo Loja_cuidados_faciais_iaf.xlsx, que traz a mesma receita já aberta por loja — por isso dá pra detalhar essa linha do mix aqui."
                 subtitle={`${fmtBRL(botikLinha.receitaAtual)} no ciclo (${fmtPct(botikLinha.variacaoPct)} vs. ano ant.) — detalhado por loja via Loja_cuidados_faciais_iaf.xlsx`}
@@ -156,7 +156,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 20 }}>
-        <ChartCard
+        <ChartCard glow
           title="Ranking de categorias (gestão estratégica)"
           hint="GMV — Gross Merchandise Value. Ranking de categorias pelo CSV de gestão estratégica (granularidade por loja, diferente do xlsx acima que é sempre rede toda)."
           subtitle="Por GMV, com % de desconto sobre a receita — granularidade por loja"
@@ -164,7 +164,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
           <RankingChart items={items} />
         </ChartCard>
 
-        <ChartCard
+        <ChartCard glow
           title="Anomalias"
           hint="Categorias onde o desconto total ultrapassa a receita líquida — normalmente indica erro de lançamento ou promoção muito agressiva."
           subtitle="Desconto acima da receita líquida"

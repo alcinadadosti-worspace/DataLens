@@ -196,7 +196,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
 
       {penetracaoRede !== null && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Penetração Fidelidade — rede"
             hint="Dos boletos de cliente Fidelidade, % que concluiu o 'desafio' do programa — uma ação/meta específica, diferente de simplesmente ser cliente cadastrado."
           >
@@ -206,7 +206,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
             </div>
           </ChartCard>
           {servicos && (
-            <ChartCard
+            <ChartCard glow
               title="Serviços em loja — GMV total"
               hint="GMV — Gross Merchandise Value: valor total vendido a partir de serviços de beleza (maquiagem, cuidados faciais, cabelo...) prestados em loja."
             >
@@ -215,7 +215,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
             </ChartCard>
           )}
           {cuidadosFaciais && cuidadosFaciais.participacaoPct !== null && (
-            <ChartCard
+            <ChartCard glow
               title="Cuidados Faciais + Botik — % da receita"
               hint="GMV — Gross Merchandise Value. % do GMV da rede que veio da linha de produtos Botik e da categoria Cuidados Faciais."
             >
@@ -228,7 +228,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {fidelidade && (
-          <ChartCard
+          <ChartCard glow
             title={`Penetração Fidelidade — ${tab === 'lojas' ? 'por loja' : 'por consultor'}`}
             hint="% de boletos de cliente Fidelidade que concluíram o 'desafio' do programa (ação/meta específica), loja a loja ou consultor a consultor."
             subtitle="% de boletos com desafio Fidelidade concluído"
@@ -238,7 +238,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
         )}
 
         {digitalItems.length > 0 && (
-          <ChartCard
+          <ChartCard glow
             title="Loja Digital — conversão por loja"
             hint="% de clientes atendidos via WhatsApp/canais digitais que converteram em venda, por loja."
             subtitle="% de clientes atendidos que converteram em venda"
@@ -248,7 +248,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
         )}
 
         {servicosPdvItems.length > 0 && (
-          <ChartCard
+          <ChartCard glow
             title="Serviços em loja — GMV por loja"
             hint="GMV — Gross Merchandise Value gerado por serviços de beleza (maquiagem, cuidados faciais, cabelo...) em cada loja."
             subtitle="Maquiagem, cuidados faciais, cabelo etc."
@@ -258,7 +258,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
         )}
 
         {servicoTiposItems.length > 0 && (
-          <ChartCard
+          <ChartCard glow
             title="Mix de serviços — rede"
             hint="GMV gerado por cada tipo de serviço de beleza, somado em toda a rede."
             subtitle="GMV gerado por tipo de serviço"
@@ -268,7 +268,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
         )}
 
         {cuidadosItems.length > 0 && (
-          <ChartCard
+          <ChartCard glow
             title="Cuidados Faciais + Botik — receita por loja"
             hint="Receita gerada pelo recorte de produtos Botik/Cuidados Faciais, loja a loja."
             subtitle="Receita total do bloco Botik dentro da loja"
@@ -280,7 +280,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
 
       {fidelidade && servicos && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Leitura cruzada"
             hint="Insight conectando a penetração do programa Fidelidade com o desempenho de serviços em loja."
             subtitle="Fidelidade vs. serviços em loja"

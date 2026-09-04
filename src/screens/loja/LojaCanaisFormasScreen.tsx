@@ -57,14 +57,14 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
       <div style={{ marginBottom: 24 }} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <ChartCard
+        <ChartCard glow
           title="Mix de canais de venda"
           hint="GMV — Gross Merchandise Value: cada canal por onde a venda pode entrar (loja física, WhatsApp, experimentação, calçada...), com o % que representa do total."
           subtitle="Participação no GMV do grupo"
         >
           <RankingChart items={toItems(canais)} />
         </ChartCard>
-        <ChartCard
+        <ChartCard glow
           title="Mix de formas de pagamento"
           hint="Como o GMV recebido se divide entre as formas de pagamento usadas pelo cliente (cartão de crédito, débito, PIX, dinheiro...)."
           subtitle="Participação no GMV recebido"
@@ -75,7 +75,7 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
 
       {dataset.receitaCanal && dataset.receitaCanal.length > 0 && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Receita por canal / UN — ciclo atual vs. anterior"
             hint="UN — Unidade de Negócio: agrupamento de canais/marcas usado pelo sistema de origem (Receita_por_Canal_UN.xlsx). Compara a receita do ciclo atual com a do ciclo anterior, canal a canal."
             subtitle={lojaFiltro ? 'Receita_por_Canal_UN.xlsx — sempre rede toda, esse arquivo não abre por loja' : 'Receita_por_Canal_UN.xlsx (GMV + Omni)'}
@@ -96,7 +96,7 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
 
       {dataset.lojaDigital && dataset.lojaDigital.pdv.length > 0 && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Loja Digital — funil de atendimento"
             hint="Funil de atendimento via WhatsApp/canais digitais: quantos clientes foram atendidos e quantos converteram em venda, por loja. Não é somado ao mix de canais acima — é outro recorte."
             subtitle="LojaDigital_Performance_por_Pdv_Consultor.xlsx — atendimento via WhatsApp/digital, não é um dos canais de venda acima (não somamos aos rankings de cima)"
@@ -117,7 +117,7 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
 
       {topCanal && topForma && (
         <div style={{ marginTop: 20 }}>
-        <ChartCard
+        <ChartCard glow
           title="Leitura cruzada"
           hint="Cruza o canal de venda líder com a forma de pagamento mais usada, para apontar diferenças de perfil de cliente entre canais."
           subtitle="Canal vs. forma de pagamento"

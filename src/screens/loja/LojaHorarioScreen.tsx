@@ -42,7 +42,7 @@ const LojaHorarioScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
       />
       <div style={{ marginBottom: 24 }} />
 
-      <ChartCard
+      <ChartCard glow
         title="Receita líquida por faixa horária"
         subtitle="Soma de todas as lojas e dias do período importado"
         hint="Receita líquida: receita já descontando trocas/devoluções, somada de todas as lojas para cada faixa de horário do dia — mostra em que horário o movimento de vendas é mais forte."
@@ -60,7 +60,7 @@ const LojaHorarioScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
 
       {pico && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard
+          <ChartCard glow
             title="Leitura"
             hint="Interpretação automática do horário de pico, para embasar decisões de escala de equipe e janelas de promoção."
             subtitle="Para embasar decisões de escala e promoção"
