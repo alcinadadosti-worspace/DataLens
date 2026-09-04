@@ -253,7 +253,10 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
 // --- Treemap ------------------------------------------------
 
 const TreemapCell: React.FC<any> = ({ x, y, width, height, item, fill, onSelect }) => {
-  if (width == null || height == null || width < 1 || height < 1) return null;
+  // O recharts também chama esse content pro nó-raiz do treemap (o container inteiro, antes de
+  // recursar pras folhas) — esse nó não tem os campos que colocamos em `data` (item, fill), só
+  // geometria. Sem folhas próprias pra desenhar, não há o que renderizar aqui.
+  if (!item || width == null || height == null || width < 1 || height < 1) return null;
   const showLabel = width > 54 && height > 30;
   return (
     <g onClick={onSelect ? () => onSelect(item) : undefined} style={{ cursor: onSelect ? 'pointer' : 'default' }}>
