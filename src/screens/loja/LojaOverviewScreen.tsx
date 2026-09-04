@@ -26,7 +26,7 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
           Importe os 7 arquivos CSV do relatório gerencial para ver o ranking.
         </p>
-        <Button variant="primary" icon={<i className="ph ph-upload-simple" style={{ fontSize: 16 }} />} onClick={() => onNavigate('loja-import')}>
+        <Button variant="primary" size="lg" icon={<i className="ph ph-upload-simple" style={{ fontSize: 18 }} />} onClick={() => onNavigate('loja-import')}>
           Importar dados
         </Button>
       </div>

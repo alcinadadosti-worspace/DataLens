@@ -6,7 +6,7 @@ interface InfoHintProps {
 }
 
 /** Ícone "i" com tooltip escuro ao passar o mouse — usado para explicar títulos e siglas. */
-const InfoHint: React.FC<InfoHintProps> = ({ text, size = 13 }) => {
+const InfoHint: React.FC<InfoHintProps> = ({ text, size = 14 }) => {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -26,10 +26,10 @@ const InfoHint: React.FC<InfoHintProps> = ({ text, size = 13 }) => {
             transform: 'translateX(-50%)',
             background: '#1C1814',
             color: '#FAF7F2',
-            borderRadius: 10,
-            padding: '9px 12px',
-            fontSize: 12,
-            lineHeight: 1.6,
+            borderRadius: 11,
+            padding: '11px 14px',
+            fontSize: 13,
+            lineHeight: 1.65,
             fontWeight: 400,
             fontStyle: 'normal',
             textTransform: 'none',
@@ -37,7 +37,7 @@ const InfoHint: React.FC<InfoHintProps> = ({ text, size = 13 }) => {
             fontFamily: 'Inter Tight, sans-serif',
             boxShadow: '0 4px 20px rgba(28,24,20,0.3)',
             whiteSpace: 'normal',
-            width: 260,
+            width: 280,
             pointerEvents: 'none',
             zIndex: 200,
           }}

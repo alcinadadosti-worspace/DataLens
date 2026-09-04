@@ -31,7 +31,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver fidelidade e serviços em loja.</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
   }
@@ -49,7 +49,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
           Nenhum arquivo de Fidelidade, Serviços, Loja Digital ou Cuidados Faciais foi importado ainda.
         </p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
   }
@@ -127,7 +127,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
               key={t}
               onClick={() => setTab(t)}
               style={{
-                fontSize: 13, padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
+                fontSize: 14, padding: '10px 16px', borderRadius: 9, cursor: 'pointer',
                 border: `1px solid ${tab === t ? '#1C1814' : '#E8E2D6'}`,
                 background: tab === t ? '#1C1814' : 'white',
                 color: tab === t ? 'white' : '#1C1814', fontWeight: 600,

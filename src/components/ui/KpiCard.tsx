@@ -24,18 +24,18 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
       style={{
         background: 'white',
         border: '1px solid #E8E2D6',
-        borderRadius: 14,
-        padding: 18,
+        borderRadius: 16,
+        padding: 22,
         boxShadow: hovered && tooltip ? '0 4px 14px rgba(28,24,20,0.1)' : '0 2px 6px rgba(28,24,20,0.05)',
         display: 'flex',
         flexDirection: 'column',
-        gap: 4,
+        gap: 5,
         position: 'relative',
         transition: 'box-shadow 200ms',
       }}
     >
       <div style={{
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 600,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
@@ -44,10 +44,10 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
         alignItems: 'center',
       }}>
         {eyebrow}
-        {hint && <InfoHint text={hint} />}
+        {hint && <InfoHint text={hint} size={14} />}
       </div>
       <div style={{
-        fontSize: 28,
+        fontSize: 32,
         fontWeight: 600,
         letterSpacing: '-0.02em',
         fontVariantNumeric: 'tabular-nums',
@@ -56,12 +56,12 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
       </div>
       {delta && (
         <div style={{
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: 500,
           color: deltaColor,
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: 5,
         }}>
           {arrow} {delta}
           {meta && <span style={{ color: '#6B6258', fontWeight: 400 }}>{meta}</span>}
@@ -75,8 +75,8 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
           background: '#1C1814',
           color: '#FAF7F2',
           borderRadius: 10,
-          padding: '10px 14px',
-          fontSize: 12,
+          padding: '11px 15px',
+          fontSize: 13,
           lineHeight: 1.75,
           boxShadow: '0 4px 20px rgba(28,24,20,0.3)',
           whiteSpace: 'nowrap',

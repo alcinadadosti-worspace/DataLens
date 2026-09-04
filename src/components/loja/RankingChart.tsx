@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import RankingList, { RankingItem } from './RankingList';
@@ -31,7 +31,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
   const [view, setView] = useState<ChartView>('bar');
 
   const toggle = (
-    <div style={{ display: 'flex', gap: 2, background: '#F2EEE2', borderRadius: 8, padding: 3, flexShrink: 0 }}>
+    <div style={{ display: 'flex', gap: 3, background: '#F2EEE2', borderRadius: 9, padding: 4, flexShrink: 0 }}>
       {VIEW_OPTIONS.map(opt => (
         <button
           key={opt.id}
@@ -39,13 +39,13 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
           title={opt.label}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 26, height: 22, borderRadius: 6, border: 'none', cursor: 'pointer',
+            width: 32, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
             background: view === opt.id ? '#1C1814' : 'transparent',
             color: view === opt.id ? 'white' : '#6B6258',
             transition: 'background 150ms, color 150ms',
           }}
         >
-          <i className={`ph ${opt.icon}`} style={{ fontSize: 13 }} />
+          <i className={`ph ${opt.icon}`} style={{ fontSize: 16 }} />
         </button>
       ))}
     </div>
@@ -74,7 +74,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
       {view === 'bar' && <RankingList items={items} medals={medals} emptyMessage={emptyMessage} />}
 
       {view === 'pie' && (
-        <ResponsiveContainer width="100%" height={Math.max(220, pieData.length * 26)}>
+        <ResponsiveContainer width="100%" height={Math.max(280, pieData.length * 30)}>
           <PieChart>
             <Pie
               data={pieData}
@@ -82,34 +82,36 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
               nameKey="label"
               cx="50%"
               cy="50%"
-              outerRadius="78%"
+              outerRadius="80%"
               labelLine={false}
               label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+              style={{ fontSize: 13, fontWeight: 600 }}
             >
               {pieData.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
             </Pie>
             <Tooltip
               formatter={(value: number, name: string) => [value.toLocaleString('pt-BR'), name]}
-              contentStyle={{ background: '#1C1814', border: 'none', borderRadius: 8, color: '#FAF7F2', fontSize: 12 }}
+              contentStyle={{ background: '#1C1814', border: 'none', borderRadius: 10, color: '#FAF7F2', fontSize: 14, padding: '10px 14px' }}
               itemStyle={{ color: '#FAF7F2' }}
             />
+            <Legend wrapperStyle={{ fontSize: 13 }} />
           </PieChart>
         </ResponsiveContainer>
       )}
 
       {view === 'spline' && (
-        <ResponsiveContainer width="100%" height={Math.max(220, 40)}>
-          <LineChart data={top.map(i => ({ ...i, label: truncateLabel(i.label) }))} margin={{ top: 10, right: 12, left: -20, bottom: 10 }}>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={top.map(i => ({ ...i, label: truncateLabel(i.label) }))} margin={{ top: 10, right: 16, left: -10, bottom: 14 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F2EEE2" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6B6258' }} interval={0} angle={-25} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10, fill: '#6B6258' }} />
+            <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#6B6258' }} interval={0} angle={-25} textAnchor="end" height={56} />
+            <YAxis tick={{ fontSize: 12, fill: '#6B6258' }} />
             <Tooltip
               formatter={(value: number) => value.toLocaleString('pt-BR')}
-              contentStyle={{ background: '#1C1814', border: 'none', borderRadius: 8, color: '#FAF7F2', fontSize: 12 }}
+              contentStyle={{ background: '#1C1814', border: 'none', borderRadius: 10, color: '#FAF7F2', fontSize: 14, padding: '10px 14px' }}
               itemStyle={{ color: '#FAF7F2' }}
               labelStyle={{ color: '#FAF7F2' }}
             />
-            <Line type="monotone" dataKey="value" stroke="#B26A3C" strokeWidth={2.5} dot={{ r: 3, fill: '#B26A3C' }} activeDot={{ r: 5 }} />
+            <Line type="monotone" dataKey="value" stroke="#B26A3C" strokeWidth={3} dot={{ r: 4, fill: '#B26A3C' }} activeDot={{ r: 6 }} />
           </LineChart>
         </ResponsiveContainer>
       )}

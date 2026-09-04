@@ -15,7 +15,7 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a série temporal.</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
   }

@@ -45,7 +45,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a curva ABC.</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
   }
@@ -56,7 +56,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
           O arquivo <strong>relatorioABCVenda</strong> não foi importado neste lote — curva ABC indisponível.
         </p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
       </div>
     );
   }
@@ -227,14 +227,14 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
               {overrideCount === 0 ? 'Nenhum SKU classificado manualmente ainda.' : `${overrideCount} SKU(s) com classificação manual.`}
             </span>
             <input ref={refFileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImportReferenceList} />
-            <Button size="sm" variant="secondary" onClick={() => refFileRef.current?.click()}>
+            <Button size="md" variant="secondary" onClick={() => refFileRef.current?.click()}>
               Importar lista de referência (.csv)
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleExportOverrides} disabled={overrideCount === 0}>
+            <Button size="md" variant="ghost" onClick={handleExportOverrides} disabled={overrideCount === 0}>
               Exportar classificação atual
             </Button>
             {overrideCount > 0 && (
-              <Button size="sm" variant="ghost" onClick={clearAllOverrides}>
+              <Button size="md" variant="ghost" onClick={clearAllOverrides}>
                 Limpar todas
               </Button>
             )}

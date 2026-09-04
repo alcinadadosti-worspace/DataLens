@@ -14,7 +14,7 @@ const LojaHorarioScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver o padrão por horário.</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
   }
@@ -25,7 +25,7 @@ const LojaHorarioScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
           O arquivo <strong>relatorioVendaPorHora</strong> não foi importado — distribuição por horário indisponível.
         </p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
       </div>
     );
   }

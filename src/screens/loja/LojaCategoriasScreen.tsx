@@ -16,7 +16,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver as categorias.</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
   }
@@ -63,7 +63,7 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
         <select
           value={lojaFiltro}
           onChange={e => setLojaFiltro(e.target.value)}
-          style={{ fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1px solid #E8E2D6', background: 'white', color: '#1C1814', cursor: 'pointer' }}
+          style={{ fontSize: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid #E8E2D6', background: 'white', color: '#1C1814', cursor: 'pointer' }}
         >
           <option value="">Todas as lojas</option>
           {lojas.map(l => (

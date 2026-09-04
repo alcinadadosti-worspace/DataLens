@@ -16,7 +16,7 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver a gestão de pedidos.</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
   }
@@ -27,7 +27,7 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
           O arquivo <strong>GestaoPedidos_Historico_Colocacao_Pedido</strong> não foi importado — gestão de pedidos indisponível.
         </p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
       </div>
     );
   }
@@ -105,8 +105,8 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
       )}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <Button variant={groupBy === 'loja' ? 'primary' : 'ghost'} onClick={() => setGroupBy('loja')}>Por loja</Button>
-        <Button variant={groupBy === 'categoria' ? 'primary' : 'ghost'} onClick={() => setGroupBy('categoria')}>Por categoria</Button>
+        <Button variant={groupBy === 'loja' ? 'primary' : 'ghost'} size="lg" onClick={() => setGroupBy('loja')}>Por loja</Button>
+        <Button variant={groupBy === 'categoria' ? 'primary' : 'ghost'} size="lg" onClick={() => setGroupBy('categoria')}>Por categoria</Button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>

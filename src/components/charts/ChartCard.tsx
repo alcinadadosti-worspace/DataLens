@@ -15,19 +15,19 @@ const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action
     <div style={{
       background: 'white',
       border: '1px solid #E8E2D6',
-      borderRadius: 14,
-      padding: 20,
+      borderRadius: 16,
+      padding: 24,
       boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
     }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 16,
+        marginBottom: 18,
       }}>
         <div>
           <div style={{
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
@@ -36,10 +36,10 @@ const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action
             alignItems: 'center',
           }}>
             {title}
-            {hint && <InfoHint text={hint} />}
+            {hint && <InfoHint text={hint} size={14} />}
           </div>
           {subtitle && (
-            <div style={{ fontSize: 13, color: '#3D362E', marginTop: 4 }}>{subtitle}</div>
+            <div style={{ fontSize: 14, color: '#3D362E', marginTop: 5 }}>{subtitle}</div>
           )}
         </div>
         {action}

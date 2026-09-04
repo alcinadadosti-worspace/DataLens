@@ -23,14 +23,14 @@ const LojaSidebar: React.FC<LojaSidebarProps> = ({ active, onNavigate }) => {
   return (
     <div style={{
       position: 'fixed',
-      top: 64, bottom: 0, left: 0, width: 240,
+      top: 64, bottom: 0, left: 0, width: 264,
       background: '#FAF7F2',
       borderRight: '1px solid rgba(28,24,20,0.08)',
-      padding: '20px 12px',
+      padding: '22px 14px',
       overflowY: 'auto',
       display: 'flex',
       flexDirection: 'column',
-      gap: 4,
+      gap: 5,
     }}>
       {navItems.map(item => {
         const isActive = active === item.id;
@@ -40,11 +40,11 @@ const LojaSidebar: React.FC<LojaSidebarProps> = ({ active, onNavigate }) => {
             className={`glossy-btn${isActive ? ' glossy-active' : ''}`}
             onClick={() => onNavigate(item.id)}
             title={item.hint}
-            style={{ borderRadius: 10, fontSize: 14 }}
+            style={{ borderRadius: 11, fontSize: 15 }}
           >
             <GlossyContent
               justify="flex-start"
-              icon={<i className={`ph ${isActive ? 'ph-bold' : ''} ${item.icon}`} style={{ fontSize: 18 }} />}
+              icon={<i className={`ph ${isActive ? 'ph-bold' : ''} ${item.icon}`} style={{ fontSize: 20 }} />}
             >
               {item.label}
             </GlossyContent>

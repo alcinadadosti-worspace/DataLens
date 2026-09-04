@@ -21,7 +21,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Importe os dados para ver os consultores.</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
+        <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar dados</Button>
       </div>
     );
   }
@@ -114,7 +114,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
             value={lojaFiltro}
             onChange={e => setLojaFiltro(e.target.value)}
             style={{
-              fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1px solid #E8E2D6',
+              fontSize: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid #E8E2D6',
               background: 'white', color: '#1C1814', cursor: 'pointer',
             }}
           >
@@ -129,13 +129,13 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
                 key={v}
                 className={`glossy-btn${view === v ? ' glossy-active' : ''}`}
                 onClick={() => { setView(v); setExpanded(null); }}
-                style={{ borderRadius: 8, fontSize: 13 }}
+                style={{ borderRadius: 9, fontSize: 14 }}
               >
                 <GlossyContent compact>{v === 'consultor' ? 'Consultor' : 'Operador'}</GlossyContent>
               </button>
             ))}
           </div>
-          <Button variant="ghost" onClick={() => setShowAll(v => !v)}>
+          <Button variant="ghost" size="lg" onClick={() => setShowAll(v => !v)}>
             {showAll ? 'Ver top/atenção' : 'Mostrar todas'}
           </Button>
         </div>

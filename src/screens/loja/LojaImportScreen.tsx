@@ -199,8 +199,8 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-        <Button variant="ghost" onClick={handleClear}>Limpar</Button>
-        <Button variant="primary" disabled={!canProceed} onClick={onComplete}>
+        <Button variant="ghost" size="lg" onClick={handleClear}>Limpar</Button>
+        <Button variant="primary" size="lg" disabled={!canProceed} onClick={onComplete}>
           Ver ranking
         </Button>
       </div>

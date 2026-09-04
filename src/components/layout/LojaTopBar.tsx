@@ -27,18 +27,18 @@ const LojaTopBar: React.FC<LojaTopBarProps> = ({ onNavigate }) => {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
-          width: 32, height: 32, borderRadius: 8,
+          width: 36, height: 36, borderRadius: 9,
           background: 'linear-gradient(135deg, #1C1814 0%, #3D362E 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'Fraunces, serif', color: '#FAF7F2', fontSize: 18, fontWeight: 600,
+          fontFamily: 'Fraunces, serif', color: '#FAF7F2', fontSize: 20, fontWeight: 600,
         }}>
           D
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-          <div style={{ fontFamily: 'Fraunces, serif', fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+          <div style={{ fontFamily: 'Fraunces, serif', fontSize: 19, fontWeight: 500, letterSpacing: '-0.01em' }}>
             DataLens
           </div>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#B26A3C' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#B26A3C' }}>
             Modo Loja
           </div>
         </div>
@@ -48,7 +48,7 @@ const LojaTopBar: React.FC<LojaTopBarProps> = ({ onNavigate }) => {
 
       {dataset && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-          <div style={{ fontSize: 12, color: '#1C1814', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+          <div style={{ fontSize: 13, color: '#1C1814', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
             {dataset.lojas.length} lojas · importado em {dataset.importedAt.toLocaleDateString('pt-BR')}
           </div>
         </div>
@@ -56,8 +56,8 @@ const LojaTopBar: React.FC<LojaTopBarProps> = ({ onNavigate }) => {
 
       <Button
         variant="secondary"
-        size="sm"
-        icon={<i className="ph ph-arrows-left-right" style={{ fontSize: 14 }} />}
+        size="md"
+        icon={<i className="ph ph-arrows-left-right" style={{ fontSize: 15 }} />}
         onClick={resetMode}
       >
         Trocar modo
@@ -65,8 +65,8 @@ const LojaTopBar: React.FC<LojaTopBarProps> = ({ onNavigate }) => {
 
       <Button
         variant="primary"
-        size="sm"
-        icon={<i className="ph ph-upload-simple" style={{ fontSize: 14 }} />}
+        size="md"
+        icon={<i className="ph ph-upload-simple" style={{ fontSize: 15 }} />}
         onClick={() => onNavigate('loja-import')}
       >
         Importar

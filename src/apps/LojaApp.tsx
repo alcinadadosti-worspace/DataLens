@@ -48,7 +48,7 @@ function LojaApp() {
     <div style={{ minHeight: '100vh', background: '#FAF7F2' }}>
       <LojaTopBar onNavigate={navigate} />
       <LojaSidebar active={route} onNavigate={navigate} />
-      <div style={{ marginLeft: 240, marginTop: 64 }}>
+      <div style={{ marginLeft: 264, marginTop: 64 }}>
         {screen}
       </div>
     </div>
