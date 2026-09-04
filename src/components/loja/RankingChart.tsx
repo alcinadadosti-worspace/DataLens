@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Bar, Cell, Tooltip, Legend, ResponsiveContainer,
@@ -9,6 +10,7 @@ import {
 import RankingList, { RankingItem, BreakdownRow } from './RankingList';
 import { TIER_STYLES } from '../../design-system/tierStyles';
 import { fmtNumber } from '../../utils/formatters';
+import { useLojaThemeStore } from '../../store/useLojaThemeStore';
 
 // --- Categorias e estilos ------------------------------------------------
 // 3 botões, cada um é um "ciclo": o 1º clique ativa a categoria (mostrando o
@@ -524,6 +526,7 @@ const DetailPanel: React.FC<{ item: RankingItem | null; breakdown: BreakdownRow[
 // --- Componente principal ------------------------------------------------
 
 const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, emptyMessage = 'Sem dados', maxSlices = 8, getBreakdown }) => {
+  const theme = useLojaThemeStore(s => s.theme);
   const [category, setCategory] = useState<Category>('bar');
   const [barStyle, setBarStyle] = useState<BarStyle>('horizontal');
   const [pieStyle, setPieStyle] = useState<PieStyle>('pie');
@@ -643,9 +646,11 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>{toolbar}</div>
       {renderBody(300)}
 
+      {createPortal(
       <AnimatePresence>
       {fullscreen && (
         <motion.div
+          data-loja-theme={theme}
           onClick={() => { setFullscreen(false); setSelected(null); }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -686,7 +691,9 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
           </motion.div>
         </motion.div>
       )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body,
+      )}
     </div>
   );
 };
