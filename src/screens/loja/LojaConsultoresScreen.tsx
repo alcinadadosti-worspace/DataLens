@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
 import Button from '../../components/ui/Button';
 import GlossyContent from '../../components/ui/GlossyContent';
+import ConsultorDetailPanel from '../../components/loja/ConsultorDetailPanel';
+import PageTitle from '../../components/ui/PageTitle';
 import { useLojaStore } from '../../store/useLojaStore';
 import { aggregateConsultoresPorLoja, listLojasInDimension } from '../../analytics/lojaMetrics';
 import { fmtBRLshort, fmtNumber } from '../../utils/formatters';
@@ -10,9 +12,10 @@ type View = 'consultor' | 'operador';
 
 const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
-  const setSelectedConsultor = useLojaStore(s => s.setSelectedConsultor);
   const [view, setView] = useState<View>('consultor');
   const [lojaFiltro, setLojaFiltro] = useState<string>('');
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   if (!dataset) {
     return (
@@ -37,67 +40,75 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
     return r.porLoja.length === 1 ? principal.nome : `${principal.nome} (principal)`;
   }
 
-  function handleClick(nome: string) {
-    setSelectedConsultor({ nome, view });
-    onNavigate('loja-consultor-detail');
+  function toggleExpand(nome: string) {
+    setExpanded(prev => (prev === nome ? null : nome));
   }
 
   const renderList = (list: typeof agg, medals: boolean) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {list.length === 0 ? (
         <div style={{ padding: '24px 0', textAlign: 'center', color: '#9B9287', fontSize: 13 }}>Sem dados</div>
-      ) : list.map((r, i) => (
-        <div
-          key={r.key + i}
-          onClick={() => handleClick(r.key)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-            padding: '6px 8px', borderRadius: 8, transition: 'background 150ms',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = '#F2EEE2')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
-          <div style={{
-            width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-            background: medals && i < 3 ? '#FBF3D0' : '#F2EEE2', color: medals && i < 3 ? '#8A6D00' : '#6B6258',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
-          }}>
-            {i + 1}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {r.key}
-                {r.porLoja.length > 0 && (
-                  <span style={{ fontWeight: 400, color: '#9B9287', marginLeft: 6, fontSize: 11 }}>
-                    · {unidadeLabel(r)}
-                  </span>
-                )}
+      ) : list.map((r, i) => {
+        const isOpen = expanded === r.key;
+        return (
+          <div key={r.key + i}>
+            <div
+              onClick={() => toggleExpand(r.key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                padding: '6px 8px', borderRadius: 8, transition: 'background 150ms',
+                background: isOpen ? '#F2EEE2' : 'transparent',
+              }}
+              onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = '#F2EEE2'; }}
+              onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <div style={{
+                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                background: medals && i < 3 ? '#FBF3D0' : '#F2EEE2', color: medals && i < 3 ? '#8A6D00' : '#6B6258',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+              }}>
+                {i + 1}
               </div>
-              <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
-                {fmtBRLshort(r.gmv)}
-              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.key}
+                    {r.porLoja.length > 0 && (
+                      <span style={{ fontWeight: 400, color: '#9B9287', marginLeft: 6, fontSize: 11 }}>
+                        · {unidadeLabel(r)}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
+                    {fmtBRLshort(r.gmv)}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: '#9B9287' }}>{fmtNumber(r.qtdBoletos)} boletos</div>
+              </div>
+              <i className={`ph ${isOpen ? 'ph-caret-up' : 'ph-caret-down'}`} style={{ color: '#D8D0C0', fontSize: 14, flexShrink: 0 }} />
             </div>
-            <div style={{ fontSize: 11, color: '#9B9287' }}>{fmtNumber(r.qtdBoletos)} boletos</div>
+            {isOpen && (
+              <div style={{ borderLeft: '2px solid #E8E2D6', marginLeft: 21, paddingLeft: 20 }}>
+                <ConsultorDetailPanel dataset={dataset} nome={r.key} view={view} />
+              </div>
+            )}
           </div>
-          <i className="ph ph-caret-right" style={{ color: '#D8D0C0', fontSize: 14, flexShrink: 0 }} />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
+
+  const allSorted = [...agg].sort((a, b) => b.gmv - a.gmv);
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
-            Modo Loja
-          </div>
-          <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 0' }}>
-            Desempenho individual
-          </h1>
-        </div>
+        <PageTitle
+          eyebrow="Modo Loja"
+          title="Desempenho individual"
+          hint="Ranking de GMV (valor total vendido) por consultor ou operador — clique num nome para ver o detalhe sem sair da página."
+        />
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <select
             value={lojaFiltro}
@@ -117,32 +128,57 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
               <button
                 key={v}
                 className={`glossy-btn${view === v ? ' glossy-active' : ''}`}
-                onClick={() => setView(v)}
+                onClick={() => { setView(v); setExpanded(null); }}
                 style={{ borderRadius: 8, fontSize: 13 }}
               >
                 <GlossyContent compact>{v === 'consultor' ? 'Consultor' : 'Operador'}</GlossyContent>
               </button>
             ))}
           </div>
+          <Button variant="ghost" onClick={() => setShowAll(v => !v)}>
+            {showAll ? 'Ver top/atenção' : 'Mostrar todas'}
+          </Button>
         </div>
       </div>
       <p style={{ color: '#6B6258', fontSize: 13, marginTop: 4, marginBottom: 24 }}>
         Consultor e Operador refletem a mesma pessoa em papéis diferentes do sistema — as visões são quase idênticas.
-        Clique em um nome para ver o detalhe individual.
+        Clique em um nome para expandir o detalhe individual.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <ChartCard title="Top performers" subtitle="Maior GMV no ciclo">
-          {renderList(top, true)}
+      {showAll ? (
+        <ChartCard
+          title="Todas as pessoas"
+          hint="Ranking completo por GMV — Gross Merchandise Value, o valor total vendido no ciclo — de todos os consultores/operadores, não só os 5 melhores e os 5 piores."
+          subtitle={`${allSorted.length} pessoa(s) no ciclo, por GMV`}
+        >
+          {renderList(allSorted, true)}
         </ChartCard>
-        <ChartCard title="Atenção" subtitle="Menor GMV no ciclo">
-          {renderList(bottom, false)}
-        </ChartCard>
-      </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <ChartCard
+            title="Consultores que mais desempenharam"
+            hint="As 5 pessoas com maior GMV (Gross Merchandise Value — valor total vendido) no ciclo atual."
+            subtitle="Maior GMV no ciclo"
+          >
+            {renderList(top, true)}
+          </ChartCard>
+          <ChartCard
+            title="Atenção"
+            hint="As 5 pessoas com menor GMV (Gross Merchandise Value — valor total vendido) no ciclo — candidatas a apoio ou treinamento."
+            subtitle="Menor GMV no ciclo"
+          >
+            {renderList(bottom, false)}
+          </ChartCard>
+        </div>
+      )}
 
       {!lojaFiltro && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard title="Avisos" subtitle="Vendas efetuadas em outras unidades">
+          <ChartCard
+            title="Avisos"
+            hint="Pessoas que aparecem vendendo em mais de uma loja no mesmo ciclo — pode ser cobertura de folga, loja compartilhada, ou erro de lançamento."
+            subtitle="Vendas efetuadas em outras unidades"
+          >
             {multiLoja.length === 0 ? (
               <div style={{ color: '#6B6258', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <i className="ph ph-check-circle" style={{ color: '#2E7D5B', fontSize: 18 }} />

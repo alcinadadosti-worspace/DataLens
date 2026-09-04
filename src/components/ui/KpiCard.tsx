@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import InfoHint from './InfoHint';
 
 interface KpiCardProps {
   eyebrow: string;
@@ -7,9 +8,11 @@ interface KpiCardProps {
   deltaDirection?: 'up' | 'down';
   meta?: string;
   tooltip?: React.ReactNode;
+  /** Texto do hover que explica o que o indicador quer dizer (e a sigla, se houver uma). */
+  hint?: string;
 }
 
-const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection, meta, tooltip }) => {
+const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection, meta, tooltip, hint }) => {
   const [hovered, setHovered] = useState(false);
   const deltaColor = deltaDirection === 'down' ? '#B83A3A' : '#2E7D5B';
   const arrow = deltaDirection === 'down' ? '↓' : '↑';
@@ -37,8 +40,11 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
         color: '#6B6258',
+        display: 'flex',
+        alignItems: 'center',
       }}>
         {eyebrow}
+        {hint && <InfoHint text={hint} />}
       </div>
       <div style={{
         fontSize: 28,

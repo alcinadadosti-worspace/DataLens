@@ -1,7 +1,9 @@
 import React from 'react';
 import ChartCard from '../../components/charts/ChartCard';
 import SimpleLineChart from '../../components/loja/SimpleLineChart';
+import RankingChart from '../../components/loja/RankingChart';
 import Button from '../../components/ui/Button';
+import PageTitle from '../../components/ui/PageTitle';
 import { useLojaStore } from '../../store/useLojaStore';
 import { dailySeries, dayOfWeekAverages } from '../../analytics/lojaMetrics';
 import { fmtBRLshort, fmtBRL } from '../../utils/formatters';
@@ -25,45 +27,48 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
   }));
 
   const dow = dayOfWeekAverages(daily);
-  const dowMax = Math.max(...dow.map(d => d.avgGmv), 1);
 
   const bestDay = daily.length > 0 ? daily.reduce((a, b) => (b.gmv > a.gmv ? b : a)) : null;
   const bestDow = dow.reduce((a, b) => (b.avgGmv > a.avgGmv ? b : a), dow[0]);
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
-        Modo Loja
-      </div>
-      <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 24px' }}>
-        Série temporal
-      </h1>
+      <PageTitle
+        eyebrow="Modo Loja"
+        title="Série temporal"
+        hint="Evolução do GMV (Gross Merchandise Value — valor total vendido) dia a dia no ciclo, e o padrão de sazonalidade por dia da semana."
+      />
+      <div style={{ marginBottom: 24 }} />
 
-      <ChartCard title="GMV por dia" subtitle="Somado entre as 6 lojas do grupo">
+      <ChartCard
+        title="GMV por dia"
+        hint="GMV — Gross Merchandise Value: valor total vendido em cada dia do ciclo, somando todas as lojas."
+        subtitle="Somado entre as 6 lojas do grupo"
+      >
         <SimpleLineChart points={points} color="#B26A3C" formatValue={fmtBRLshort} />
       </ChartCard>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 20 }}>
-        <ChartCard title="Média por dia da semana" subtitle="Comportamento sazonal">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {dow.map(d => (
-              <div key={d.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 64, fontSize: 12, color: d.label === 'Domingo' ? '#5B9BD5' : '#6B6258', fontWeight: d.label === 'Domingo' ? 600 : 400 }}>{d.label}</div>
-                <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#F2EEE6', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', width: `${Math.max((d.avgGmv / dowMax) * 100, 1.5)}%`,
-                    background: d.label === 'Domingo' ? '#A9CCE8' : d.label === bestDow?.label ? '#B26A3C' : '#D8D0C0', borderRadius: 4,
-                  }} />
-                </div>
-                <div style={{ width: 90, textAlign: 'right', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: '#1C1814', fontWeight: 600 }}>
-                  {fmtBRLshort(d.avgGmv)}
-                </div>
-              </div>
-            ))}
-          </div>
+        <ChartCard
+          title="Média por dia da semana"
+          hint="GMV médio de cada dia da semana (segunda, terça...) ao longo do ciclo — mostra em que dias o movimento costuma ser mais forte."
+          subtitle="Comportamento sazonal"
+        >
+          <RankingChart
+            medals={false}
+            items={dow.map(d => ({
+              label: d.label,
+              value: d.avgGmv,
+              valueLabel: fmtBRLshort(d.avgGmv),
+            }))}
+          />
         </ChartCard>
 
-        <ChartCard title="Leitura do período" subtitle="Destaques do ciclo">
+        <ChartCard
+          title="Leitura do período"
+          hint="Destaques automáticos do ciclo: o melhor dia individual e o dia da semana com maior média de GMV."
+          subtitle="Destaques do ciclo"
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {bestDay && (
               <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#3D362E', lineHeight: 1.5 }}>

@@ -7,16 +7,16 @@ interface LojaSidebarProps {
 }
 
 const navItems = [
-  { id: 'loja-overview',    label: 'Ranking geral',      icon: 'ph-trophy' },
-  { id: 'loja-consultores', label: 'Consultores',        icon: 'ph-users' },
-  { id: 'loja-canais',      label: 'Canais & Formas',    icon: 'ph-share-network' },
-  { id: 'loja-categorias',  label: 'Categorias',         icon: 'ph-tag' },
-  { id: 'loja-abc',         label: 'Curva ABC',          icon: 'ph-chart-bar' },
-  { id: 'loja-pedidos',     label: 'Gestão de pedidos',  icon: 'ph-package' },
-  { id: 'loja-periodo',     label: 'Período',            icon: 'ph-calendar-dots' },
-  { id: 'loja-horario',     label: 'Venda por hora',     icon: 'ph-clock' },
-  { id: 'loja-fidelidade-servicos', label: 'Fidelidade & serviços', icon: 'ph-heart' },
-  { id: 'loja-import',      label: 'Importar',           icon: 'ph-upload-simple' },
+  { id: 'loja-overview',    label: 'Ranking geral',      icon: 'ph-trophy', hint: 'Visão consolidada de todas as lojas por GMV (Gross Merchandise Value).' },
+  { id: 'loja-consultores', label: 'Consultores',        icon: 'ph-users', hint: 'Desempenho individual de consultores e operadores.' },
+  { id: 'loja-canais',      label: 'Canais & Formas',    icon: 'ph-share-network', hint: 'Mix de canais de venda e formas de pagamento.' },
+  { id: 'loja-categorias',  label: 'Categorias',         icon: 'ph-tag', hint: 'Mix de categoria, subcategoria, linha e marca de produto.' },
+  { id: 'loja-abc',         label: 'Curva ABC',          icon: 'ph-chart-bar', hint: 'Classificação de produtos por importância no faturamento (A, B, C).' },
+  { id: 'loja-pedidos',     label: 'Gestão de pedidos',  icon: 'ph-package', hint: 'Ciclo de reposição de estoque: sugestão, colocação e atendimento.' },
+  { id: 'loja-periodo',     label: 'Período',            icon: 'ph-calendar-dots', hint: 'GMV dia a dia e sazonalidade por dia da semana.' },
+  { id: 'loja-horario',     label: 'Venda por hora',     icon: 'ph-clock', hint: 'Distribuição de vendas por faixa de horário do dia.' },
+  { id: 'loja-fidelidade-servicos', label: 'Fidelidade & serviços', icon: 'ph-heart', hint: 'Programa Fidelidade, Serviços em loja, Loja Digital e Cuidados Faciais + Botik.' },
+  { id: 'loja-import',      label: 'Importar',           icon: 'ph-upload-simple', hint: 'Importar os arquivos CSV/xlsx do relatório gerencial.' },
 ];
 
 const LojaSidebar: React.FC<LojaSidebarProps> = ({ active, onNavigate }) => {
@@ -39,6 +39,7 @@ const LojaSidebar: React.FC<LojaSidebarProps> = ({ active, onNavigate }) => {
             key={item.id}
             className={`glossy-btn${isActive ? ' glossy-active' : ''}`}
             onClick={() => onNavigate(item.id)}
+            title={item.hint}
             style={{ borderRadius: 10, fontSize: 14 }}
           >
             <GlossyContent

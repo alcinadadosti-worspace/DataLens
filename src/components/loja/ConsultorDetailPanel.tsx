@@ -1,44 +1,45 @@
 import React from 'react';
-import ChartCard from '../../components/charts/ChartCard';
-import KpiCard from '../../components/ui/KpiCard';
-import Button from '../../components/ui/Button';
-import { useLojaStore } from '../../store/useLojaStore';
-import { aggregateByName, buildLojaNomeLookup, hourlyDistribution, findConsultorExtras } from '../../analytics/lojaMetrics';
+import ChartCard from '../charts/ChartCard';
+import KpiCard from '../ui/KpiCard';
+import RankingChart from './RankingChart';
+import { aggregateByName, aggregateConsultoresPorLoja, buildLojaNomeLookup, hourlyDistribution, findConsultorExtras } from '../../analytics/lojaMetrics';
 import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
+import { LojaDataset } from '../../types/loja';
 
-const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
-  const dataset = useLojaStore(s => s.dataset);
-  const selected = useLojaStore(s => s.selectedConsultor);
+interface ConsultorDetailPanelProps {
+  dataset: LojaDataset;
+  nome: string;
+  view: 'consultor' | 'operador';
+}
 
-  if (!dataset || !selected) {
-    return (
-      <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Nenhum consultor selecionado.</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-consultores')}>Voltar</Button>
-      </div>
-    );
-  }
-
-  const rows = selected.view === 'consultor' ? dataset.consultor : dataset.operador;
-  const agg = aggregateByName(rows).find(r => r.key === selected.nome);
+/**
+ * Corpo do detalhe de um consultor/operador — usado embutido (expandir/recolher) na lista de
+ * Consultores, em vez de navegar para uma página separada.
+ */
+const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, nome, view }) => {
+  const rows = view === 'consultor' ? dataset.consultor : dataset.operador;
+  const agg = aggregateByName(rows).find(r => r.key === nome);
+  const porLojaAgg = aggregateConsultoresPorLoja(rows).find(r => r.key === nome);
   const lojaNomeLookup = buildLojaNomeLookup(dataset.lojas);
 
   if (!agg) {
     return (
-      <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>Não foi possível encontrar dados para "{selected.nome}".</p>
-        <Button variant="primary" onClick={() => onNavigate('loja-consultores')}>Voltar</Button>
+      <div style={{ padding: '16px 0', color: '#9B9287', fontSize: 13 }}>
+        Não foi possível encontrar dados para "{nome}".
       </div>
     );
   }
 
-  const lojaCodigo = agg.lojaCodigos.length === 1 ? agg.lojaCodigos[0] : null;
+  // Sempre usa a loja "principal" (maior GMV) para o padrão de horário — inclusive quando a pessoa
+  // vendeu em mais de uma unidade no período, em vez de deixar o padrão de horário indisponível.
+  const principal = porLojaAgg && porLojaAgg.porLoja.length > 0 ? porLojaAgg.porLoja[0] : null;
+  const lojaCodigo = principal?.codigo ?? null;
   const lojaNome = lojaCodigo ? lojaNomeLookup.get(lojaCodigo) : null;
   const horaRows = lojaCodigo && dataset.vendaPorHora ? dataset.vendaPorHora.filter(r => r.lojaCodigo === lojaCodigo) : [];
   const buckets = horaRows.length > 0 ? hourlyDistribution(horaRows) : [];
-  const maxBucket = buckets.length > 0 ? Math.max(...buckets.map(b => b.receitaLiquida), 1) : 1;
+  const multiLoja = (porLojaAgg?.porLoja.length ?? 0) > 1;
 
-  const extras = findConsultorExtras(dataset, selected.nome);
+  const extras = findConsultorExtras(dataset, nome);
   const hasExtras = extras.fidelidade || extras.lojaDigital.length > 0 || extras.servicos.length > 0 || extras.cuidadosFaciais.length > 0;
   const cuidadosTotal = extras.cuidadosFaciais.reduce((s, r) => s + r.receitaTotal, 0);
   const cuidadosBotik = extras.cuidadosFaciais.reduce((s, r) => s + r.receitaBotik, 0);
@@ -46,43 +47,34 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
   const servicosTotalCompletos = extras.servicos.reduce((s, r) => s + r.qtdCompletos, 0);
 
   return (
-    <div style={{ padding: '32px 32px 64px' }}>
-      <button
-        onClick={() => onNavigate('loja-consultores')}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#6B6258', fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: 12 }}
-      >
-        <i className="ph ph-arrow-left" /> Voltar para consultores
-      </button>
-
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
-        Modo Loja · {selected.view === 'consultor' ? 'Consultor' : 'Operador'}
-      </div>
-      <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 0' }}>
-        {selected.nome}
-      </h1>
+    <div style={{ padding: '20px 4px 4px' }}>
       {agg.lojaCodigos.length > 0 && (
-        <p style={{ color: '#6B6258', fontSize: 13, marginTop: 6 }}>
+        <p style={{ color: '#6B6258', fontSize: 13, marginTop: 0, marginBottom: 16 }}>
           Unidade{agg.lojaCodigos.length > 1 ? 's' : ''}: {agg.lojaCodigos.map(c => `${c}${lojaNomeLookup.get(c) ? ' - ' + lojaNomeLookup.get(c) : ''}`).join(', ')}
         </p>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
         <KpiCard
           eyebrow="GMV no ciclo"
+          hint="GMV — Gross Merchandise Value: valor total vendido por essa pessoa no ciclo, antes de descontos e trocas."
           value={fmtBRLshort(agg.gmv)}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(agg.gmv)}</span>}
         />
         <KpiCard
           eyebrow="Boletos"
+          hint="Quantidade de boletos (cupons/recibos de venda) fechados por essa pessoa no ciclo."
           value={fmtNumber(agg.qtdBoletos)}
         />
         <KpiCard
           eyebrow="Ticket médio"
+          hint="GMV dividido pela quantidade de boletos — quanto, em média, cada venda fechada por essa pessoa valeu."
           value={fmtBRLshort(agg.ticketMedio)}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(agg.ticketMedio)}</span>}
         />
         <KpiCard
           eyebrow="% Desconto sobre receita"
+          hint="Total de descontos concedidos dividido pela receita líquida — quanto do valor vendido foi abatido em desconto."
           value={agg.descontoPct.toFixed(1).replace('.', ',') + '%'}
           meta={fmtBRL(agg.totalDescontos)}
         />
@@ -92,12 +84,14 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 14 }}>
           <KpiCard
             eyebrow="Boletos de cliente Fidelidade"
+            hint="% dos boletos dessa pessoa que pertencem a clientes cadastrados no programa Fidelidade (dado que já vinha no CSV, mas não era exibido em nenhuma tela)."
             value={agg.fidelidadePenetracaoPct.toFixed(1).replace('.', ',') + '%'}
             meta={`${fmtNumber(agg.qtdBoletos)} boletos no ciclo`}
           />
           {extras.fidelidade && (
             <KpiCard
               eyebrow="% concluiu desafio Fidelidade"
+              hint="Dos boletos de cliente Fidelidade, quantos concluíram o 'desafio' Fidelidade (uma ação/meta específica do programa) — vem do arquivo ProgramaFidelidade novo."
               value={extras.fidelidade.penetracaoPct.toFixed(1).replace('.', ',') + '%'}
               meta={`${fmtNumber(extras.fidelidade.qtdBoletosDesafio)} de ${fmtNumber(extras.fidelidade.qtdBoletosFidelidade)} boletos`}
             />
@@ -108,16 +102,16 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
       <div style={{ marginTop: 20 }}>
         <ChartCard
           title="Padrão de horário"
+          hint="Distribuição da receita líquida por faixa de horário do dia, na loja onde essa pessoa mais vendeu — mostra em que horário o movimento é mais forte."
           subtitle={
             lojaCodigo
-              ? `Loja ${lojaCodigo}${lojaNome ? ' - ' + lojaNome : ''} — não é possível segmentar por vendedor individual`
+              ? `Loja ${lojaCodigo}${lojaNome ? ' - ' + lojaNome : ''}${multiLoja ? ' (principal — maior GMV)' : ''} — não é possível segmentar por vendedor individual`
               : 'Indisponível'
           }
         >
           {!lojaCodigo ? (
             <div style={{ color: '#9B9287', fontSize: 13, lineHeight: 1.6 }}>
-              Este {selected.view === 'consultor' ? 'consultor' : 'operador'} aparece em {agg.lojaCodigos.length} lojas diferentes
-              no período, então não há uma única loja para mostrar o padrão de horário.
+              Não foi possível identificar a loja de {nome} no período.
             </div>
           ) : buckets.length === 0 ? (
             <div style={{ color: '#9B9287', fontSize: 13, lineHeight: 1.6 }}>
@@ -125,28 +119,18 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
             </div>
           ) : (
             <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {buckets.map((b, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 64, fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: '#6B6258', flexShrink: 0 }}>
-                      {b.faixaHoraria}
-                    </div>
-                    <div style={{ flex: 1, height: 18, borderRadius: 6, background: '#F2EEE6', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', width: `${Math.max((b.receitaLiquida / maxBucket) * 100, 1.5)}%`, borderRadius: 6,
-                        background: '#B26A3C',
-                      }} />
-                    </div>
-                    <div style={{ width: 90, textAlign: 'right', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
-                      {fmtBRLshort(b.receitaLiquida)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <RankingChart
+                medals={false}
+                items={buckets.map(b => ({
+                  label: b.faixaHoraria,
+                  value: b.receitaLiquida,
+                  valueLabel: fmtBRLshort(b.receitaLiquida),
+                }))}
+              />
               <div style={{ fontSize: 11, color: '#9B9287', marginTop: 12, lineHeight: 1.5 }}>
-                Este é o padrão de horário <strong>da loja inteira</strong> (todos os vendedores), mostrado como contexto —
+                Este é o padrão de horário <strong>da loja inteira</strong> (todos os vendedores){multiLoja ? ', a unidade onde ' + nome + ' mais vendeu' : ''} —
                 os arquivos de origem não trazem venda por hora quebrada por consultor/operador individual, então não é
-                possível isolar só as vendas de {selected.nome} por faixa horária.
+                possível isolar só as vendas de {nome} por faixa horária.
               </div>
             </>
           )}
@@ -156,7 +140,11 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
       {hasExtras && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
           {extras.lojaDigital.length > 0 && (
-            <ChartCard title="Loja Digital" subtitle="Funil de atendimento via WhatsApp/digital">
+            <ChartCard
+              title="Loja Digital"
+              hint="Funil de atendimento via WhatsApp/canais digitais dessa pessoa: quantos clientes foram atendidos, quantos converteram em venda, e o tempo de resposta."
+              subtitle="Funil de atendimento via WhatsApp/digital"
+            >
               {extras.lojaDigital.map((r, i) => (
                 <div key={i} style={{ fontSize: 13, borderBottom: i < extras.lojaDigital.length - 1 ? '1px solid #F2EEE2' : 'none', paddingBottom: 10, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
@@ -164,7 +152,7 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
                     <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRL(r.receita)}</span>
                   </div>
                   <div style={{ color: '#6B6258', fontSize: 12, marginTop: 2 }}>
-                    {r.clientesConvertidos}/{r.clientesAtendidos} convertidos ({fmtPct(r.conversaoPct).replace('+', '')}) · TME {r.tmeAjustado}
+                    {r.clientesConvertidos}/{r.clientesAtendidos} convertidos ({fmtPct(r.conversaoPct).replace('+', '')}) · TME (tempo médio de espera/atendimento) {r.tmeAjustado}
                   </div>
                 </div>
               ))}
@@ -172,7 +160,11 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
           )}
 
           {extras.servicos.length > 0 && (
-            <ChartCard title="Serviços em loja" subtitle={`${fmtNumber(servicosTotalCompletos)} serviços completos · ${fmtBRL(servicosTotalGmv)} em GMV`}>
+            <ChartCard
+              title="Serviços em loja"
+              hint="Serviços de beleza (maquiagem, cuidados faciais, cabelo...) realizados por essa pessoa, e quantos deles foram convertidos em venda (GMV)."
+              subtitle={`${fmtNumber(servicosTotalCompletos)} serviços completos · ${fmtBRL(servicosTotalGmv)} em GMV`}
+            >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {extras.servicos.map((r, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
@@ -187,7 +179,11 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
           )}
 
           {extras.cuidadosFaciais.length > 0 && (
-            <ChartCard title="Cuidados Faciais + Botik" subtitle="Receita gerada nesse recorte">
+            <ChartCard
+              title="Cuidados Faciais + Botik"
+              hint="Receita gerada por essa pessoa nesse recorte específico de produtos (linha Botik e categoria Cuidados Faciais)."
+              subtitle="Receita gerada nesse recorte"
+            >
               <div style={{ fontSize: 24, fontWeight: 700 }}>{fmtBRL(cuidadosTotal)}</div>
               <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>
                 dos quais {fmtBRL(cuidadosBotik)} em produtos Botik ({cuidadosTotal > 0 ? ((cuidadosBotik / cuidadosTotal) * 100).toFixed(0) : 0}%)
@@ -200,4 +196,4 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
   );
 };
 
-export default LojaConsultorDetailScreen;
+export default ConsultorDetailPanel;

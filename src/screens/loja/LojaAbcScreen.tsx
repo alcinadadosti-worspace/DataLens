@@ -1,12 +1,20 @@
 import React, { useMemo, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingList from '../../components/loja/RankingList';
+import RankingChart from '../../components/loja/RankingChart';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { useAbcOverridesStore } from '../../store/useAbcOverridesStore';
 import { classifyAbc, classifyAbcByLoja, AbcAggregatedItem } from '../../analytics/lojaMetrics';
+import PageTitle from '../../components/ui/PageTitle';
+import InfoHint from '../../components/ui/InfoHint';
 import { fmtBRLshort } from '../../utils/formatters';
+
+const CLASS_HINT: Record<'A' | 'B' | 'C', string> = {
+  A: 'Classe A: os itens que, somados, respondem pelos primeiros ~80% do faturamento — o núcleo do portfólio, prioridade máxima de estoque/preço.',
+  B: 'Classe B: itens intermediários, que somados aos da Classe A chegam a ~95% do faturamento acumulado.',
+  C: 'Classe C: os itens de menor peso individual no faturamento — cauda longa do portfólio (últimos ~5% acumulados).',
+};
 
 const CLASS_COLOR: Record<'A' | 'B' | 'C', { bg: string; color: string }> = {
   A: { bg: '#E0F2E8', color: '#2E7D5B' },
@@ -113,14 +121,11 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
   return (
     <div style={{ padding: '32px 32px 64px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
-            Modo Loja
-          </div>
-          <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 0' }}>
-            Curva ABC de produtos
-          </h1>
-        </div>
+        <PageTitle
+          eyebrow="Modo Loja"
+          title="Curva ABC de produtos"
+          hint="ABC é a classificação de produtos pela importância no faturamento acumulado: Classe A (essenciais), B (intermediários) e C (cauda longa)."
+        />
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#3D362E', cursor: 'pointer' }}>
           <input type="checkbox" checked={comercialOnly} onChange={e => setComercialOnly(e.target.checked)} />
           Excluir sacolas/amostras/PRM
@@ -130,8 +135,9 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 24 }}>
         {(['A', 'B', 'C'] as const).map(c => (
           <div key={c} style={{ background: CLASS_COLOR[c].bg, borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: CLASS_COLOR[c].color }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: CLASS_COLOR[c].color, display: 'flex', alignItems: 'center' }}>
               Classe {c}
+              <InfoHint text={CLASS_HINT[c]} />
             </div>
             <div style={{ fontSize: 26, fontWeight: 700, color: '#1C1814', marginTop: 4 }}>{counts[c]}</div>
             <div style={{ fontSize: 12, color: '#6B6258' }}>SKUs</div>
@@ -140,7 +146,11 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 24 }}>
-        <ChartCard title="Top produtos por faturamento" subtitle={comercialOnly ? 'Somente itens comerciais — clique no ícone para corrigir a classificação' : 'Todos os itens, incluindo sacolas/amostras'}>
+        <ChartCard
+          title="Top produtos por faturamento"
+          hint="Os produtos (SKUs) que mais faturaram no período, com a classe ABC de cada um e o % acumulado no ranking."
+          subtitle={comercialOnly ? 'Somente itens comerciais — clique no ícone para corrigir a classificação' : 'Todos os itens, incluindo sacolas/amostras'}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {topItems.length === 0 ? (
               <div style={{ padding: '24px 0', textAlign: 'center', color: '#9B9287', fontSize: 13 }}>Sem dados</div>
@@ -181,7 +191,11 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
           </div>
         </ChartCard>
 
-        <ChartCard title="Classe A com margem baixa" subtitle="Risco de precificação (margem < 20%)">
+        <ChartCard
+          title="Classe A com margem baixa"
+          hint="Produtos essenciais (Classe A) vendidos com margem de lucro abaixo de 20% — risco de estar vendendo muito volume com pouco lucro."
+          subtitle="Risco de precificação (margem < 20%)"
+        >
           {riscoMargem.length === 0 ? (
             <div style={{ color: '#6B6258', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
               <i className="ph ph-check-circle" style={{ color: '#2E7D5B', fontSize: 18 }} />
@@ -205,6 +219,7 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
       <div style={{ marginTop: 20 }}>
         <ChartCard
           title="Classificação manual de itens"
+          hint="PRM é o sufixo usado pelo sistema de origem para identificar brindes/amostras. Aqui você corrige, item a item, se algo foi classificado errado pela heurística automática."
           subtitle="Corrija exceções da heurística automática (sufixo PRM / preço < R$3) sem depender de um novo arquivo-fonte"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -236,12 +251,16 @@ const LojaAbcScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNaviga
 
       {hasLojaBreakdown && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard title="Top produtos por loja" subtitle="Disponível porque o arquivo veio aberto por loja (Quebra2 preenchida)">
+          <ChartCard
+            title="Top produtos por loja"
+            hint="Mesmo ranking de faturamento por produto, agora aberto loja a loja — só aparece quando o arquivo de origem já vem quebrado por loja."
+            subtitle="Disponível porque o arquivo veio aberto por loja (Quebra2 preenchida)"
+          >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
               {Array.from(byLoja.entries()).slice(0, 6).map(([loja, items]) => (
                 <div key={loja}>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{loja}</div>
-                  <RankingList
+                  <RankingChart
                     medals={false}
                     items={items.slice(0, 5).map(a => ({
                       label: a.descricao || a.codigo,

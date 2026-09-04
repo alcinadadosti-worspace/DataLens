@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingList from '../../components/loja/RankingList';
+import RankingChart from '../../components/loja/RankingChart';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { pedidosRates, classifyAbc, buildLojaNomeLookup } from '../../analytics/lojaMetrics';
+import PageTitle from '../../components/ui/PageTitle';
+import InfoHint from '../../components/ui/InfoHint';
 import { fmtNumber, fmtPct } from '../../utils/formatters';
 
 const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
@@ -62,29 +64,41 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
-        Modo Loja
-      </div>
-      <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 24px' }}>
-        Gestão de pedidos e reposição
-      </h1>
+      <PageTitle
+        eyebrow="Modo Loja"
+        title="Gestão de pedidos e reposição"
+        hint="Acompanha o ciclo de reposição de estoque: quanto foi sugerido pedir, quanto foi de fato colocado no pedido, e quanto o fornecedor faturou (entregou)."
+      />
+      <div style={{ marginBottom: 24 }} />
 
       {visaoGeral && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
           <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Meta sugestão</div>
+            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+              Meta sugestão
+              <InfoHint text="Volume que o sistema sugeriu pedir no ciclo, com base no histórico de vendas e estoque." />
+            </div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{fmtNumber(visaoGeral.metaSugestao)}</div>
           </div>
           <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Volume colocado</div>
+            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+              Volume colocado
+              <InfoHint text="Volume que de fato foi pedido ao fornecedor, podendo diferir da sugestão do sistema." />
+            </div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{fmtNumber(visaoGeral.volumeColocado)}</div>
           </div>
           <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Volume faturado</div>
+            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+              Volume faturado
+              <InfoHint text="Volume que o fornecedor efetivamente entregou/faturou do que foi colocado no pedido." />
+            </div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{fmtNumber(visaoGeral.volumeFaturado)}</div>
           </div>
           <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Giro do ciclo</div>
+            <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+              Giro do ciclo
+              <InfoHint text="Indicador de giro de estoque do ciclo — quão rápido o estoque reposto foi vendido." />
+            </div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{fmtPct(visaoGeral.giro)}</div>
           </div>
         </div>
@@ -96,12 +110,19 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>
-        <ChartCard title={`Taxa de colocação e atendimento — ${groupBy === 'loja' ? 'por loja' : 'por categoria'}`}
-          subtitle="Colocação = Colocado/Sugestão · Atendimento = Faturado/Colocado">
-          <RankingList items={items} medals={false} />
+        <ChartCard
+          title={`Taxa de colocação e atendimento — ${groupBy === 'loja' ? 'por loja' : 'por categoria'}`}
+          hint="Colocação: % do volume sugerido que de fato foi pedido. Atendimento: % do volume pedido que o fornecedor entregou. Volume ordenado do maior colocado ao menor."
+          subtitle="Colocação = Colocado/Sugestão · Atendimento = Faturado/Colocado"
+        >
+          <RankingChart items={items} medals={false} />
         </ChartCard>
 
-        <ChartCard title="Giro — Geral vs. Loja" subtitle="Rede toda (todos os canais) vs. só o canal físico">
+        <ChartCard
+          title="Giro — Geral vs. Loja"
+          hint="Compara o giro de estoque da rede toda (todos os canais de venda) com o giro apenas do canal loja física."
+          subtitle="Rede toda (todos os canais) vs. só o canal físico"
+        >
           {giroCanais.length === 0 ? (
             <div style={{ color: '#9B9287', fontSize: 13 }}>Arquivo de giro por canal não importado.</div>
           ) : (
@@ -121,7 +142,11 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
 
       {groupBy === 'categoria' && classeARisco.length > 0 && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard title="Risco de ruptura" subtitle="Categoria com produto Classe A e baixa taxa de atendimento do fornecedor">
+          <ChartCard
+            title="Risco de ruptura"
+            hint="Categorias que contêm produto Classe A (essencial no faturamento, ver Curva ABC) e baixa taxa de atendimento do fornecedor — risco real de faltar produto importante em loja."
+            subtitle="Categoria com produto Classe A e baixa taxa de atendimento do fornecedor"
+          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {classeARisco.map((r, i) => (
                 <div key={i} style={{ background: '#FBE5E9', border: '1px solid #F0A8B3', borderRadius: 10, padding: '10px 14px' }}>

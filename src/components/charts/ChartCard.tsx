@@ -1,13 +1,16 @@
 import React from 'react';
+import InfoHint from '../ui/InfoHint';
 
 interface ChartCardProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  /** Texto do hover que explica o que o título quer dizer (e a sigla, se houver uma). */
+  hint?: string;
 }
 
-const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action }) => {
+const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action, hint }) => {
   return (
     <div style={{
       background: 'white',
@@ -29,8 +32,11 @@ const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             color: '#6B6258',
+            display: 'flex',
+            alignItems: 'center',
           }}>
             {title}
+            {hint && <InfoHint text={hint} />}
           </div>
           {subtitle && (
             <div style={{ fontSize: 13, color: '#3D362E', marginTop: 4 }}>{subtitle}</div>

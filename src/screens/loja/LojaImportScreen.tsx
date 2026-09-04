@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import Button from '../../components/ui/Button';
+import PageTitle from '../../components/ui/PageTitle';
+import InfoHint from '../../components/ui/InfoHint';
 import { parseLojaFiles } from '../../parsers/lojaParser';
 import { useLojaStore } from '../../store/useLojaStore';
 import { LOJA_DIMENSIONS, LOJA_DIMENSION_LABELS, LOJA_OPTIONAL_FILES, LOJA_OPTIONAL_FILE_LABELS, LojaParseResult } from '../../types/loja';
@@ -57,12 +59,12 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px' }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
-        Modo Loja · Importar dados
-      </div>
-      <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 6px' }}>
-        Importar relatório gerencial
-      </h1>
+      <PageTitle
+        eyebrow="Modo Loja · Importar dados"
+        title="Importar relatório gerencial"
+        hint="Arraste os arquivos exportados do sistema gerencial (CSV e xlsx) — tudo é processado localmente no navegador, nada é enviado para um servidor."
+      />
+      <div style={{ marginBottom: 6 }} />
       <p style={{ color: '#6B6258', fontSize: 15, marginTop: 0, marginBottom: 28 }}>
         Arraste os <strong>7 arquivos CSV obrigatórios</strong> do relatório gerencial (Lojas, Forma, Consultor,
         Operador, Data, Canal e Gestão) e, se tiver, os arquivos <strong>opcionais</strong> (Curva ABC, Venda por
@@ -110,8 +112,9 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
         background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
         padding: 20, marginBottom: 20,
       }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
           Obrigatórios
+          <InfoHint text="Os 7 arquivos CSV do relatório gerencial (Lojas, Forma, Consultor, Operador, Data, Canal, Gestão) — sem eles o Modo Loja não consegue montar o ranking." />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {LOJA_DIMENSIONS.map(dim => {
@@ -144,8 +147,9 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
         background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
         padding: 20, marginBottom: 20,
       }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
           Opcionais
+          <InfoHint text="Arquivos extras que enriquecem outras telas (curva ABC, venda por hora, gestão de pedidos, Fidelidade, Loja Digital, Serviços em loja, Cuidados Faciais...) — o Modo Loja funciona sem eles, só mostra menos." />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {LOJA_OPTIONAL_FILES.map(f => {

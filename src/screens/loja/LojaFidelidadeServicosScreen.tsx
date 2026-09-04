@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingList, { RankingItem } from '../../components/loja/RankingList';
+import RankingChart from '../../components/loja/RankingChart';
+import { RankingItem } from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
+import PageTitle from '../../components/ui/PageTitle';
 import { useLojaStore } from '../../store/useLojaStore';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { fmtBRL, fmtPct, fmtNumber } from '../../utils/formatters';
@@ -114,14 +116,11 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
   return (
     <div style={{ padding: '32px 32px 64px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B26A3C' }}>
-            Modo Loja
-          </div>
-          <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 0' }}>
-            Fidelidade, serviços & digital
-          </h1>
-        </div>
+        <PageTitle
+          eyebrow="Modo Loja"
+          title="Fidelidade, serviços & digital"
+          hint="Reúne os 4 arquivos xlsx mais novos: Programa Fidelidade, Serviços em loja, Loja Digital e Cuidados Faciais + Botik — cada um com visão de rede completa, por loja ou por consultor."
+        />
         <div style={{ display: 'flex', gap: 6 }}>
           {(['lojas', 'consultores'] as const).map(t => (
             <button
@@ -143,20 +142,29 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
 
       {penetracaoRede !== null && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-          <ChartCard title="Penetração Fidelidade — rede">
+          <ChartCard
+            title="Penetração Fidelidade — rede"
+            hint="Dos boletos de cliente Fidelidade, % que concluiu o 'desafio' do programa — uma ação/meta específica, diferente de simplesmente ser cliente cadastrado."
+          >
             <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em' }}>{fmtPct(penetracaoRede).replace('+', '')}</div>
             <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>
               {fmtNumber(totalDesafio ?? 0)} de {fmtNumber(totalBoletosFid ?? 0)} boletos com desafio concluído
             </div>
           </ChartCard>
           {servicos && (
-            <ChartCard title="Serviços em loja — GMV total">
+            <ChartCard
+              title="Serviços em loja — GMV total"
+              hint="GMV — Gross Merchandise Value: valor total vendido a partir de serviços de beleza (maquiagem, cuidados faciais, cabelo...) prestados em loja."
+            >
               <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em' }}>{fmtBRL(totalServicosGmv)}</div>
               <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>{fmtNumber(totalServicosCompletos)} serviços completos</div>
             </ChartCard>
           )}
           {cuidadosFaciais && cuidadosFaciais.participacaoPct !== null && (
-            <ChartCard title="Cuidados Faciais + Botik — % da receita">
+            <ChartCard
+              title="Cuidados Faciais + Botik — % da receita"
+              hint="GMV — Gross Merchandise Value. % do GMV da rede que veio da linha de produtos Botik e da categoria Cuidados Faciais."
+            >
               <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em' }}>{fmtPct(cuidadosFaciais.participacaoPct).replace('+', '')}</div>
               <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>do GMV total da rede no ciclo</div>
             </ChartCard>
@@ -166,39 +174,63 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {fidelidade && (
-          <ChartCard title={`Penetração Fidelidade — ${tab === 'lojas' ? 'por loja' : 'por consultor'}`} subtitle="% de boletos com desafio Fidelidade concluído">
-            <RankingList items={fidelidadeItems} />
+          <ChartCard
+            title={`Penetração Fidelidade — ${tab === 'lojas' ? 'por loja' : 'por consultor'}`}
+            hint="% de boletos de cliente Fidelidade que concluíram o 'desafio' do programa (ação/meta específica), loja a loja ou consultor a consultor."
+            subtitle="% de boletos com desafio Fidelidade concluído"
+          >
+            <RankingChart items={fidelidadeItems} />
           </ChartCard>
         )}
 
         {digitalItems.length > 0 && (
-          <ChartCard title="Loja Digital — conversão por loja" subtitle="% de clientes atendidos que converteram em venda">
-            <RankingList items={digitalItems} />
+          <ChartCard
+            title="Loja Digital — conversão por loja"
+            hint="% de clientes atendidos via WhatsApp/canais digitais que converteram em venda, por loja."
+            subtitle="% de clientes atendidos que converteram em venda"
+          >
+            <RankingChart items={digitalItems} />
           </ChartCard>
         )}
 
         {servicosPdvItems.length > 0 && (
-          <ChartCard title="Serviços em loja — GMV por loja" subtitle="Maquiagem, cuidados faciais, cabelo etc.">
-            <RankingList items={servicosPdvItems} />
+          <ChartCard
+            title="Serviços em loja — GMV por loja"
+            hint="GMV — Gross Merchandise Value gerado por serviços de beleza (maquiagem, cuidados faciais, cabelo...) em cada loja."
+            subtitle="Maquiagem, cuidados faciais, cabelo etc."
+          >
+            <RankingChart items={servicosPdvItems} />
           </ChartCard>
         )}
 
         {servicoTiposItems.length > 0 && (
-          <ChartCard title="Mix de serviços — rede" subtitle="GMV gerado por tipo de serviço">
-            <RankingList items={servicoTiposItems} />
+          <ChartCard
+            title="Mix de serviços — rede"
+            hint="GMV gerado por cada tipo de serviço de beleza, somado em toda a rede."
+            subtitle="GMV gerado por tipo de serviço"
+          >
+            <RankingChart items={servicoTiposItems} />
           </ChartCard>
         )}
 
         {cuidadosItems.length > 0 && (
-          <ChartCard title="Cuidados Faciais + Botik — receita por loja" subtitle="Receita total do bloco Botik dentro da loja">
-            <RankingList items={cuidadosItems} />
+          <ChartCard
+            title="Cuidados Faciais + Botik — receita por loja"
+            hint="Receita gerada pelo recorte de produtos Botik/Cuidados Faciais, loja a loja."
+            subtitle="Receita total do bloco Botik dentro da loja"
+          >
+            <RankingChart items={cuidadosItems} />
           </ChartCard>
         )}
       </div>
 
       {fidelidade && servicos && (
         <div style={{ marginTop: 20 }}>
-          <ChartCard title="Leitura cruzada" subtitle="Fidelidade vs. serviços em loja">
+          <ChartCard
+            title="Leitura cruzada"
+            hint="Insight conectando a penetração do programa Fidelidade com o desempenho de serviços em loja."
+            subtitle="Fidelidade vs. serviços em loja"
+          >
             <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#3D362E', lineHeight: 1.6, marginTop: 12 }}>
               <i className="ph ph-lightbulb" style={{ color: '#C9A227', fontSize: 16, flexShrink: 0, marginTop: 1 }} />
               <span>
