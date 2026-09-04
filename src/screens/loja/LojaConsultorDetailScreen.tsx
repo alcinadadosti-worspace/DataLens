@@ -3,8 +3,8 @@ import ChartCard from '../../components/charts/ChartCard';
 import KpiCard from '../../components/ui/KpiCard';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
-import { aggregateByName, buildLojaNomeLookup, hourlyDistribution } from '../../analytics/lojaMetrics';
-import { fmtBRL, fmtBRLshort, fmtNumber } from '../../utils/formatters';
+import { aggregateByName, buildLojaNomeLookup, hourlyDistribution, findConsultorExtras } from '../../analytics/lojaMetrics';
+import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
 
 const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
@@ -37,6 +37,13 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
   const horaRows = lojaCodigo && dataset.vendaPorHora ? dataset.vendaPorHora.filter(r => r.lojaCodigo === lojaCodigo) : [];
   const buckets = horaRows.length > 0 ? hourlyDistribution(horaRows) : [];
   const maxBucket = buckets.length > 0 ? Math.max(...buckets.map(b => b.receitaLiquida), 1) : 1;
+
+  const extras = findConsultorExtras(dataset, selected.nome);
+  const hasExtras = extras.fidelidade || extras.lojaDigital.length > 0 || extras.servicos.length > 0 || extras.cuidadosFaciais.length > 0;
+  const cuidadosTotal = extras.cuidadosFaciais.reduce((s, r) => s + r.receitaTotal, 0);
+  const cuidadosBotik = extras.cuidadosFaciais.reduce((s, r) => s + r.receitaBotik, 0);
+  const servicosTotalGmv = extras.servicos.reduce((s, r) => s + r.gmv, 0);
+  const servicosTotalCompletos = extras.servicos.reduce((s, r) => s + r.qtdCompletos, 0);
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -80,6 +87,23 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
           meta={fmtBRL(agg.totalDescontos)}
         />
       </div>
+
+      {agg.qtdBoletos > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 14 }}>
+          <KpiCard
+            eyebrow="Boletos de cliente Fidelidade"
+            value={agg.fidelidadePenetracaoPct.toFixed(1).replace('.', ',') + '%'}
+            meta={`${fmtNumber(agg.qtdBoletos)} boletos no ciclo`}
+          />
+          {extras.fidelidade && (
+            <KpiCard
+              eyebrow="% concluiu desafio Fidelidade"
+              value={extras.fidelidade.penetracaoPct.toFixed(1).replace('.', ',') + '%'}
+              meta={`${fmtNumber(extras.fidelidade.qtdBoletosDesafio)} de ${fmtNumber(extras.fidelidade.qtdBoletosFidelidade)} boletos`}
+            />
+          )}
+        </div>
+      )}
 
       <div style={{ marginTop: 20 }}>
         <ChartCard
@@ -128,6 +152,50 @@ const LojaConsultorDetailScreen: React.FC<{ onNavigate: (r: string) => void }> =
           )}
         </ChartCard>
       </div>
+
+      {hasExtras && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
+          {extras.lojaDigital.length > 0 && (
+            <ChartCard title="Loja Digital" subtitle="Funil de atendimento via WhatsApp/digital">
+              {extras.lojaDigital.map((r, i) => (
+                <div key={i} style={{ fontSize: 13, borderBottom: i < extras.lojaDigital.length - 1 ? '1px solid #F2EEE2' : 'none', paddingBottom: 10, marginBottom: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                    <span>{lojaNomeLookup.get(r.pdvCodigo ?? '') ?? r.pdvCodigo}</span>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRL(r.receita)}</span>
+                  </div>
+                  <div style={{ color: '#6B6258', fontSize: 12, marginTop: 2 }}>
+                    {r.clientesConvertidos}/{r.clientesAtendidos} convertidos ({fmtPct(r.conversaoPct).replace('+', '')}) · TME {r.tmeAjustado}
+                  </div>
+                </div>
+              ))}
+            </ChartCard>
+          )}
+
+          {extras.servicos.length > 0 && (
+            <ChartCard title="Serviços em loja" subtitle={`${fmtNumber(servicosTotalCompletos)} serviços completos · ${fmtBRL(servicosTotalGmv)} em GMV`}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {extras.servicos.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                    <span style={{ fontWeight: 600 }}>{r.servico}</span>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
+                      {r.qtdCompletos}/{r.qtdRealizados} · {fmtBRL(r.gmv)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </ChartCard>
+          )}
+
+          {extras.cuidadosFaciais.length > 0 && (
+            <ChartCard title="Cuidados Faciais + Botik" subtitle="Receita gerada nesse recorte">
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{fmtBRL(cuidadosTotal)}</div>
+              <div style={{ fontSize: 12, color: '#6B6258', marginTop: 4 }}>
+                dos quais {fmtBRL(cuidadosBotik)} em produtos Botik ({cuidadosTotal > 0 ? ((cuidadosBotik / cuidadosTotal) * 100).toFixed(0) : 0}%)
+              </div>
+            </ChartCard>
+          )}
+        </div>
+      )}
     </div>
   );
 };

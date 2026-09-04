@@ -89,6 +89,32 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
         </div>
       )}
 
+      {(kpis.fidelidadePenetracaoPctGeral > 0 || dataset.fidelidade || dataset.cuidadosFaciais) && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 20 }}>
+          {kpis.fidelidadePenetracaoPctGeral > 0 && (
+            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Boletos de cliente Fidelidade</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{kpis.fidelidadePenetracaoPctGeral.toFixed(1).replace('.', ',')}%</div>
+              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2 }}>média ponderada por boletos, {fmtNumber(kpis.qtdBoletosTotal)} boletos no ciclo</div>
+            </div>
+          )}
+          {dataset.fidelidade && dataset.fidelidade.cp.length > 0 && (
+            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>% que concluiu o desafio Fidelidade</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{dataset.fidelidade.cp[0].penetracaoPct.toFixed(1).replace('.', ',')}%</div>
+              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2 }}>dentre os boletos de cliente Fidelidade</div>
+            </div>
+          )}
+          {dataset.cuidadosFaciais && dataset.cuidadosFaciais.participacaoPct !== null && (
+            <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, color: '#9B9287', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cuidados Faciais + Botik no GMV</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{dataset.cuidadosFaciais.participacaoPct.toFixed(1).replace('.', ',')}%</div>
+              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2 }}>do GMV total da rede no ciclo</div>
+            </div>
+          )}
+        </div>
+      )}
+
       {optionalWarnings.length > 0 && (
         <div style={{ background: '#FBF3D0', border: '1px solid #E8C547', borderRadius: 10, padding: '10px 16px', marginTop: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: '#5C4500', marginBottom: 6 }}>

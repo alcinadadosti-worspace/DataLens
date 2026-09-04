@@ -4,7 +4,8 @@ import RankingList from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { aggregateByName, listLojasInDimension } from '../../analytics/lojaMetrics';
-import { fmtBRLshort, fmtPct } from '../../utils/formatters';
+import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
+import { fmtBRLshort, fmtBRL, fmtPct } from '../../utils/formatters';
 
 const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
@@ -42,6 +43,13 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
   const maioresVariacoes = hasXlsx
     ? [...receitaCategoria!.categoria].sort((a, b) => Math.abs(b.variacaoPct) - Math.abs(a.variacaoPct)).slice(0, 8)
     : [];
+
+  // A linha "BOTIK" de Receita_por_Cat_Sub_Mar.xlsx é sempre rede toda — mas Loja_cuidados_faciais_iaf.xlsx
+  // traz exatamente essa mesma receita (bateu no cruzamento: R$ 11.617,02 nos dois arquivos) já aberta por
+  // loja/consultor, então dá pra detalhar essa linha do mix sem precisar de outro arquivo.
+  const botikLinha = hasXlsx ? receitaCategoria!.linha.find(r => r.nome.trim().toUpperCase() === 'BOTIK') : null;
+  const cuidadosFaciais = dataset.cuidadosFaciais;
+  const botikPorLoja = cuidadosFaciais ? [...cuidadosFaciais.pdv].sort((a, b) => b.receitaBotik - a.receitaBotik) : [];
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -104,6 +112,25 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
                   }))} />
                 </ChartCard>
               )}
+            </div>
+          )}
+          {botikLinha && botikPorLoja.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <ChartCard
+                title={`Linha "BOTIK" — de onde vem a receita`}
+                subtitle={`${fmtBRL(botikLinha.receitaAtual)} no ciclo (${fmtPct(botikLinha.variacaoPct)} vs. ano ant.) — detalhado por loja via Loja_cuidados_faciais_iaf.xlsx`}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {botikPorLoja.map((r, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                      <span style={{ fontWeight: 600 }}>{resolveLojaNome(r.pdvCodigo, r.nome)}</span>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
+                        {fmtBRLshort(r.receitaBotik)} <span style={{ color: '#9B9287' }}>({botikLinha.receitaAtual > 0 ? ((r.receitaBotik / botikLinha.receitaAtual) * 100).toFixed(0) : 0}%)</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </ChartCard>
             </div>
           )}
         </>

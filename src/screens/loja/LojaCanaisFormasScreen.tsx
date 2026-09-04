@@ -4,6 +4,7 @@ import RankingList from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { aggregateByName, listLojasInDimension } from '../../analytics/lojaMetrics';
+import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { fmtBRLshort, fmtBRL, fmtPct } from '../../utils/formatters';
 
 const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
@@ -75,6 +76,26 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
                   <span style={{ fontWeight: 600 }}>{c.canal}</span>
                   <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
                     {fmtBRLshort(c.receitaAtual)} <span style={{ color: c.variacaoPct >= 0 ? '#2E7D5B' : '#B83A3A' }}>{fmtPct(c.variacaoPct)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ChartCard>
+        </div>
+      )}
+
+      {dataset.lojaDigital && dataset.lojaDigital.pdv.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <ChartCard
+            title="Loja Digital — funil de atendimento"
+            subtitle="LojaDigital_Performance_por_Pdv_Consultor.xlsx — atendimento via WhatsApp/digital, não é um dos canais de venda acima (não somamos aos rankings de cima)"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[...dataset.lojaDigital.pdv].sort((a, b) => b.receita - a.receita).map((r, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #F2EEE2', paddingBottom: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{resolveLojaNome(r.pdvCodigo ?? r.nome, r.nome)}</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6B6258' }}>
+                    {r.clientesConvertidos}/{r.clientesAtendidos} convertidos ({fmtPct(r.conversaoPct).replace('+', '')}) · {fmtBRLshort(r.receita)}
                   </span>
                 </div>
               ))}

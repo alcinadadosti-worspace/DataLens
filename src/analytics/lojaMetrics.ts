@@ -1,4 +1,7 @@
-import { AbcRow, AggregatedRow, LojaDataset, LojaMetricRow, PedidoHistoricoRow, VendaHoraRow } from '../types/loja';
+import {
+  AbcRow, AggregatedRow, LojaDataset, LojaMetricRow, PedidoHistoricoRow, VendaHoraRow,
+  FidelidadeRow, LojaDigitalRow, ServicoConsultorRow, CuidadosFaciaisRow,
+} from '../types/loja';
 import { normalizeStoreDisplayName } from '../parsers/lojaParser';
 import { resolveLojaNome } from './lojaStoreAliases';
 
@@ -10,14 +13,14 @@ export function isSemIdentificacao(nome: string): boolean {
 
 export function aggregateByName(rows: LojaMetricRow[], excludeEmpty = true, lojaCodigoFilter?: string | null): AggregatedRow[] {
   const source = lojaCodigoFilter ? rows.filter(r => r.lojaCodigo === lojaCodigoFilter) : rows;
-  const groups = new Map<string, AggregatedRow & { lojaCodigosSet: Set<string> }>();
+  const groups = new Map<string, AggregatedRow & { lojaCodigosSet: Set<string>; fidelidadePenetracaoWeighted: number }>();
 
   for (const r of source) {
     if (excludeEmpty && isSemIdentificacao(r.quebraNome) && r.gmv === 0) continue;
     const key = r.quebraNome;
     let g = groups.get(key);
     if (!g) {
-      g = { key, gmv: 0, qtdBoletos: 0, receitaLiquida: 0, totalDescontos: 0, trocasValor: 0, qtdTrocas: 0, ticketMedio: 0, descontoPct: 0, participacaoPct: 0, lojaCodigos: [], lojaCodigosSet: new Set() };
+      g = { key, gmv: 0, qtdBoletos: 0, receitaLiquida: 0, totalDescontos: 0, trocasValor: 0, qtdTrocas: 0, ticketMedio: 0, descontoPct: 0, participacaoPct: 0, lojaCodigos: [], fidelidadePenetracaoPct: 0, lojaCodigosSet: new Set(), fidelidadePenetracaoWeighted: 0 };
       groups.set(key, g);
     }
     g.gmv += r.gmv;
@@ -26,6 +29,7 @@ export function aggregateByName(rows: LojaMetricRow[], excludeEmpty = true, loja
     g.totalDescontos += r.totalDescontos;
     g.trocasValor += r.trocasValor;
     g.qtdTrocas += r.qtdTrocas;
+    g.fidelidadePenetracaoWeighted += r.fidelidadePenetracao * r.qtdBoletos;
     if (r.lojaCodigo) g.lojaCodigosSet.add(r.lojaCodigo);
   }
 
@@ -36,11 +40,12 @@ export function aggregateByName(rows: LojaMetricRow[], excludeEmpty = true, loja
     g.ticketMedio = g.qtdBoletos > 0 ? g.gmv / g.qtdBoletos : 0;
     g.descontoPct = g.receitaLiquida > 0 ? (g.totalDescontos / g.receitaLiquida) * 100 : 0;
     g.participacaoPct = totalGmv > 0 ? (g.gmv / totalGmv) * 100 : 0;
+    g.fidelidadePenetracaoPct = g.qtdBoletos > 0 ? g.fidelidadePenetracaoWeighted / g.qtdBoletos : 0;
     g.lojaCodigos = Array.from(g.lojaCodigosSet).sort();
   }
 
   return list
-    .map(({ lojaCodigosSet: _lojaCodigosSet, ...rest }) => rest)
+    .map(({ lojaCodigosSet: _lojaCodigosSet, fidelidadePenetracaoWeighted: _fidelidadePenetracaoWeighted, ...rest }) => rest)
     .sort((a, b) => b.gmv - a.gmv);
 }
 
@@ -64,7 +69,7 @@ export interface ConsultorLojaBreakdown extends AggregatedRow {
  */
 export function aggregateConsultoresPorLoja(rows: LojaMetricRow[], lojaCodigoFilter?: string | null): ConsultorLojaBreakdown[] {
   const source = lojaCodigoFilter ? rows.filter(r => r.lojaCodigo === lojaCodigoFilter) : rows;
-  const byNome = new Map<string, Map<string, { gmv: number; qtdBoletos: number; receitaLiquida: number; totalDescontos: number; trocasValor: number; qtdTrocas: number }>>();
+  const byNome = new Map<string, Map<string, { gmv: number; qtdBoletos: number; receitaLiquida: number; totalDescontos: number; trocasValor: number; qtdTrocas: number; fidelidadePenetracaoWeighted: number }>>();
 
   for (const r of source) {
     if (isSemIdentificacao(r.quebraNome) && r.gmv === 0) continue;
@@ -72,7 +77,7 @@ export function aggregateConsultoresPorLoja(rows: LojaMetricRow[], lojaCodigoFil
     if (!byNome.has(nome)) byNome.set(nome, new Map());
     const lojaMap = byNome.get(nome)!;
     const lojaKey = r.lojaCodigo ?? '';
-    if (!lojaMap.has(lojaKey)) lojaMap.set(lojaKey, { gmv: 0, qtdBoletos: 0, receitaLiquida: 0, totalDescontos: 0, trocasValor: 0, qtdTrocas: 0 });
+    if (!lojaMap.has(lojaKey)) lojaMap.set(lojaKey, { gmv: 0, qtdBoletos: 0, receitaLiquida: 0, totalDescontos: 0, trocasValor: 0, qtdTrocas: 0, fidelidadePenetracaoWeighted: 0 });
     const g = lojaMap.get(lojaKey)!;
     g.gmv += r.gmv;
     g.qtdBoletos += r.qtdBoletos;
@@ -80,6 +85,7 @@ export function aggregateConsultoresPorLoja(rows: LojaMetricRow[], lojaCodigoFil
     g.totalDescontos += r.totalDescontos;
     g.trocasValor += r.trocasValor;
     g.qtdTrocas += r.qtdTrocas;
+    g.fidelidadePenetracaoWeighted += r.fidelidadePenetracao * r.qtdBoletos;
   }
 
   const result: ConsultorLojaBreakdown[] = [];
@@ -99,6 +105,7 @@ export function aggregateConsultoresPorLoja(rows: LojaMetricRow[], lojaCodigoFil
     const totalDescontos = knownEntries.reduce((s, [, g]) => s + g.totalDescontos, 0);
     const trocasValor = knownEntries.reduce((s, [, g]) => s + g.trocasValor, 0);
     const qtdTrocas = knownEntries.reduce((s, [, g]) => s + g.qtdTrocas, 0);
+    const fidelidadePenetracaoWeighted = knownEntries.reduce((s, [, g]) => s + g.fidelidadePenetracaoWeighted, 0);
 
     result.push({
       key: nome,
@@ -112,6 +119,7 @@ export function aggregateConsultoresPorLoja(rows: LojaMetricRow[], lojaCodigoFil
       descontoPct: receitaLiquida > 0 ? (totalDescontos / receitaLiquida) * 100 : 0,
       participacaoPct: 0,
       lojaCodigos: porLoja.map(l => l.codigo),
+      fidelidadePenetracaoPct: qtdBoletos > 0 ? fidelidadePenetracaoWeighted / qtdBoletos : 0,
       porLoja,
     });
   }
@@ -128,11 +136,16 @@ export function computeOverallKPIs(lojasRows: LojaMetricRow[]) {
   const qtdBoletosTotal = lojasRows.reduce((s, r) => s + r.qtdBoletos, 0);
   const totalDescontosTotal = lojasRows.reduce((s, r) => s + r.totalDescontos, 0);
   const trocasValorTotal = lojasRows.reduce((s, r) => s + r.trocasValor, 0);
+  const fidelidadePenetracaoWeighted = lojasRows.reduce((s, r) => s + r.fidelidadePenetracao * r.qtdBoletos, 0);
   const ticketMedioGeral = qtdBoletosTotal > 0 ? gmvTotal / qtdBoletosTotal : 0;
   const descontoPctGeral = receitaLiquidaTotal > 0 ? (totalDescontosTotal / receitaLiquidaTotal) * 100 : 0;
   const trocasPctGeral = receitaLiquidaTotal > 0 ? (trocasValorTotal / receitaLiquidaTotal) * 100 : 0;
+  const fidelidadePenetracaoPctGeral = qtdBoletosTotal > 0 ? fidelidadePenetracaoWeighted / qtdBoletosTotal : 0;
 
-  return { gmvTotal, receitaLiquidaTotal, qtdBoletosTotal, totalDescontosTotal, trocasValorTotal, ticketMedioGeral, descontoPctGeral, trocasPctGeral };
+  return {
+    gmvTotal, receitaLiquidaTotal, qtdBoletosTotal, totalDescontosTotal, trocasValorTotal, ticketMedioGeral, descontoPctGeral, trocasPctGeral,
+    fidelidadePenetracaoPctGeral,
+  };
 }
 
 /**
@@ -155,10 +168,45 @@ export function rankLojas(lojasRows: LojaMetricRow[]): AggregatedRow[] {
     descontoPct: r.receitaLiquida > 0 ? (r.totalDescontos / r.receitaLiquida) * 100 : 0,
     participacaoPct: 0,
     lojaCodigos: r.lojaCodigo ? [r.lojaCodigo] : [],
+    fidelidadePenetracaoPct: r.fidelidadePenetracao,
   }));
   const total = list.reduce((s, g) => s + g.gmv, 0);
   for (const g of list) g.participacaoPct = total > 0 ? (g.gmv / total) * 100 : 0;
   return list.sort((a, b) => b.gmv - a.gmv);
+}
+
+/**
+ * Nomes de pessoa vêm em formatos diferentes entre os arquivos — MAIÚSCULO nos CSVs obrigatórios
+ * e no xlsx Cuidados Faciais, mas Capitalizado no xlsx Loja Digital — então a comparação entre
+ * datasets precisa ser sem acento/case/espaço, senão "Mariane Santos Sousa" nunca bate com
+ * "MARIANE SANTOS SOUSA".
+ */
+export function normalizePersonName(s: string): string {
+  return s
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toUpperCase().trim().replace(/\s+/g, ' ');
+}
+
+export interface ConsultorExtras {
+  fidelidade: FidelidadeRow | null;
+  lojaDigital: LojaDigitalRow[];
+  servicos: ServicoConsultorRow[];
+  cuidadosFaciais: CuidadosFaciaisRow[];
+}
+
+/**
+ * Cruza um consultor/operador (pelo nome, já que é a única chave em comum entre os arquivos) com
+ * os 4 xlsx opcionais novos — Fidelidade, Loja Digital, Serviços e Cuidados Faciais — nenhum dos
+ * quais tem um ID de pessoa estável, só o nome como veio de cada exportação.
+ */
+export function findConsultorExtras(dataset: LojaDataset, nome: string): ConsultorExtras {
+  const target = normalizePersonName(nome);
+  return {
+    fidelidade: dataset.fidelidade?.consultor.find(r => normalizePersonName(r.nome) === target) ?? null,
+    lojaDigital: dataset.lojaDigital?.consultor.filter(r => normalizePersonName(r.nome) === target) ?? [],
+    servicos: dataset.servicos?.consultor.filter(r => normalizePersonName(r.consultor) === target) ?? [],
+    cuidadosFaciais: dataset.cuidadosFaciais?.consultor.filter(r => normalizePersonName(r.nome) === target) ?? [],
+  };
 }
 
 /** codigo da loja -> nome amigável (apelido do usuário, ou razão social com typo corrigido). */
@@ -279,6 +327,46 @@ export function crossInsights(dataset: LojaDataset): string[] {
   for (const a of anomalias) {
     insights.push(
       `Atenção: a categoria "${a.key}" tem desconto total (${a.descontoPct.toFixed(0)}%) acima da receita líquida — possível erro de lançamento ou promoção agressiva.`
+    );
+  }
+
+  // --- Cruzamentos com os xlsx novos (Fidelidade, Serviços, Loja Digital, Cuidados Faciais) ---
+
+  const kpis = computeOverallKPIs(dataset.lojas);
+  if (dataset.fidelidade && dataset.fidelidade.cp.length > 0 && kpis.fidelidadePenetracaoPctGeral > 0) {
+    const desafioPct = dataset.fidelidade.cp[0].penetracaoPct;
+    insights.push(
+      `${kpis.fidelidadePenetracaoPctGeral.toFixed(0)}% dos boletos da rede são de cliente cadastrado no Fidelidade, mas só ${desafioPct.toFixed(0)}% ` +
+      `desses boletos concluem o desafio Fidelidade — funil de engajamento com bastante espaço para melhorar entre "é cliente" e "participa ativamente".`
+    );
+  }
+
+  if (dataset.cuidadosFaciais && dataset.cuidadosFaciais.pdv.length >= 2) {
+    const top = [...dataset.cuidadosFaciais.pdv].sort((a, b) => b.receitaBotik - a.receitaBotik)[0];
+    const topLojaGmv = lojas.find(l => l.key.startsWith(top.pdvCodigo ?? '__'));
+    insights.push(
+      `A loja ${resolveLojaNome(top.pdvCodigo, top.nome)} lidera a receita de Botik/Cuidados Faciais (${top.receitaBotik.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})` +
+      (topLojaGmv ? `, e ocupa a ${lojas.indexOf(topLojaGmv) + 1}ª posição no ranking geral de GMV — vale ver se essa especialização em Botik é motivo ou consequência do desempenho.` : '.')
+    );
+  }
+
+  if (dataset.lojaDigital && dataset.lojaDigital.pdv.length > 0) {
+    const totalAtendidos = dataset.lojaDigital.pdv.reduce((s, r) => s + r.clientesAtendidos, 0);
+    const totalConvertidos = dataset.lojaDigital.pdv.reduce((s, r) => s + r.clientesConvertidos, 0);
+    const convRede = totalAtendidos > 0 ? (totalConvertidos / totalAtendidos) * 100 : 0;
+    const pior = [...dataset.lojaDigital.pdv].sort((a, b) => a.conversaoPct - b.conversaoPct)[0];
+    if (pior && pior.conversaoPct < convRede) {
+      insights.push(
+        `A conversão da Loja Digital na rede é ${convRede.toFixed(1).replace('.', ',')}%, mas a loja ${resolveLojaNome(pior.pdvCodigo, pior.nome)} converte só ` +
+        `${pior.conversaoPct.toFixed(1).replace('.', ',')}% dos clientes atendidos — maior oportunidade de melhoria no atendimento via WhatsApp/digital.`
+      );
+    }
+  }
+
+  if (dataset.servicos && dataset.servicos.pdv.length >= 2) {
+    const top = [...dataset.servicos.pdv].sort((a, b) => b.gmv - a.gmv)[0];
+    insights.push(
+      `Serviços em loja (maquiagem, cuidados faciais, cabelo) geraram ${top.gmv.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} na loja ${resolveLojaNome(top.pdvCodigo, top.pdvCodigo)}, a que mais converteu esse tipo de atendimento em venda.`
     );
   }
 

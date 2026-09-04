@@ -321,4 +321,15 @@ export interface AggregatedRow {
   participacaoPct: number;
   /** Código(s) de loja onde essa chave aparece nos dados de origem (ex. lojas de um consultor). */
   lojaCodigos: string[];
+  /**
+   * Penetração de boletos Fidelidade (já vinha nos CSVs obrigatórios desde sempre — coluna 20,
+   * `LojaMetricRow.fidelidadePenetracao` — mas não era exibida em nenhuma tela). Média ponderada
+   * por qtdBoletos entre as linhas agregadas. Não confundir com a penetração do "desafio"
+   * Fidelidade, que vem do xlsx ProgramaFidelidade novo (ver FidelidadeRow.penetracaoPct) e mede
+   * outra coisa: quantos desses boletos concluíram um desafio, não quantos são de cliente
+   * cadastrado. (A coluna "Fidelidade-Qtd de boletos" do CSV não é uma contagem no mesmo universo
+   * de qtdBoletos — em várias lojas ela é maior que o total de boletos —, então não dá pra somar
+   * contagens entre linhas; por isso usamos a % já calculada pelo sistema, ponderada.)
+   */
+  fidelidadePenetracaoPct: number;
 }
