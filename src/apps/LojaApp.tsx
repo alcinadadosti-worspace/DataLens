@@ -55,8 +55,20 @@ function LojaApp() {
       <ScrollProgress />
       <LojaTopBar onNavigate={navigate} />
       <LojaSidebar active={route} onNavigate={navigate} />
+      <GradualBlur
+        key={route}
+        position="bottom"
+        target="page"
+        height="6rem"
+        strength={2.2}
+        divCount={6}
+        curve="bezier"
+        animated
+        duration="0.5s"
+        zIndex={30}
+        style={{ left: 264 }}
+      />
       <div style={{ marginLeft: 264, marginTop: 64, position: 'relative' }}>
-        <GradualBlur key={route} position="top" height="4.5rem" strength={2.2} divCount={6} curve="bezier" animated duration="0.5s" zIndex={30} />
         <AnimatePresence mode="wait">
           <motion.div
             key={route}
