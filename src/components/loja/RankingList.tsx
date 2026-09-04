@@ -7,18 +7,21 @@ export interface RankingItem {
   value: number;
   valueLabel: string;
   meta?: string;
+  /** Meta PEF (ou outro alvo) associada a esse item, quando existir — habilita a view de colunas empilhadas com fundo de meta no RankingChart. */
+  metaTarget?: number;
 }
 
 interface RankingListProps {
   items: RankingItem[];
   medals?: boolean;
   emptyMessage?: string;
+  onItemClick?: (item: RankingItem, index: number) => void;
 }
 
 const MEDAL_COLORS = [TIER_STYLES.ouro.accent, TIER_STYLES.prata.accent, TIER_STYLES.bronze.accent];
 const MEDAL_BG = [TIER_STYLES.ouro.bg, TIER_STYLES.prata.bg, TIER_STYLES.bronze.bg];
 
-const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMessage = 'Sem dados' }) => {
+const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMessage = 'Sem dados', onItemClick }) => {
   if (items.length === 0) {
     return <div style={{ padding: '28px 0', textAlign: 'center', color: '#9B9287', fontSize: 14 }}>{emptyMessage}</div>;
   }
@@ -34,7 +37,11 @@ const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMe
         const pct = Math.max((item.value / max) * 100, 1.5);
 
         return (
-          <div key={item.label + i} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            key={item.label + i}
+            onClick={onItemClick ? () => onItemClick(item, i) : undefined}
+            style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: onItemClick ? 'pointer' : 'default' }}
+          >
             <div style={{
               width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               background: badgeBg, color: badgeColor,

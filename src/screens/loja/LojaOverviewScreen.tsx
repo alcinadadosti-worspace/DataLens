@@ -40,11 +40,22 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
   const optionalWarnings = optionalConsistencyWarnings(dataset);
   const receitaTotalIndicador = dataset.resumoPerformance?.cp?.find(i => i.indicador.toUpperCase().includes('RECEITA TOTAL'));
 
+  // Meta PEF por loja (Resumo_de_Performance_Indicadores_Loja.xlsx, aba PDV) — o arquivo só traz a
+  // variação % vs. a meta, não o valor absoluto, então a meta é reconstruída a partir dela:
+  // vsMetaPEFPct = (receita - meta) / meta * 100  =>  meta = receita / (1 + vsMetaPEFPct/100).
+  const metaPorLoja = new Map<string, number>();
+  for (const r of dataset.resumoPerformance?.pdv ?? []) {
+    if (r.vsMetaPEFPct != null && r.vsMetaPEFPct > -100) {
+      metaPorLoja.set(r.nome, r.receita / (1 + r.vsMetaPEFPct / 100));
+    }
+  }
+
   const rankingItems = ranking.map(r => ({
     label: r.key,
     value: r.gmv,
     valueLabel: fmtBRLshort(r.gmv),
     meta: `${r.participacaoPct.toFixed(1).replace('.', ',')}% · ${fmtNumber(r.qtdBoletos)} boletos`,
+    metaTarget: r.lojaCodigos[0] ? metaPorLoja.get(r.lojaCodigos[0]) : undefined,
   }));
 
   return (
@@ -173,7 +184,7 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 24 }}>
         <ChartCard
           title="Ranking de lojas"
-          hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu."
+          hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu. Na visão de colunas empilhadas (botão de barras, 3º clique), a Meta PEF de cada loja aparece como referência de fundo, quando o Resumo de Performance foi importado."
           subtitle="Por GMV — 1º ao último lugar"
         >
           <RankingChart items={rankingItems} />
