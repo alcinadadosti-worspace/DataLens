@@ -4,7 +4,6 @@ import '../design-system/lojaTheme.css';
 import LojaTopBar from '../components/layout/LojaTopBar';
 import LojaSidebar from '../components/layout/LojaSidebar';
 import ScrollProgress from '../components/ui/ScrollProgress';
-import GradualBlur from '../components/ui/GradualBlur';
 import LojaImportScreen from '../screens/loja/LojaImportScreen';
 import LojaOverviewScreen from '../screens/loja/LojaOverviewScreen';
 import LojaConsultoresScreen from '../screens/loja/LojaConsultoresScreen';
@@ -55,19 +54,6 @@ function LojaApp() {
       <ScrollProgress />
       <LojaTopBar onNavigate={navigate} />
       <LojaSidebar active={route} onNavigate={navigate} />
-      <GradualBlur
-        key={route}
-        position="bottom"
-        target="page"
-        height="5rem"
-        strength={1.6}
-        divCount={3}
-        curve="bezier"
-        animated
-        duration="0.5s"
-        zIndex={30}
-        style={{ left: 264 }}
-      />
       <div style={{ marginLeft: 264, marginTop: 64, position: 'relative' }}>
         <AnimatePresence mode="wait">
           <motion.div
