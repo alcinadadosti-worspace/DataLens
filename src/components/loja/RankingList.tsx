@@ -20,6 +20,8 @@ export interface BreakdownRow {
   value: number;
   valueLabel: string;
   pct: number;
+  /** Texto extra opcional exibido junto do valor (ex. "31/75 boletos fidelizados"). */
+  meta?: string;
 }
 
 interface RankingListProps {

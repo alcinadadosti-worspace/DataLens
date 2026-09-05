@@ -134,7 +134,13 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
     for (const c of consultoresDaLoja) {
       const fid = fidelidade.consultor.find(f => normalizePersonName(f.nome) === normalizePersonName(c.key));
       if (!fid) continue;
-      rows.push({ label: c.key, value: fid.penetracaoPct, valueLabel: fmtPct(fid.penetracaoPct).replace('+', ''), pct: fid.penetracaoPct });
+      rows.push({
+        label: c.key,
+        value: fid.penetracaoPct,
+        valueLabel: fmtPct(fid.penetracaoPct).replace('+', ''),
+        pct: fid.penetracaoPct,
+        meta: `${fmtNumber(fid.qtdBoletosDesafio)}/${fmtNumber(fid.qtdBoletosFidelidade)} boletos fidelizados`,
+      });
     }
     return rows.length > 0 ? rows.sort((a, b) => b.value - a.value) : null;
   }

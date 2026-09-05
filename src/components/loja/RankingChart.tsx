@@ -512,7 +512,9 @@ const DetailPanel: React.FC<{ item: RankingItem | null; breakdown: BreakdownRow[
                   <div style={{ height: 6, borderRadius: 3, background: 'var(--loja-bg-track, #F2EEE6)', overflow: 'hidden', marginTop: 5 }}>
                     <div style={{ height: '100%', width: `${Math.max(b.pct, 1.5)}%`, background: 'var(--loja-accent, #B26A3C)', borderRadius: 3 }} />
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 3 }}>{b.pct.toFixed(1).replace('.', ',')}% da métrica</div>
+                  <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 3 }}>
+                    {b.meta ?? `${b.pct.toFixed(1).replace('.', ',')}% da métrica`}
+                  </div>
                 </div>
               ))}
             </div>
