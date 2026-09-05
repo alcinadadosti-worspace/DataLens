@@ -59,9 +59,9 @@ function LojaApp() {
         key={route}
         position="bottom"
         target="page"
-        height="6rem"
-        strength={2.2}
-        divCount={6}
+        height="5rem"
+        strength={1.6}
+        divCount={3}
         curve="bezier"
         animated
         duration="0.5s"

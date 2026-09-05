@@ -80,12 +80,14 @@ const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMe
                 </div>
               </div>
               <div style={{ height: 9, borderRadius: 4, background: 'var(--loja-bg-track, #F2EEE6)', overflow: 'hidden' }}>
+                {/* scaleX (transform) em vez de animar "width" — width força reflow a cada frame,
+                    o que pesa muito quando várias linhas animam ao mesmo tempo (ex. "Mostrar todas"). */}
                 <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: pct / 100 }}
                   transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                   style={{
-                    height: '100%', borderRadius: 4,
+                    height: '100%', width: '100%', borderRadius: 4, transformOrigin: 'left',
                     background: isMedal ? badgeColor : 'var(--loja-border-strong, #D8D0C0)',
                   }}
                 />

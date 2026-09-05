@@ -15,11 +15,12 @@ interface ChartCardProps {
 }
 
 const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, children, action, hint, glow }) => {
-  const onPointerMove = useBorderGlowHandler();
+  const { onPointerEnter, onPointerMove } = useBorderGlowHandler();
   const [hovered, setHovered] = useState(false);
 
   return (
     <div
+      onPointerEnter={glow ? onPointerEnter : undefined}
       onPointerMove={glow ? onPointerMove : undefined}
       onMouseEnter={glow ? () => setHovered(true) : undefined}
       onMouseLeave={glow ? () => setHovered(false) : undefined}

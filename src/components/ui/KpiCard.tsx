@@ -18,7 +18,7 @@ interface KpiCardProps {
 
 const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection, meta, tooltip, hint, glow }) => {
   const [hovered, setHovered] = useState(false);
-  const onPointerMove = useBorderGlowHandler();
+  const { onPointerEnter, onPointerMove } = useBorderGlowHandler();
   const deltaColor = deltaDirection === 'down' ? 'var(--loja-danger, #B83A3A)' : 'var(--loja-success, #2E7D5B)';
   const arrow = deltaDirection === 'down' ? '↓' : '↑';
 
@@ -26,6 +26,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onPointerEnter={glow ? onPointerEnter : undefined}
       onPointerMove={glow ? onPointerMove : undefined}
       className={glow ? 'loja-glow-card' : undefined}
       style={{

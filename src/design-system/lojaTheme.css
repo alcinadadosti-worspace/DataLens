@@ -71,10 +71,6 @@
   min-height: 100vh;
 }
 
-[data-loja-theme] * {
-  transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease;
-}
-
 /* A troca de tema em si (círculo se expandindo a partir do botão) usa a View Transitions API —
    só existe em navegadores Chromium; nos demais, a troca é instantânea (sem esse efeito), sem
    quebrar nada. */
