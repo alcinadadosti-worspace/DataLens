@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import ChartCard from '../charts/ChartCard';
 import KpiCard from '../ui/KpiCard';
 import RankingChart from './RankingChart';
@@ -17,12 +17,40 @@ interface ConsultorDetailPanelProps {
  * Consultores, em vez de navegar para uma página separada.
  */
 const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, nome, view }) => {
-  const rows = view === 'consultor' ? dataset.consultor : dataset.operador;
-  const agg = aggregateByName(rows).find(r => r.key === nome);
-  const porLojaAgg = aggregateConsultoresPorLoja(rows).find(r => r.key === nome);
-  const lojaNomeLookup = buildLojaNomeLookup(dataset.lojas);
+  // Cada uma dessas varre o dataset inteiro (todas as linhas de consultor/operador, lojas,
+  // fidelidade, loja digital, serviços, cuidados faciais) — memoizado pra não recalcular tudo de
+  // novo a cada re-render enquanto o painel está expandido (ex. ao expandir outra pessoa na lista).
+  const derived = useMemo(() => {
+    const rows = view === 'consultor' ? dataset.consultor : dataset.operador;
+    const agg = aggregateByName(rows).find(r => r.key === nome);
+    if (!agg) return { agg: undefined };
 
-  if (!agg) {
+    const porLojaAgg = aggregateConsultoresPorLoja(rows).find(r => r.key === nome);
+    const lojaNomeLookup = buildLojaNomeLookup(dataset.lojas);
+
+    // Sempre usa a loja "principal" (maior GMV) para o padrão de horário — inclusive quando a
+    // pessoa vendeu em mais de uma unidade no período, em vez de deixar indisponível.
+    const principal = porLojaAgg && porLojaAgg.porLoja.length > 0 ? porLojaAgg.porLoja[0] : null;
+    const lojaCodigo = principal?.codigo ?? null;
+    const lojaNome = lojaCodigo ? lojaNomeLookup.get(lojaCodigo) : null;
+    const horaRows = lojaCodigo && dataset.vendaPorHora ? dataset.vendaPorHora.filter(r => r.lojaCodigo === lojaCodigo) : [];
+    const buckets = horaRows.length > 0 ? hourlyDistribution(horaRows) : [];
+    const multiLoja = (porLojaAgg?.porLoja.length ?? 0) > 1;
+
+    const extras = findConsultorExtras(dataset, nome);
+    const hasExtras = !!extras.fidelidade || extras.lojaDigital.length > 0 || extras.servicos.length > 0 || extras.cuidadosFaciais.length > 0;
+    const cuidadosTotal = extras.cuidadosFaciais.reduce((s, r) => s + r.receitaTotal, 0);
+    const cuidadosBotik = extras.cuidadosFaciais.reduce((s, r) => s + r.receitaBotik, 0);
+    const servicosTotalGmv = extras.servicos.reduce((s, r) => s + r.gmv, 0);
+    const servicosTotalCompletos = extras.servicos.reduce((s, r) => s + r.qtdCompletos, 0);
+
+    return {
+      agg, lojaNomeLookup, lojaCodigo, lojaNome, buckets, multiLoja, extras, hasExtras,
+      cuidadosTotal, cuidadosBotik, servicosTotalGmv, servicosTotalCompletos,
+    };
+  }, [dataset, nome, view]);
+
+  if (!derived.agg) {
     return (
       <div style={{ padding: '16px 0', color: 'var(--loja-text-muted, #9B9287)', fontSize: 13 }}>
         Não foi possível encontrar dados para "{nome}".
@@ -30,21 +58,10 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
     );
   }
 
-  // Sempre usa a loja "principal" (maior GMV) para o padrão de horário — inclusive quando a pessoa
-  // vendeu em mais de uma unidade no período, em vez de deixar o padrão de horário indisponível.
-  const principal = porLojaAgg && porLojaAgg.porLoja.length > 0 ? porLojaAgg.porLoja[0] : null;
-  const lojaCodigo = principal?.codigo ?? null;
-  const lojaNome = lojaCodigo ? lojaNomeLookup.get(lojaCodigo) : null;
-  const horaRows = lojaCodigo && dataset.vendaPorHora ? dataset.vendaPorHora.filter(r => r.lojaCodigo === lojaCodigo) : [];
-  const buckets = horaRows.length > 0 ? hourlyDistribution(horaRows) : [];
-  const multiLoja = (porLojaAgg?.porLoja.length ?? 0) > 1;
-
-  const extras = findConsultorExtras(dataset, nome);
-  const hasExtras = extras.fidelidade || extras.lojaDigital.length > 0 || extras.servicos.length > 0 || extras.cuidadosFaciais.length > 0;
-  const cuidadosTotal = extras.cuidadosFaciais.reduce((s, r) => s + r.receitaTotal, 0);
-  const cuidadosBotik = extras.cuidadosFaciais.reduce((s, r) => s + r.receitaBotik, 0);
-  const servicosTotalGmv = extras.servicos.reduce((s, r) => s + r.gmv, 0);
-  const servicosTotalCompletos = extras.servicos.reduce((s, r) => s + r.qtdCompletos, 0);
+  const {
+    agg, lojaNomeLookup, lojaCodigo, lojaNome, buckets, multiLoja, extras, hasExtras,
+    cuidadosTotal, cuidadosBotik, servicosTotalGmv, servicosTotalCompletos,
+  } = derived;
 
   return (
     <div style={{ padding: '20px 4px 4px' }}>

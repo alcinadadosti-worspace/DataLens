@@ -95,21 +95,24 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
                 style={{ display: 'inline-block', color: 'var(--loja-border-strong, #D8D0C0)', fontSize: 14, flexShrink: 0 }}
               />
             </motion.div>
-            <AnimatePresence initial={false}>
-              {isOpen && (
+            {/*
+              Sem animar "height" aqui de propósito: o conteúdo expandido pode ter até 4 gráficos
+              (RankingChart/recharts inclusos), e animar a altura do contêiner força recálculo de
+              layout a cada frame — combinado com o ResizeObserver do recharts reagindo a esse
+              contêiner mudando de tamanho em tempo real, isso derrubava bastante o FPS. Só opacity
+              (sem exit também, pra não re-renderizar o conteúdo pesado ao fechar).
+            */}
+            {isOpen && (
                 <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                  style={{ overflow: 'hidden' }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
                 >
                   <div style={{ borderLeft: '2px solid var(--loja-border, #E8E2D6)', marginLeft: 21, paddingLeft: 20 }}>
                     <ConsultorDetailPanel dataset={dataset} nome={r.key} view={view} />
                   </div>
                 </motion.div>
               )}
-            </AnimatePresence>
           </div>
         );
       })}
