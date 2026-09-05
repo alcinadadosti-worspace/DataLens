@@ -5,6 +5,7 @@ import { RankingItem, BreakdownRow } from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import { useLojaStore } from '../../store/useLojaStore';
+import { aggregateConsultoresPorLoja, normalizePersonName } from '../../analytics/lojaMetrics';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { fmtBRL, fmtPct, fmtNumber } from '../../utils/formatters';
 import { ServicoConsultorRow } from '../../types/loja';
@@ -62,6 +63,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
           value: r.penetracaoPct,
           valueLabel: fmtPct(r.penetracaoPct).replace('+', ''),
           meta: `${fmtNumber(r.qtdBoletosDesafio)}/${fmtNumber(r.qtdBoletosFidelidade)} boletos`,
+          lojaCodigo: tab === 'lojas' ? r.nome : undefined,
         }))
     : [];
 
@@ -117,6 +119,26 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
   const totalServicosCompletos = servicos ? servicos.pdv.reduce((s, r) => s + r.qtdCompletos, 0) : 0;
 
   // Painéis de detalhe (tela cheia): quebra por colaborador de uma loja, na mesma métrica do gráfico.
+  //
+  // Fidelidade é diferente das outras três: o arquivo ProgramaFidelidade traz penetração por
+  // consultor, mas SEM o código da loja de cada um (ao contrário de Serviços/Loja Digital/Cuidados
+  // Faciais, que trazem pdvCodigo linha a linha) — não tem como saber direto quem vende em que loja
+  // só com esse arquivo. Contorna cruzando pelo nome com o CSV de consultor (que sim tem o vínculo
+  // com a loja): pega quem vende naquela loja e busca a penetração de cada um no arquivo de
+  // Fidelidade. Se o nome não bater entre os dois arquivos, essa pessoa fica de fora da lista.
+  function getFidelidadeBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !fidelidade || !dataset) return null;
+    const consultoresDaLoja = aggregateConsultoresPorLoja(dataset.consultor, item.lojaCodigo);
+    if (consultoresDaLoja.length === 0) return null;
+    const rows: BreakdownRow[] = [];
+    for (const c of consultoresDaLoja) {
+      const fid = fidelidade.consultor.find(f => normalizePersonName(f.nome) === normalizePersonName(c.key));
+      if (!fid) continue;
+      rows.push({ label: c.key, value: fid.penetracaoPct, valueLabel: fmtPct(fid.penetracaoPct).replace('+', ''), pct: fid.penetracaoPct });
+    }
+    return rows.length > 0 ? rows.sort((a, b) => b.value - a.value) : null;
+  }
+
   function getServicosBreakdown(item: RankingItem): BreakdownRow[] | null {
     if (!item.lojaCodigo || !servicos) return null;
     const map = new Map<string, number>();
@@ -230,10 +252,12 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
         {fidelidade && (
           <ChartCard glow
             title={`Penetração Fidelidade — ${tab === 'lojas' ? 'por loja' : 'por consultor'}`}
-            hint="% de boletos de cliente Fidelidade que concluíram o 'desafio' do programa (ação/meta específica), loja a loja ou consultor a consultor."
+            hint={tab === 'lojas'
+              ? "% de boletos de cliente Fidelidade que concluíram o 'desafio' do programa (ação/meta específica), loja a loja. Em tela cheia, clique numa loja pra ver a penetração de cada consultor dela — cruzada com o CSV de consultor, já que o arquivo de Fidelidade não traz o código da loja de cada pessoa."
+              : "% de boletos de cliente Fidelidade que concluíram o 'desafio' do programa (ação/meta específica), consultor a consultor."}
             subtitle="% de boletos com desafio Fidelidade concluído"
           >
-            <RankingChart items={fidelidadeItems} />
+            <RankingChart items={fidelidadeItems} getBreakdown={tab === 'lojas' ? getFidelidadeBreakdown : undefined} />
           </ChartCard>
         )}
 
