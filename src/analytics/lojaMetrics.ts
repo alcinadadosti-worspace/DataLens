@@ -187,6 +187,47 @@ export function normalizePersonName(s: string): string {
     .toUpperCase().trim().replace(/\s+/g, ' ');
 }
 
+function levenshteinDistance(a: string, b: string): number {
+  const dp: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+/**
+ * Acha o nome mais parecido numa lista — nome exato primeiro; se não achar, cai pra distância de
+ * edição pequena (até 2 caracteres), pra tolerar erros de digitação entre arquivos diferentes
+ * (ex. "NAYARA SOARAS KIMURA" no CSV vs. "Nayara Soares Kimura" no xlsx de Fidelidade — mesma
+ * pessoa, só um typo). O limite de 2 é conservador o bastante pra não confundir pessoas diferentes
+ * com nomes parecidos.
+ */
+export function findByPersonName<T>(items: T[], nome: string, getName: (item: T) => string): T | null {
+  const target = normalizePersonName(nome);
+  const exact = items.find(it => normalizePersonName(getName(it)) === target);
+  if (exact) return exact;
+
+  const MAX_DIST = 2;
+  let best: T | null = null;
+  let bestDist = Infinity;
+  for (const it of items) {
+    const candidate = normalizePersonName(getName(it));
+    if (Math.abs(candidate.length - target.length) > MAX_DIST) continue;
+    const dist = levenshteinDistance(target, candidate);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = it;
+    }
+  }
+  return bestDist <= MAX_DIST ? best : null;
+}
+
 export interface ConsultorExtras {
   fidelidade: FidelidadeRow | null;
   lojaDigital: LojaDigitalRow[];
@@ -201,8 +242,9 @@ export interface ConsultorExtras {
  */
 export function findConsultorExtras(dataset: LojaDataset, nome: string): ConsultorExtras {
   const target = normalizePersonName(nome);
+  const fid = dataset.fidelidade ? findByPersonName(dataset.fidelidade.consultor, nome, r => r.nome) : null;
   return {
-    fidelidade: dataset.fidelidade?.consultor.find(r => normalizePersonName(r.nome) === target) ?? null,
+    fidelidade: fid,
     lojaDigital: dataset.lojaDigital?.consultor.filter(r => normalizePersonName(r.nome) === target) ?? [],
     servicos: dataset.servicos?.consultor.filter(r => normalizePersonName(r.consultor) === target) ?? [],
     cuidadosFaciais: dataset.cuidadosFaciais?.consultor.filter(r => normalizePersonName(r.nome) === target) ?? [],

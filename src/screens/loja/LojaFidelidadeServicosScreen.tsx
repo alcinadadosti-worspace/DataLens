@@ -5,7 +5,7 @@ import { RankingItem, BreakdownRow } from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import { useLojaStore } from '../../store/useLojaStore';
-import { aggregateConsultoresPorLoja, normalizePersonName } from '../../analytics/lojaMetrics';
+import { aggregateConsultoresPorLoja, findByPersonName } from '../../analytics/lojaMetrics';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { fmtBRL, fmtPct, fmtNumber } from '../../utils/formatters';
 import { ServicoConsultorRow } from '../../types/loja';
@@ -132,7 +132,7 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
     if (consultoresDaLoja.length === 0) return null;
     const rows: BreakdownRow[] = [];
     for (const c of consultoresDaLoja) {
-      const fid = fidelidade.consultor.find(f => normalizePersonName(f.nome) === normalizePersonName(c.key));
+      const fid = findByPersonName(fidelidade.consultor, c.key, f => f.nome);
       if (!fid) continue;
       rows.push({
         label: c.key,
