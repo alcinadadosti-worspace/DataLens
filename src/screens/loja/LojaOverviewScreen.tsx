@@ -6,8 +6,12 @@ import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import InfoHint from '../../components/ui/InfoHint';
 import { useLojaStore } from '../../store/useLojaStore';
-import { computeOverallKPIs, rankLojas, consistencyCheck, crossInsights, optionalConsistencyWarnings, aggregateConsultoresPorLoja } from '../../analytics/lojaMetrics';
+import {
+  computeOverallKPIs, rankLojas, consistencyCheck, crossInsights, optionalConsistencyWarnings, aggregateConsultoresPorLoja,
+  findByPersonName, classifyAbcByLoja, dailySeries, dayOfWeekAverages, hourlyDistribution,
+} from '../../analytics/lojaMetrics';
 import { RankingItem, BreakdownRow } from '../../components/loja/RankingList';
+import { DetailView } from '../../components/loja/RankingChart';
 import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
 
 interface LojaOverviewScreenProps {
@@ -60,8 +64,12 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
     lojaCodigo: r.lojaCodigos[0],
   }));
 
-  // Painel de detalhe (tela cheia) de uma loja: quem são os consultores dela e quanto cada um
-  // participa do GMV daquela loja — a métrica mostrada nesse ranking.
+  // Painel de detalhe (tela cheia) de uma loja: 8 "páginas" diferentes, alternadas clicando de
+  // novo no nome da loja já selecionada (mesmo padrão de ciclo do seletor barra/pizza/mais).
+  // Cada função abaixo cobre uma pergunta diferente sobre a unidade clicada; views cujo dataset
+  // de origem não foi importado nem entram no array, e views sem dado pro item específico são
+  // puladas automaticamente pelo RankingChart.
+
   function getLojaBreakdown(item: RankingItem): BreakdownRow[] | null {
     if (!item.lojaCodigo || !dataset) return null;
     const consultores = aggregateConsultoresPorLoja(dataset.consultor, item.lojaCodigo);
@@ -71,6 +79,117 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       .map(c => ({ label: c.key, value: c.gmv, valueLabel: fmtBRLshort(c.gmv), pct: total > 0 ? (c.gmv / total) * 100 : 0 }))
       .sort((a, b) => b.value - a.value);
   }
+
+  const abcByLoja = dataset?.abc ? classifyAbcByLoja(dataset.abc) : null;
+  function getProdutoBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !abcByLoja) return null;
+    const entry = Array.from(abcByLoja.entries()).find(([key]) => key.startsWith(`${item.lojaCodigo} -`));
+    if (!entry) return null;
+    const produtos = entry[1].slice(0, 8);
+    if (produtos.length === 0) return null;
+    return produtos.map(p => ({
+      label: p.descricao,
+      value: p.faturamento,
+      valueLabel: fmtBRLshort(p.faturamento),
+      pct: p.participacaoPct,
+      meta: `${fmtNumber(p.quantidade)} un · classe ${p.classe}`,
+    }));
+  }
+
+  function getBoletosBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !dataset) return null;
+    const consultores = aggregateConsultoresPorLoja(dataset.consultor, item.lojaCodigo).filter(c => c.qtdBoletos > 0);
+    if (consultores.length === 0) return null;
+    const total = consultores.reduce((s, c) => s + c.qtdBoletos, 0);
+    return consultores
+      .map(c => ({ label: c.key, value: c.qtdBoletos, valueLabel: fmtNumber(c.qtdBoletos), pct: total > 0 ? (c.qtdBoletos / total) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+  }
+
+  // Fidelidade não traz o código da loja de cada consultor — cruza pelo nome com o CSV de
+  // consultor (que sim tem o vínculo com a loja), mesmo padrão usado em LojaFidelidadeServicosScreen.
+  function getFidelidadeDetailBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !dataset?.fidelidade) return null;
+    const consultoresDaLoja = aggregateConsultoresPorLoja(dataset.consultor, item.lojaCodigo);
+    if (consultoresDaLoja.length === 0) return null;
+    const rows: BreakdownRow[] = [];
+    for (const c of consultoresDaLoja) {
+      const fid = findByPersonName(dataset.fidelidade.consultor, c.key, f => f.nome);
+      if (!fid) continue;
+      rows.push({
+        label: c.key,
+        value: fid.penetracaoPct,
+        valueLabel: fmtPct(fid.penetracaoPct).replace('+', ''),
+        pct: fid.penetracaoPct,
+        meta: `${fmtNumber(fid.qtdBoletosDesafio)}/${fmtNumber(fid.qtdBoletosFidelidade)} boletos fidelizados`,
+      });
+    }
+    return rows.length > 0 ? rows.sort((a, b) => b.value - a.value) : null;
+  }
+
+  function getServicosDetailBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !dataset?.servicos) return null;
+    const map = new Map<string, number>();
+    for (const r of dataset.servicos.consultor) {
+      if (r.pdvCodigo !== item.lojaCodigo) continue;
+      map.set(r.consultor, (map.get(r.consultor) ?? 0) + r.gmv);
+    }
+    if (map.size === 0) return null;
+    const total = Array.from(map.values()).reduce((s, v) => s + v, 0);
+    return Array.from(map.entries())
+      .map(([nome, gmv]) => ({ label: nome, value: gmv, valueLabel: fmtBRLshort(gmv), pct: total > 0 ? (gmv / total) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+  }
+
+  function getCuidadosDetailBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !dataset?.cuidadosFaciais) return null;
+    const map = new Map<string, number>();
+    for (const r of dataset.cuidadosFaciais.consultor) {
+      if (r.pdvCodigo !== item.lojaCodigo) continue;
+      map.set(r.nome, (map.get(r.nome) ?? 0) + r.receitaTotal);
+    }
+    if (map.size === 0) return null;
+    const total = Array.from(map.values()).reduce((s, v) => s + v, 0);
+    return Array.from(map.entries())
+      .map(([nome, v]) => ({ label: nome, value: v, valueLabel: fmtBRLshort(v), pct: total > 0 ? (v / total) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+  }
+
+  function getDiasPicoBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !dataset) return null;
+    const rows = dataset.data.filter(r => r.lojaCodigo === item.lojaCodigo);
+    if (rows.length === 0) return null;
+    const weekdays = dayOfWeekAverages(dailySeries(rows)).filter(d => d.avgGmv > 0);
+    if (weekdays.length === 0) return null;
+    // pct = participação de cada dia no total semanal (não relativo ao pico) — mesma semântica das
+    // outras views, pra combinar com o texto padrão "% da métrica" do painel de detalhe.
+    const total = weekdays.reduce((s, d) => s + d.avgGmv, 0);
+    return weekdays
+      .sort((a, b) => b.avgGmv - a.avgGmv)
+      .map(d => ({ label: d.label, value: d.avgGmv, valueLabel: fmtBRLshort(d.avgGmv), pct: total > 0 ? (d.avgGmv / total) * 100 : 0 }));
+  }
+
+  function getHorariosPicoBreakdown(item: RankingItem): BreakdownRow[] | null {
+    if (!item.lojaCodigo || !dataset?.vendaPorHora) return null;
+    const rows = dataset.vendaPorHora.filter(r => r.lojaCodigo === item.lojaCodigo);
+    if (rows.length === 0) return null;
+    const buckets = hourlyDistribution(rows).filter(b => b.receitaLiquida > 0);
+    if (buckets.length === 0) return null;
+    return buckets
+      .sort((a, b) => b.receitaLiquida - a.receitaLiquida)
+      .map(b => ({ label: b.faixaHoraria, value: b.receitaLiquida, valueLabel: fmtBRLshort(b.receitaLiquida), pct: b.participacaoPct, meta: `${fmtNumber(b.qtdBoletos)} boletos` }));
+  }
+
+  const lojaDetailViews: DetailView[] = [
+    { key: 'consultores', icon: 'ph-users-three', label: 'GMV por colaborador', getBreakdown: getLojaBreakdown },
+    ...(dataset?.abc ? [{ key: 'produtos', icon: 'ph-package', label: 'Produtos mais vendidos', getBreakdown: getProdutoBreakdown }] : []),
+    { key: 'boletos', icon: 'ph-receipt', label: 'Boletos finalizados por colaborador', getBreakdown: getBoletosBreakdown },
+    ...(dataset?.fidelidade ? [{ key: 'fidelidade', icon: 'ph-heart', label: 'Boletos fidelizados por colaborador', getBreakdown: getFidelidadeDetailBreakdown }] : []),
+    ...(dataset?.servicos ? [{ key: 'servicos', icon: 'ph-sparkle', label: 'Serviços da loja por colaborador', getBreakdown: getServicosDetailBreakdown }] : []),
+    ...(dataset?.cuidadosFaciais ? [{ key: 'cuidados', icon: 'ph-drop', label: 'Cuidados faciais por colaborador', getBreakdown: getCuidadosDetailBreakdown }] : []),
+    { key: 'dias', icon: 'ph-calendar', label: 'GMV médio por dia da semana', getBreakdown: getDiasPicoBreakdown },
+    ...(dataset?.vendaPorHora ? [{ key: 'horarios', icon: 'ph-clock', label: 'Faturamento por faixa de horário', getBreakdown: getHorariosPicoBreakdown }] : []),
+  ];
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -198,10 +317,10 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 24 }}>
         <ChartCard glow
           title="Ranking de lojas"
-          hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu. Na visão de colunas empilhadas (botão de barras, 3º clique), a Meta PEF de cada loja aparece como referência de fundo, quando o Resumo de Performance foi importado. Em tela cheia, clique numa loja para ver os consultores dela e a participação de cada um no GMV."
+          hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu. Na visão de colunas empilhadas (botão de barras, 3º clique), a Meta PEF de cada loja aparece como referência de fundo, quando o Resumo de Performance foi importado. Em tela cheia, clique numa loja para ver o detalhe dela; clique de novo no nome pra alternar entre GMV por colaborador, produtos mais vendidos, boletos finalizados/fidelizados, serviços, cuidados faciais, dias e horários de pico (conforme os arquivos importados)."
           subtitle="Por GMV — 1º ao último lugar"
         >
-          <RankingChart items={rankingItems} getBreakdown={getLojaBreakdown} />
+          <RankingChart items={rankingItems} detailViews={lojaDetailViews} />
         </ChartCard>
 
         <ChartCard glow

@@ -39,6 +39,10 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
   const [loading, setLoading] = useState(false);
   const [loadingDefaults, setLoadingDefaults] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // true assim que o usuário mexe manualmente (upload ou "Limpar") — impede que o carregamento
+  // automático dos arquivos padrão, se ainda estiver em andamento, sobrescreva silenciosamente o
+  // que o usuário acabou de fazer quando a busca dos arquivos padrão terminar.
+  const userInteractedRef = useRef(false);
   const setDataset = useLojaStore(s => s.setDataset);
   const clearDataset = useLojaStore(s => s.clearDataset);
 
@@ -64,12 +68,13 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
     ).then(async loaded => {
       if (cancelled) return;
       setLoadingDefaults(false);
+      if (userInteractedRef.current) return;
       const valid = loaded.filter((f): f is File => f !== null);
       if (valid.length === 0) return;
       setFiles(valid);
       setLoading(true);
       const r = await parseLojaFiles(valid);
-      if (cancelled) return;
+      if (cancelled || userInteractedRef.current) return;
       setResult(r);
       setLoading(false);
       if (r.dataset) {
@@ -84,6 +89,7 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
   }, []);
 
   function addFiles(incoming: FileList | File[]) {
+    userInteractedRef.current = true;
     const accepted = Array.from(incoming).filter(f => /\.(csv|xlsx|xls)$/i.test(f.name));
     const merged = [...files];
     for (const f of accepted) {
@@ -105,6 +111,7 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
   }
 
   function handleClear() {
+    userInteractedRef.current = true;
     setFiles([]);
     setResult(null);
     clearDataset();

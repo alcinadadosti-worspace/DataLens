@@ -1,12 +1,35 @@
 import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingChart from '../../components/loja/RankingChart';
+import RankingChart, { ExtraStat } from '../../components/loja/RankingChart';
+import { RankingItem } from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { aggregateByName, listLojasInDimension } from '../../analytics/lojaMetrics';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
+import { ReceitaCategoriaRow } from '../../types/loja';
 import PageTitle from '../../components/ui/PageTitle';
 import { fmtBRLshort, fmtBRL, fmtPct } from '../../utils/formatters';
+
+/**
+ * Estatísticas extras (painel de detalhe em tela cheia) de uma categoria/subcategoria/marca — não
+ * dá pra listar os produtos que mais venderam ali (o xlsx de Receita por Categoria não tem coluna
+ * de produto, e a Curva ABC não tem coluna de categoria — nenhum arquivo cruza as duas), então o
+ * detalhe usa o que já está calculado e sendo descartado: receita do ciclo anterior, participação
+ * no total e posição no ranking.
+ */
+function makeReceitaCategoriaExtraStats(list: ReceitaCategoriaRow[]) {
+  return (item: RankingItem): ExtraStat[] | null => {
+    const idx = list.findIndex(r => r.nome === item.label);
+    if (idx < 0) return null;
+    const row = list[idx];
+    return [
+      { label: 'Receita ciclo anterior', value: fmtBRLshort(row.receitaAnterior) },
+      { label: 'Variação vs. ano ant.', value: fmtPct(row.variacaoPct) },
+      { label: 'Participação no total', value: row.participacaoPct.toFixed(1).replace('.', ',') + '%' },
+      { label: 'Posição no ranking', value: `${idx + 1}º de ${list.length}` },
+    ];
+  };
+}
 
 const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
@@ -80,10 +103,10 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
           <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>
             <ChartCard glow
               title="Receita por categoria"
-              hint="Receita de cada categoria de produto no ciclo atual, comparada com o mesmo ciclo do ano anterior (Receita_por_Cat_Sub_Mar.xlsx)."
+              hint="Receita de cada categoria de produto no ciclo atual, comparada com o mesmo ciclo do ano anterior (Receita_por_Cat_Sub_Mar.xlsx). Em tela cheia, clique numa categoria para ver receita do ciclo anterior, participação no total e posição no ranking."
               subtitle="Ciclo atual, com variação vs. ano anterior (Receita_por_Cat_Sub_Mar)"
             >
-              <RankingChart items={xlsxItems} />
+              <RankingChart items={xlsxItems} getExtraStats={makeReceitaCategoriaExtraStats(receitaCategoria!.categoria)} />
             </ChartCard>
             <ChartCard glow
               title="Maiores variações"
@@ -107,12 +130,12 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
               {receitaCategoria!.subcategoria.length > 0 && (
                 <ChartCard glow
                   title="Top subcategorias"
-                  hint="As subcategorias (recorte mais fino que categoria) com maior receita no ciclo."
+                  hint="As subcategorias (recorte mais fino que categoria) com maior receita no ciclo. Em tela cheia, clique numa subcategoria para ver receita do ciclo anterior, participação no total e posição no ranking."
                   subtitle="Por receita no ciclo"
                 >
                   <RankingChart medals={false} items={receitaCategoria!.subcategoria.slice(0, 8).map(r => ({
                     label: r.nome, value: r.receitaAtual, valueLabel: fmtBRLshort(r.receitaAtual), meta: fmtPct(r.variacaoPct),
-                  }))} />
+                  }))} getExtraStats={makeReceitaCategoriaExtraStats(receitaCategoria!.subcategoria)} />
                 </ChartCard>
               )}
               {receitaCategoria!.marca.length > 0 && (

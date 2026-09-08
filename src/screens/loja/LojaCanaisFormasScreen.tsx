@@ -1,12 +1,30 @@
 import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingChart from '../../components/loja/RankingChart';
+import RankingChart, { ExtraStat } from '../../components/loja/RankingChart';
+import { RankingItem } from '../../components/loja/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { aggregateByName, listLojasInDimension } from '../../analytics/lojaMetrics';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
+import { AggregatedRow } from '../../types/loja';
 import PageTitle from '../../components/ui/PageTitle';
-import { fmtBRLshort, fmtBRL, fmtPct } from '../../utils/formatters';
+import { fmtBRLshort, fmtBRL, fmtPct, fmtNumber } from '../../utils/formatters';
+
+/** Estatísticas extras (painel de detalhe em tela cheia) de um canal/forma — dados já calculados por aggregateByName, mas descartados no ranking compacto. */
+function makeExtraStats(list: AggregatedRow[]) {
+  return (item: RankingItem): ExtraStat[] | null => {
+    const row = list.find(r => r.key === item.label);
+    if (!row) return null;
+    return [
+      { label: 'Ticket médio', value: fmtBRL(row.ticketMedio) },
+      { label: 'Boletos', value: fmtNumber(row.qtdBoletos) },
+      { label: 'Receita líquida', value: fmtBRLshort(row.receitaLiquida) },
+      { label: '% desconto s/ receita', value: row.descontoPct.toFixed(1).replace('.', ',') + '%' },
+      { label: 'Trocas', value: `${fmtNumber(row.qtdTrocas)} · ${fmtBRLshort(row.trocasValor)}` },
+      { label: 'Penetração Fidelidade', value: row.fidelidadePenetracaoPct.toFixed(1).replace('.', ',') + '%' },
+    ];
+  };
+}
 
 const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
@@ -59,17 +77,17 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <ChartCard glow
           title="Mix de canais de venda"
-          hint="GMV — Gross Merchandise Value: cada canal por onde a venda pode entrar (loja física, WhatsApp, experimentação, calçada...), com o % que representa do total."
+          hint="GMV — Gross Merchandise Value: cada canal por onde a venda pode entrar (loja física, WhatsApp, experimentação, calçada...), com o % que representa do total. Em tela cheia, clique num canal para ver ticket médio, boletos, receita líquida, desconto, trocas e penetração de Fidelidade daquele canal."
           subtitle="Participação no GMV do grupo"
         >
-          <RankingChart items={toItems(canais)} />
+          <RankingChart items={toItems(canais)} getExtraStats={makeExtraStats(canais)} />
         </ChartCard>
         <ChartCard glow
           title="Mix de formas de pagamento"
-          hint="Como o GMV recebido se divide entre as formas de pagamento usadas pelo cliente (cartão de crédito, débito, PIX, dinheiro...)."
+          hint="Como o GMV recebido se divide entre as formas de pagamento usadas pelo cliente (cartão de crédito, débito, PIX, dinheiro...). Em tela cheia, clique numa forma para ver ticket médio, boletos, receita líquida, desconto, trocas e penetração de Fidelidade daquela forma."
           subtitle="Participação no GMV recebido"
         >
-          <RankingChart items={toItems(formas)} />
+          <RankingChart items={toItems(formas)} getExtraStats={makeExtraStats(formas)} />
         </ChartCard>
       </div>
 

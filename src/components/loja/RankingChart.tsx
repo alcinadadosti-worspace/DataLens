@@ -62,6 +62,22 @@ function barColor(i: number, medals: boolean): string {
 
 const tooltipBoxStyle: React.CSSProperties = { background: 'var(--loja-ink, #1C1814)', border: 'none', borderRadius: 10, color: 'var(--loja-bg, #FAF7F2)', fontSize: 14, padding: '10px 14px' };
 
+/** Uma "página" do painel de detalhe (tela cheia) — clicar de novo no nome do item já selecionado avança pra próxima. */
+export interface DetailView {
+  key: string;
+  /** Ícone Phosphor (ex. "ph-users-three") mostrado no seletor de views. */
+  icon: string;
+  /** Título da seção de quebra (ex. "Colaboradores dessa unidade"). */
+  label: string;
+  getBreakdown: (item: RankingItem) => BreakdownRow[] | null;
+}
+
+/** Estatística extra de uma linha (rótulo + valor já formatado) mostrada no painel de detalhe. */
+export interface ExtraStat {
+  label: string;
+  value: string;
+}
+
 interface RankingChartProps {
   items: RankingItem[];
   medals?: boolean;
@@ -71,9 +87,17 @@ interface RankingChartProps {
   /**
    * Quando o item clicado representa uma loja (tem `lojaCodigo`), essa função retorna a quebra por
    * colaborador — exibida no painel de detalhe em tela cheia, junto com a % de cada um na métrica
-   * mostrada. Retornar null/lista vazia esconde a seção.
+   * mostrada. Retornar null/lista vazia esconde a seção. Ignorado quando `detailViews` é passado.
    */
   getBreakdown?: (item: RankingItem) => BreakdownRow[] | null;
+  /**
+   * Várias "páginas" de quebra para o painel de detalhe — clicar de novo no nome do item já
+   * selecionado (no gráfico ou no próprio painel) avança pra próxima view do array, em ciclo.
+   * Views cuja `getBreakdown` retorna null/vazia pro item atual são puladas automaticamente.
+   */
+  detailViews?: DetailView[];
+  /** Estatísticas extras (rótulo + valor) mostradas no painel de detalhe, acima da quebra. */
+  getExtraStats?: (item: RankingItem) => ExtraStat[] | null;
 }
 
 // --- Barras verticais ------------------------------------------------
@@ -467,7 +491,23 @@ const WordCloudView: React.FC<{ items: RankingItem[]; maxSlices: number; onSelec
 
 // --- Painel de detalhe (tela cheia) ------------------------------------------------
 
-const DetailPanel: React.FC<{ item: RankingItem | null; breakdown: BreakdownRow[] | null }> = ({ item, breakdown }) => (
+const DetailPanel: React.FC<{
+  item: RankingItem | null;
+  breakdown: BreakdownRow[] | null;
+  breakdownLabel?: string;
+  extraStats?: ExtraStat[] | null;
+  detailViews?: DetailView[];
+  activeViewKey?: string;
+  onCycle?: () => void;
+}> = ({ item, breakdown, breakdownLabel, extraStats, detailViews, activeViewKey, onCycle }) => {
+  // Só mostra no seletor as views que de fato têm dado pra essa unidade — uma loja sem xlsx de
+  // Fidelidade importado, por exemplo, nunca teria o que exibir nesse ícone.
+  const visibleViews = item && detailViews ? detailViews.filter(v => {
+    const bd = v.getBreakdown(item);
+    return bd && bd.length > 0;
+  }) : [];
+
+  return (
   <div style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--loja-border, #E8E2D6)', padding: 24, overflowY: 'auto' }}>
     <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--loja-text-muted, #9B9287)', marginBottom: 14 }}>
       Detalhe
@@ -478,8 +518,14 @@ const DetailPanel: React.FC<{ item: RankingItem | null; breakdown: BreakdownRow[
       </div>
     ) : (
       <>
-        <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.25 }}>{item.label}</div>
-        {item.sublabel && <div style={{ fontSize: 13, color: 'var(--loja-text-muted, #9B9287)', marginTop: 4 }}>{item.sublabel}</div>}
+        <div
+          onClick={visibleViews.length > 1 ? onCycle : undefined}
+          title={visibleViews.length > 1 ? 'Clique de novo para ver outro detalhe dessa unidade' : undefined}
+          style={{ cursor: visibleViews.length > 1 ? 'pointer' : 'default' }}
+        >
+          <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.25 }}>{item.label}</div>
+          {item.sublabel && <div style={{ fontSize: 13, color: 'var(--loja-text-muted, #9B9287)', marginTop: 4 }}>{item.sublabel}</div>}
+        </div>
         <div style={{ fontSize: 30, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', marginTop: 16 }}>
           {item.valueLabel || fmtNumber(item.value)}
         </div>
@@ -497,10 +543,45 @@ const DetailPanel: React.FC<{ item: RankingItem | null; breakdown: BreakdownRow[
             </div>
           </div>
         )}
+
+        {extraStats && extraStats.length > 0 && (
+          <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {extraStats.map((s, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 12,
+                padding: '11px 14px', boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--loja-text-secondary, #6B6258)', minWidth: 0 }}>{s.label}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap', flexShrink: 0 }}>{s.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {visibleViews.length > 1 && (
+          <div style={{ display: 'flex', gap: 6, marginTop: 20, flexWrap: 'wrap' }}>
+            {visibleViews.map(v => (
+              <div
+                key={v.key}
+                title={v.label}
+                style={{
+                  width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: v.key === activeViewKey ? 'var(--loja-ink, #1C1814)' : 'var(--loja-bg-subtle, #F2EEE2)',
+                  color: v.key === activeViewKey ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-text-muted, #9B9287)',
+                }}
+              >
+                <i className={`ph ${v.icon}`} style={{ fontSize: 13 }} />
+              </div>
+            ))}
+          </div>
+        )}
+
         {breakdown && breakdown.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--loja-text-muted, #9B9287)', marginBottom: 12 }}>
-              Colaboradores dessa unidade
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--loja-text-muted, #9B9287)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {breakdownLabel ?? 'Colaboradores dessa unidade'}
+              {visibleViews.length > 1 && <i className="ph ph-arrow-clockwise" style={{ fontSize: 12 }} title="Clique no nome da unidade acima para alternar" />}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {breakdown.map((b, i) => (
@@ -520,14 +601,20 @@ const DetailPanel: React.FC<{ item: RankingItem | null; breakdown: BreakdownRow[
             </div>
           </div>
         )}
+        {detailViews && detailViews.length > 0 && visibleViews.length === 0 && (!breakdown || breakdown.length === 0) && (
+          <div style={{ marginTop: 20, fontSize: 12, color: 'var(--loja-text-muted, #9B9287)', fontStyle: 'italic' }}>
+            Nenhum dado extra disponível pra essa unidade.
+          </div>
+        )}
       </>
     )}
   </div>
-);
+  );
+};
 
 // --- Componente principal ------------------------------------------------
 
-const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, emptyMessage = 'Sem dados', maxSlices = 8, getBreakdown }) => {
+const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, emptyMessage = 'Sem dados', maxSlices = 8, getBreakdown, detailViews, getExtraStats }) => {
   const theme = useLojaThemeStore(s => s.theme);
   const [category, setCategory] = useState<Category>('bar');
   const [barStyle, setBarStyle] = useState<BarStyle>('horizontal');
@@ -535,6 +622,35 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
   const [maisStyle, setMaisStyle] = useState<MaisStyle>('treemap');
   const [fullscreen, setFullscreen] = useState(false);
   const [selected, setSelected] = useState<RankingItem | null>(null);
+  const [viewIndex, setViewIndex] = useState(0);
+
+  // Pula views sem dado pro item atual (ex. loja sem xlsx de Fidelidade importado) — procura a
+  // partir de `start`, na direção informada, e volta pra `start` se nenhuma view tiver dado.
+  function findValidViewIndex(it: RankingItem, start: number): number {
+    if (!detailViews || detailViews.length === 0) return 0;
+    for (let i = 0; i < detailViews.length; i++) {
+      const idx = (start + i) % detailViews.length;
+      const bd = detailViews[idx].getBreakdown(it);
+      if (bd && bd.length > 0) return idx;
+    }
+    return start;
+  }
+
+  // Nunca chamar setViewIndex de dentro do updater do setSelected: em StrictMode o React invoca
+  // esse updater 2x pra checar pureza, e como setViewIndex é um efeito colateral real (não um
+  // cálculo puro), isso avançava o índice em 2 por clique em vez de 1 — daí só os ímpares
+  // apareciam. Lendo `selected` direto do closure evita isso.
+  function handleSelect(it: RankingItem) {
+    if (selected && selected.label === it.label && detailViews && detailViews.length > 1) {
+      setViewIndex(v => findValidViewIndex(it, (v + 1) % detailViews.length));
+    } else {
+      setSelected(it);
+      // Ao trocar de unidade, tenta manter a mesma "página" que já estava aberta (ex. veio olhando
+      // Serviços da loja A, clica na loja B — continua em Serviços, se ela tiver esse dado) em vez
+      // de sempre voltar pra 1ª view; cai pra mais próxima válida se essa não tiver dado.
+      setViewIndex(v => (detailViews && detailViews.length > 0 ? findValidViewIndex(it, v) : 0));
+    }
+  }
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -554,6 +670,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
 
   function openFullscreen() {
     setSelected(null);
+    setViewIndex(0);
     setFullscreen(true);
   }
 
@@ -686,9 +803,25 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
             </div>
             <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
               <div style={{ flex: 1, padding: 24, overflow: 'auto' }}>
-                {renderBody(460, setSelected)}
+                {renderBody(460, handleSelect)}
               </div>
-              <DetailPanel item={selected} breakdown={selected && getBreakdown ? getBreakdown(selected) : null} />
+              {(() => {
+                const activeView = selected && detailViews && detailViews.length > 0 ? detailViews[viewIndex % detailViews.length] : undefined;
+                const currentBreakdown = selected
+                  ? (activeView ? activeView.getBreakdown(selected) : (getBreakdown ? getBreakdown(selected) : null))
+                  : null;
+                return (
+                  <DetailPanel
+                    item={selected}
+                    breakdown={currentBreakdown}
+                    breakdownLabel={activeView?.label}
+                    extraStats={selected && getExtraStats ? getExtraStats(selected) : null}
+                    detailViews={detailViews}
+                    activeViewKey={activeView?.key}
+                    onCycle={selected ? () => handleSelect(selected) : undefined}
+                  />
+                );
+              })()}
             </div>
           </motion.div>
         </motion.div>
