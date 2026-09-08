@@ -1,10 +1,32 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import InfoHint from '../../components/ui/InfoHint';
 import { parseLojaFiles } from '../../parsers/lojaParser';
 import { useLojaStore } from '../../store/useLojaStore';
 import { LOJA_DIMENSIONS, LOJA_DIMENSION_LABELS, LOJA_OPTIONAL_FILES, LOJA_OPTIONAL_FILE_LABELS, LojaParseResult } from '../../types/loja';
+
+const DEFAULT_FILE_NAMES = [
+  'GerencialVendas-01-09-2026CANAL.csv',
+  'GerencialVendas-01-09-2026CONSULTOR.csv',
+  'GerencialVendas-01-09-2026DATA.csv',
+  'GerencialVendas-01-09-2026FORMA.csv',
+  'GerencialVendas-01-09-2026GESTAO.csv',
+  'GerencialVendas-01-09-2026LOJAS.csv',
+  'GerencialVendas-01-09-2026OPERADOR.csv',
+  'relatorioABCVenda.csv',
+  'relatorioVendaPorHora.csv',
+  '20260902_GestaoPedidos_Visao_Geral_por_Ciclo_0a4eefbbbfbe.csv',
+  '20260902_GestaoPedidos_Giro_Pedidos_Canais_por_Ciclo_178adeb05957.csv',
+  '20260902_GestaoPedidos_Historico_Colocacao_Pedido_0a97308d4986.csv',
+  '20260902_Receita_por_Canal_UN_047811f18f65.xlsx',
+  '20260902_Receita_por_Cat_Sub_Mar_7edb29665699.xlsx',
+  '20260904_Resumo_de_Performance_Indicadores_Loja_c7007cbcf310.xlsx',
+  '20260904_Loja_cuidados_faciais_iaf_a288d7bf06ba.xlsx',
+  '20260904_LojaDigital_Performance_por_Pdv_Consultor_a673a862600f.xlsx',
+  '20260904_ProgramaFidelidade_Distribuicao_Penetracao_boleto_Fidelidade_8b55d0b32e4d.xlsx',
+  '20260904_Servicos_em_loja_5b5eb7906d4e.xlsx',
+];
 
 interface LojaImportScreenProps {
   onComplete: () => void;
@@ -15,6 +37,7 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [result, setResult] = useState<LojaParseResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const setDataset = useLojaStore(s => s.setDataset);
   const clearDataset = useLojaStore(s => s.clearDataset);
@@ -26,6 +49,39 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
     setLoading(false);
     if (r.dataset) setDataset(r.dataset);
   }
+
+  useEffect(() => {
+    if (files.length > 0) return;
+    let cancelled = false;
+    setLoadingDefaults(true);
+    Promise.all(
+      DEFAULT_FILE_NAMES.map(name =>
+        fetch(`/dados-padrao-loja/${name}`)
+          .then(r => (r.ok ? r.blob() : null))
+          .then(blob => (blob ? new File([blob], name, { type: blob.type }) : null))
+          .catch(() => null)
+      )
+    ).then(async loaded => {
+      if (cancelled) return;
+      setLoadingDefaults(false);
+      const valid = loaded.filter((f): f is File => f !== null);
+      if (valid.length === 0) return;
+      setFiles(valid);
+      setLoading(true);
+      const r = await parseLojaFiles(valid);
+      if (cancelled) return;
+      setResult(r);
+      setLoading(false);
+      if (r.dataset) {
+        setDataset(r.dataset);
+        onComplete();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function addFiles(incoming: FileList | File[]) {
     const accepted = Array.from(incoming).filter(f => /\.(csv|xlsx|xls)$/i.test(f.name));
@@ -97,10 +153,10 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
         }}
       >
         <div style={{ fontSize: 40, color: 'var(--loja-text-muted, #9B9287)', marginBottom: 10 }}>
-          <i className={loading ? 'ph ph-spinner' : 'ph ph-cloud-arrow-up'} />
+          <i className={loading || loadingDefaults ? 'ph ph-spinner' : 'ph ph-cloud-arrow-up'} />
         </div>
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
-          {loading ? 'Processando arquivos...' : 'Arraste os arquivos aqui'}
+          {loadingDefaults ? 'Carregando dados padrão...' : loading ? 'Processando arquivos...' : 'Arraste os arquivos aqui'}
         </div>
         <div style={{ fontSize: 13, color: 'var(--loja-text-secondary, #6B6258)' }}>
           ou <span style={{ color: 'var(--loja-ink, #1C1814)', fontWeight: 600, textDecoration: 'underline' }}>selecione do computador</span>
