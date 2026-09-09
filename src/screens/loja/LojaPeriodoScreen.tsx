@@ -1,7 +1,7 @@
 import React from 'react';
 import ChartCard from '../../components/charts/ChartCard';
 import SimpleLineChart from '../../components/loja/SimpleLineChart';
-import RankingChart from '../../components/loja/RankingChart';
+import RankingChart from '../../components/charts/RankingChart';
 import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import { useLojaStore } from '../../store/useLojaStore';
@@ -43,7 +43,7 @@ const LojaPeriodoScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
       <ChartCard glow
         title="GMV por dia"
         hint="GMV — Gross Merchandise Value: valor total vendido em cada dia do ciclo, somando todas as lojas."
-        subtitle="Somado entre as 6 lojas do grupo"
+        subtitle={`Somado entre as ${dataset.lojas.length} loja${dataset.lojas.length === 1 ? '' : 's'} do grupo`}
       >
         <SimpleLineChart points={points} color="var(--loja-accent, #B26A3C)" formatValue={fmtBRLshort} />
       </ChartCard>

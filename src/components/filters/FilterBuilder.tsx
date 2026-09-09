@@ -184,17 +184,17 @@ const FilterBuilder: React.FC = () => {
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', left: 0,
-          background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
+          background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14,
           boxShadow: '0 16px 32px rgba(28,24,20,0.09), 0 4px 8px rgba(28,24,20,0.05)',
           zIndex: 100, overflow: 'hidden',
           display: 'flex', minWidth: 280,
         }}>
 
           {/* Left: category list */}
-          <div style={{ width: 180, borderRight: '1px solid #F2EEE6', padding: '8px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ width: 180, borderRight: '1px solid var(--vd-bg-track, #F2EEE6)', padding: '8px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{
               fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: '#6B6258', padding: '6px 14px 8px',
+              textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', padding: '6px 14px 8px',
             }}>
               Filtrar por
             </div>
@@ -255,16 +255,16 @@ const FilterBuilder: React.FC = () => {
           {/* Right: date range panel */}
           {activeColIsDate && (
             <div style={{ width: 260, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '12px 14px', borderBottom: '1px solid #F2EEE6' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#6B6258', marginBottom: 2 }}>Período de captação</div>
-                <div style={{ fontSize: 11, color: '#9B9287' }}>
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 2 }}>Período de captação</div>
+                <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)' }}>
                   Disponível: {isoToBr(minDate)} → {isoToBr(maxDate)}
                 </div>
               </div>
 
               <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6B6258', display: 'block', marginBottom: 6 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--vd-text-secondary, #6B6258)', display: 'block', marginBottom: 6 }}>
                     De
                   </label>
                   <input
@@ -291,16 +291,16 @@ const FilterBuilder: React.FC = () => {
                     }}
                     style={{
                       width: '100%', padding: '7px 10px', borderRadius: 8,
-                      border: `1px solid ${fromInput.length === 10 && !parseBrInput(fromInput) ? '#B83A3A' : '#D8D0C0'}`,
-                      fontSize: 13, color: '#1C1814',
-                      background: '#FAF7F2', outline: 'none', boxSizing: 'border-box',
+                      border: `1px solid ${fromInput.length === 10 && !parseBrInput(fromInput) ? 'var(--vd-danger, #B83A3A)' : 'var(--vd-border-strong, #D8D0C0)'}`,
+                      fontSize: 13, color: 'var(--vd-ink, #1C1814)',
+                      background: 'var(--vd-bg, #FAF7F2)', outline: 'none', boxSizing: 'border-box',
                       fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.03em',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6B6258', display: 'block', marginBottom: 6 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--vd-text-secondary, #6B6258)', display: 'block', marginBottom: 6 }}>
                     Até
                   </label>
                   <input
@@ -327,9 +327,9 @@ const FilterBuilder: React.FC = () => {
                     }}
                     style={{
                       width: '100%', padding: '7px 10px', borderRadius: 8,
-                      border: `1px solid ${toInput.length === 10 && !parseBrInput(toInput) ? '#B83A3A' : '#D8D0C0'}`,
-                      fontSize: 13, color: '#1C1814',
-                      background: '#FAF7F2', outline: 'none', boxSizing: 'border-box',
+                      border: `1px solid ${toInput.length === 10 && !parseBrInput(toInput) ? 'var(--vd-danger, #B83A3A)' : 'var(--vd-border-strong, #D8D0C0)'}`,
+                      fontSize: 13, color: 'var(--vd-ink, #1C1814)',
+                      background: 'var(--vd-bg, #FAF7F2)', outline: 'none', boxSizing: 'border-box',
                       fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.03em',
                     }}
                   />
@@ -352,13 +352,13 @@ const FilterBuilder: React.FC = () => {
           {activeColDef && (
             <div style={{ width: 240, display: 'flex', flexDirection: 'column' }}>
               {/* Search */}
-              <div style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6' }}>
+              <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  background: '#FAF7F2', borderRadius: 8, padding: '5px 10px',
-                  border: '1px solid #E8E2D6',
+                  background: 'var(--vd-bg, #FAF7F2)', borderRadius: 8, padding: '5px 10px',
+                  border: '1px solid var(--vd-border, #E8E2D6)',
                 }}>
-                  <i className="ph ph-magnifying-glass" style={{ fontSize: 13, color: '#9B9287', flexShrink: 0 }} />
+                  <i className="ph ph-magnifying-glass" style={{ fontSize: 13, color: 'var(--vd-text-muted, #9B9287)', flexShrink: 0 }} />
                   <input
                     autoFocus
                     value={search}
@@ -366,7 +366,7 @@ const FilterBuilder: React.FC = () => {
                     placeholder={`Buscar ${activeColDef.label.toLowerCase()}...`}
                     style={{
                       border: 'none', background: 'transparent', outline: 'none',
-                      fontSize: 13, color: '#1C1814', width: '100%',
+                      fontSize: 13, color: 'var(--vd-ink, #1C1814)', width: '100%',
                     }}
                   />
                 </div>
@@ -375,7 +375,7 @@ const FilterBuilder: React.FC = () => {
               {/* Options list */}
               <div style={{ maxHeight: 240, overflowY: 'auto', padding: '6px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {filteredOptions.length === 0 ? (
-                  <div style={{ padding: '12px 14px', fontSize: 13, color: '#9B9287' }}>Nenhum resultado</div>
+                  <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--vd-text-muted, #9B9287)' }}>Nenhum resultado</div>
                 ) : filteredOptions.map(opt => {
                   const checked = currentVals.includes(opt.value);
                   return (
@@ -410,11 +410,11 @@ const FilterBuilder: React.FC = () => {
               {/* Footer */}
               {currentVals.length > 0 && (
                 <div style={{
-                  padding: '8px 14px', borderTop: '1px solid #F2EEE6',
+                  padding: '8px 14px', borderTop: '1px solid var(--vd-bg-track, #F2EEE6)',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   fontSize: 12,
                 }}>
-                  <span style={{ color: '#C9A227', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--vd-accent, #C9A227)', fontWeight: 600 }}>
                     {currentVals.length} selecionado{currentVals.length > 1 ? 's' : ''}
                   </span>
                   <span

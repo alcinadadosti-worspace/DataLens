@@ -3,7 +3,10 @@ import { TIER_STYLES, TIER_DEFINITIONS } from '../design-system/tierStyles';
 import { useFilteredOrders, useTierMetrics } from '../hooks/useAnalytics';
 import { fmtBRLshort, fmtBRL } from '../utils/formatters';
 import { isRevenueEligible } from '../analytics/financialMetrics';
+import { parseBRDate } from '../utils/dateUtils';
 import TierBadge from '../components/ui/TierBadge';
+import RankingChart, { ExtraStat, DetailView } from '../components/charts/RankingChart';
+import { RankingItem, BreakdownRow } from '../components/charts/RankingList';
 
 const TEXT_GRADS: Record<string, string> = {
   bronze:    'linear-gradient(90deg, #6B3815 0%, #C9824D 28%, #F4D3B0 48%, #C9824D 68%, #6B3815 100%)',
@@ -13,7 +16,7 @@ const TEXT_GRADS: Record<string, string> = {
   rubi:      'linear-gradient(90deg, #4A0A14 0%, #C32E47 28%, #FF8099 48%, #C32E47 68%, #4A0A14 100%)',
   esmeralda: 'linear-gradient(90deg, #082A1C 0%, #1F8A5B 28%, #7FD4A8 48%, #1F8A5B 68%, #082A1C 100%)',
   diamante:  'linear-gradient(90deg, #2A3580 0%, #6B7DD9 18%, #FCE4F0 36%, #DCEAFE 50%, #C4F4E5 64%, #6B7DD9 82%, #2A3580 100%)',
-  cf:        'linear-gradient(90deg, #1C1814 0%, #6B6258 28%, #C8C0B0 48%, #6B6258 68%, #1C1814 100%)',
+  cf:        'linear-gradient(90deg, var(--vd-ink, #1C1814) 0%, var(--vd-text-secondary, #6B6258) 28%, #C8C0B0 48%, var(--vd-text-secondary, #6B6258) 68%, var(--vd-ink, #1C1814) 100%)',
 };
 
 const DIAMANTE_COLORS = ['#FCE4F0', '#B8CEFF', '#C4F4E5', '#FFF1B5', '#E0B8FF', '#A8F0D8'];
@@ -181,12 +184,66 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
     byStatus[o.SituacaoComercial] = (byStatus[o.SituacaoComercial] ?? 0) + 1;
   }
 
+  // Ranking visual (tela cheia) dos revendedores dessa segmentação — clicar num revendedor no
+  // gráfico ou na tela cheia mostra a quebra de pedidos por status dele.
+  const rankingItems: RankingItem[] = topResellers.map(([, data]) => ({
+    label: data.name,
+    value: data.value,
+    valueLabel: fmtBRLshort(data.value),
+    meta: `${data.orders} pedido${data.orders === 1 ? '' : 's'}`,
+  }));
+
+  function getResellerBreakdown(item: RankingItem): BreakdownRow[] | null {
+    const entry = topResellers.find(([, data]) => data.name === item.label);
+    if (!entry) return null;
+    const [id] = entry;
+    const orders = tierOrders.filter(o => o.Pessoa === id);
+    if (orders.length === 0) return null;
+    const statusCount: Record<string, number> = {};
+    for (const o of orders) statusCount[o.SituacaoComercial] = (statusCount[o.SituacaoComercial] ?? 0) + 1;
+    return Object.entries(statusCount)
+      .sort((a, b) => b[1] - a[1])
+      .map(([status, count]) => ({ label: status, value: count, valueLabel: `${count}`, pct: (count / orders.length) * 100 }));
+  }
+
+  function getResellerOrdersBreakdown(item: RankingItem): BreakdownRow[] | null {
+    const entry = topResellers.find(([, data]) => data.name === item.label);
+    if (!entry) return null;
+    const [id] = entry;
+    const orders = tierOrders.filter(o => o.Pessoa === id)
+      .sort((a, b) => (parseBRDate(a.DataCaptacao)?.getTime() ?? 0) - (parseBRDate(b.DataCaptacao)?.getTime() ?? 0));
+    if (orders.length === 0) return null;
+    const total = orders.reduce((s, o) => s + o.ValorPraticado, 0);
+    return orders.map(o => ({
+      label: o.DataCaptacao || `Pedido ${o.CodigoPedido}`,
+      value: o.ValorPraticado,
+      valueLabel: fmtBRL(o.ValorPraticado),
+      pct: total > 0 ? (o.ValorPraticado / total) * 100 : 0,
+      meta: `Pedido ${o.CodigoPedido} · ${o.SituacaoComercial}`,
+    }));
+  }
+
+  // Painel de detalhe do revendedor, em tela cheia: 1ª página lista o valor de cada pedido que ele
+  // fez (o que foi pedido); clicando de novo no nome, alterna pra quebra por status.
+  const resellerDetailViews: DetailView[] = [
+    { key: 'pedidos', icon: 'ph-receipt', label: 'Valor de cada pedido', getBreakdown: getResellerOrdersBreakdown },
+    { key: 'status', icon: 'ph-chart-pie-slice', label: 'Pedidos por status', getBreakdown: getResellerBreakdown },
+  ];
+
+  function getResellerExtraStats(item: RankingItem): ExtraStat[] | null {
+    const entry = topResellers.find(([, data]) => data.name === item.label);
+    if (!entry) return null;
+    const [, data] = entry;
+    const avg = data.orders > 0 ? data.value / data.orders : 0;
+    return [{ label: 'Ticket médio', value: fmtBRL(Math.round(avg)) }];
+  }
+
   return (
     <div style={{ padding: '32px 32px 64px' }}>
       {/* Back link */}
       <div
         onClick={onBack}
-        style={{ fontSize: 13, color: '#6B6258', marginBottom: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+        style={{ fontSize: 13, color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
       >
         <i className="ph ph-arrow-left" /> Voltar para visão geral
       </div>
@@ -213,23 +270,23 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, paddingLeft: 20, flexWrap: 'wrap' }}>
           <MetallicTierName name={tierDef.name} tierId={tierId} tierStyle={tierStyle} isDiamante={isDiamante} />
-          <div style={{ fontSize: 13, color: '#6B6258' }}>
+          <div style={{ fontSize: 13, color: 'var(--vd-text-secondary, #6B6258)' }}>
             {metrics?.resellerCount ?? 0} revendedores · {tierOrders.length} pedidos
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32, marginTop: 16, paddingLeft: 20 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>Receita total</div>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>Receita total</div>
             <div style={{ fontSize: 24, fontWeight: 600, fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>{fmtBRLshort(totalRevenue)}</div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>Ticket médio</div>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>Ticket médio</div>
             <div style={{ fontSize: 24, fontWeight: 600, fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>{fmtBRL(Math.round(avgTicket))}</div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>Pedidos ativos</div>
-            <div style={{ fontSize: 24, fontWeight: 600, fontVariantNumeric: 'tabular-nums', marginTop: 4, color: '#2E7D5B' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>Pedidos ativos</div>
+            <div style={{ fontSize: 24, fontWeight: 600, fontVariantNumeric: 'tabular-nums', marginTop: 4, color: 'var(--vd-success, #2E7D5B)' }}>
               {eligibleOrders.length.toLocaleString('pt-BR')}
             </div>
           </div>
@@ -239,11 +296,11 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
       {/* Status breakdown */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 20 }}>
         {Object.entries(byStatus).map(([status, count]) => {
-          const color = status === 'Cancelado' ? '#B83A3A' : status === 'Entregue' ? '#2E7D5B' : '#6B6258';
-          const bg = status === 'Cancelado' ? '#FBE5E9' : status === 'Entregue' ? '#E0F2E8' : '#F2EEE6';
+          const color = status === 'Cancelado' ? 'var(--vd-danger, #B83A3A)' : status === 'Entregue' ? 'var(--vd-success, #2E7D5B)' : 'var(--vd-text-secondary, #6B6258)';
+          const bg = status === 'Cancelado' ? 'var(--vd-danger-bg, #FBE5E9)' : status === 'Entregue' ? 'var(--vd-success-bg, #E0F2E8)' : 'var(--vd-bg-track, #F2EEE6)';
           return (
-            <div key={status} style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 12, padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 4 }}>
+            <div key={status} style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 12, padding: '14px 18px' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4 }}>
                 {status}
               </div>
               <div style={{ fontSize: 24, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color }}>
@@ -257,13 +314,36 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
         })}
       </div>
 
+      {/* Ranking visual — cicla entre estilos de gráfico e abre tela cheia com detalhe por status */}
+      {rankingItems.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: tierStyle.fg, marginBottom: 12 }}>
+            Ranking de revendedores · {tierDef.name}
+          </div>
+          <div style={{
+            background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 20,
+            boxShadow: `0 1px 0 rgba(255,255,255,0.6) inset, 0 4px 16px ${tierStyle.ringGlow}22`,
+          }}>
+            <RankingChart
+              items={rankingItems}
+              mode="vd"
+              accentColor={tierStyle.accent}
+              maxSlices={10}
+              emptyMessage="Sem revendedores"
+              detailViews={resellerDetailViews}
+              getExtraStats={getResellerExtraStats}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Top resellers table */}
       {topResellers.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 12 }}>
             Top revendedores
           </div>
-          <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
@@ -271,8 +351,8 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
                     <th key={h} style={{
                       textAlign: h === 'Receita' ? 'right' : 'left',
                       fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
-                      color: '#6B6258', padding: '12px 14px',
-                      background: '#F2EEE6', borderBottom: '1px solid #E8E2D6',
+                      color: 'var(--vd-text-secondary, #6B6258)', padding: '12px 14px',
+                      background: 'var(--vd-bg-track, #F2EEE6)', borderBottom: '1px solid var(--vd-border, #E8E2D6)',
                     }}>{h}</th>
                   ))}
                 </tr>
@@ -283,7 +363,7 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
                   return (
                     <tr
                       key={id}
-                      style={{ cursor: 'pointer', background: isHov ? '#FAF7F2' : '' }}
+                      style={{ cursor: 'pointer', background: isHov ? 'var(--vd-bg, #FAF7F2)' : '' }}
                       onMouseEnter={() => setHoveredReseller(id)}
                       onMouseLeave={() => setHoveredReseller(null)}
                       onClick={() => {
@@ -291,14 +371,14 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
                         onNavigate('table');
                       }}
                     >
-                      <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', color: '#9B9287', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
+                      <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', color: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
                         {i + 1}
                       </td>
-                      <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6' }}>
+                      <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{
                             fontWeight: 600,
-                            color: isHov ? tierStyle.accent : '#1C1814',
+                            color: isHov ? tierStyle.accent : 'var(--vd-ink, #1C1814)',
                             textDecoration: isHov ? 'underline' : 'none',
                             textDecorationColor: `${tierStyle.accent}66`,
                             transition: 'color 150ms',
@@ -314,13 +394,13 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
                           }} />
                         </div>
                       </td>
-                      <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6' }}>
+                      <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
                         <TierBadge tier={data.tier} size="sm" />
                       </td>
-                      <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', color: '#6B6258', fontVariantNumeric: 'tabular-nums' }}>
+                      <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', color: 'var(--vd-text-secondary, #6B6258)', fontVariantNumeric: 'tabular-nums' }}>
                         {data.orders}
                       </td>
-                      <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+                      <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
                         {fmtBRL(Math.round(data.value))}
                       </td>
                     </tr>

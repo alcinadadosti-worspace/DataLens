@@ -5,7 +5,7 @@ interface TierAmbienceProps {
   tierId: string | null;
 }
 
-const TierAmbience: React.FC<TierAmbienceProps> = ({ tierId }) => {
+const TierAmbience: React.FC<TierAmbienceProps> = React.memo(({ tierId }) => {
   if (!tierId) return null;
   const style = TIER_STYLES[tierId];
   if (!style) return null;
@@ -32,7 +32,7 @@ const TierAmbience: React.FC<TierAmbienceProps> = ({ tierId }) => {
       <CornerSet style={style} intensity={intensity} isDiamante={isDiamante} />
     </div>
   );
-};
+});
 
 function BgWash({ style, isDiamante }: { style: TierStyle; isDiamante: boolean }) {
   if (isDiamante) {
@@ -236,10 +236,13 @@ function CornerSet({ style, intensity, isDiamante }: CornerSetProps) {
 
 interface Pos { key: string; top?: number; left?: number; bottom?: number; right?: number; rotate: number; }
 
-function CornerBracket({ pos, style, intensity, isDiamante }: { pos: Pos; style: TierStyle; intensity: number; isDiamante: boolean }) {
+const CornerBracket = React.memo(function CornerBracket({ pos, style, intensity, isDiamante }: { pos: Pos; style: TierStyle; intensity: number; isDiamante: boolean }) {
   const size = intensity >= 5 ? 280 : intensity >= 3 ? 240 : 220;
   const strokeWidth = intensity >= 5 ? 5 : 4.5;
-  const id = `metal-${pos.key}-${Math.random().toString(36).slice(2, 7)}`;
+  // Estável entre renders — gerar um id novo a cada render (era `Math.random()` direto no corpo)
+  // fazia o React redefinir o <linearGradient> do SVG (recurso referenciado por url(#id)) toda
+  // vez, mesmo sem nada mudar visualmente.
+  const id = useMemo(() => `metal-${pos.key}-${Math.random().toString(36).slice(2, 7)}`, [pos.key]);
   const ringGlow = style.ringGlow;
   const showSecondary = intensity >= 5;
   const showGem = intensity >= 4;
@@ -313,6 +316,6 @@ function CornerBracket({ pos, style, intensity, isDiamante }: { pos: Pos; style:
       </svg>
     </div>
   );
-}
+});
 
 export default TierAmbience;

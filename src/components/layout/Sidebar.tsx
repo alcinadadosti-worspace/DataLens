@@ -27,10 +27,10 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onNavigate, activeTier }) => 
     <div style={{
       position: 'fixed',
       top: 64, bottom: 0, left: 0, width: 240,
-      background: themed ? 'rgba(255,255,255,0.55)' : '#FAF7F2',
-      backdropFilter: themed ? 'blur(14px) saturate(1.1)' : 'none',
-      WebkitBackdropFilter: themed ? 'blur(14px) saturate(1.1)' : 'none',
-      borderRight: '1px solid rgba(28,24,20,0.08)',
+      background: themed ? 'var(--vd-surface-translucent, rgba(255,255,255,0.55))' : 'var(--vd-bg, #FAF7F2)',
+      backdropFilter: 'blur(14px) saturate(1.1)',
+      WebkitBackdropFilter: 'blur(14px) saturate(1.1)',
+      borderRight: '1px solid var(--vd-border-soft, rgba(28,24,20,0.08))',
       padding: '20px 12px',
       overflowY: 'auto',
       display: 'flex',
@@ -59,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onNavigate, activeTier }) => 
 
       <div style={{
         fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
-        textTransform: 'uppercase', color: '#9B9287',
+        textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)',
         padding: '20px 14px 8px',
       }}>
         Segmentações

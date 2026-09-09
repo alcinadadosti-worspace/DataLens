@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import '../design-system/lojaTheme.css';
+import '../design-system/chartTheme.css';
 import LojaTopBar from '../components/layout/LojaTopBar';
 import LojaSidebar from '../components/layout/LojaSidebar';
 import ScrollProgress from '../components/ui/ScrollProgress';

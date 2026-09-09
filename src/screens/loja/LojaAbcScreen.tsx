@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingChart from '../../components/loja/RankingChart';
+import RankingChart from '../../components/charts/RankingChart';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { useAbcOverridesStore } from '../../store/useAbcOverridesStore';

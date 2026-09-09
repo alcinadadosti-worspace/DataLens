@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import ChartCard from '../charts/ChartCard';
 import KpiCard from '../ui/KpiCard';
-import RankingChart from './RankingChart';
+import RankingChart from '../charts/RankingChart';
 import { aggregateByName, aggregateConsultoresPorLoja, buildLojaNomeLookup, hourlyDistribution, findConsultorExtras } from '../../analytics/lojaMetrics';
 import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
 import { LojaDataset } from '../../types/loja';

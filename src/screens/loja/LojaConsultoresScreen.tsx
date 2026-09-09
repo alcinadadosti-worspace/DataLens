@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import ChartCard from '../../components/charts/ChartCard';
 import Button from '../../components/ui/Button';
@@ -18,6 +18,20 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
+  // Hooks ficam antes do guard "sem dados" abaixo (ordem estável entre renders); `rows` cai pra
+  // array vazio sem dataset, então os memos abaixo continuam seguros de chamar incondicionalmente.
+  // Memoizado por `rows`/`lojaFiltro` — sem isso, expandir/recolher um card (a interação mais
+  // frequente da tela, via `toggleExpand`/`setExpanded`) reprocessava o dataset inteiro à toa, já
+  // que `expanded` não entra em nenhuma dessas dependências.
+  const rows = dataset ? (view === 'consultor' ? dataset.consultor : dataset.operador) : [];
+  const lojas = useMemo(() => listLojasInDimension(rows), [rows]);
+  const agg = useMemo(() => aggregateConsultoresPorLoja(rows, lojaFiltro || null), [rows, lojaFiltro]);
+  const multiLoja = useMemo(() => agg.filter(r => r.porLoja.length > 1), [agg]);
+
+  const top = useMemo(() => agg.slice(0, 5), [agg]);
+  const bottom = useMemo(() => agg.slice(-5).reverse(), [agg]);
+  const allSorted = useMemo(() => [...agg].sort((a, b) => b.gmv - a.gmv), [agg]);
+
   if (!dataset) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
@@ -26,14 +40,6 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
       </div>
     );
   }
-
-  const rows = view === 'consultor' ? dataset.consultor : dataset.operador;
-  const lojas = listLojasInDimension(rows);
-  const agg = aggregateConsultoresPorLoja(rows, lojaFiltro || null);
-  const multiLoja = agg.filter(r => r.porLoja.length > 1);
-
-  const top = agg.slice(0, 5);
-  const bottom = agg.slice(-5).reverse();
 
   function unidadeLabel(r: typeof agg[number]): string {
     if (r.porLoja.length === 0) return '';
@@ -118,8 +124,6 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
       })}
     </div>
   );
-
-  const allSorted = [...agg].sort((a, b) => b.gmv - a.gmv);
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>

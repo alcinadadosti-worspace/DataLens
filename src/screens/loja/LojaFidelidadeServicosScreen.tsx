@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingChart from '../../components/loja/RankingChart';
-import { RankingItem, BreakdownRow } from '../../components/loja/RankingList';
+import RankingChart from '../../components/charts/RankingChart';
+import { RankingItem, BreakdownRow } from '../../components/charts/RankingList';
 import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import { useLojaStore } from '../../store/useLojaStore';

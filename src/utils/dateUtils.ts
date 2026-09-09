@@ -30,6 +30,13 @@ export function parseBRDate(raw: string | undefined | null): Date | null {
     return new Date(+y, +mo - 1, +d);
   }
 
+  // Fallback: número de série do Excel (ex. quando a célula não foi convertida pro texto
+  // dd/MM/yyyy na origem) — mesma faixa usada pelo parser de planilha (spreadsheetParser.ts).
+  const n = parseFloat(s);
+  if (!isNaN(n) && n > 40000 && n < 60000) {
+    return new Date(Date.UTC(1899, 11, 30) + n * 86400000);
+  }
+
   return null;
 }
 

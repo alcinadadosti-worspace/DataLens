@@ -1,0 +1,49 @@
+/* Tokens --chart-* usados pelo motor de gráficos compartilhado (RankingChart/RankingList,
+   components/charts/). Ele é renderizado tanto no Modo Loja (data-loja-theme) quanto no Modo VD
+   (data-vd-theme) — em vez de duplicar o componente por modo, cada var --chart-* aqui é só um
+   espelho da var equivalente do tema ativo, então o mesmo motor de gráfico se pinta sozinho com a
+   paleta certa em qualquer um dos dois. */
+
+[data-loja-theme='light'],
+[data-vd-theme='light'] {
+  --chart-bg: var(--loja-bg, var(--vd-bg, #FAF7F2));
+  --chart-surface: var(--loja-surface, var(--vd-surface, #FFFFFF));
+  --chart-bg-subtle: var(--loja-bg-subtle, var(--vd-bg-subtle, #F2EEE2));
+  --chart-bg-track: var(--loja-bg-track, #F2EEE6);
+  --chart-border: var(--loja-border, var(--vd-border, #E8E2D6));
+  --chart-border-strong: var(--loja-border-strong, #D8D0C0);
+  --chart-ink: var(--loja-ink, var(--vd-ink, #1C1814));
+  --chart-text-strong: var(--loja-text-strong, var(--vd-text-strong, #3D362E));
+  --chart-text-secondary: var(--loja-text-secondary, var(--vd-text-secondary, #6B6258));
+  --chart-text-muted: var(--loja-text-muted, var(--vd-text-muted, #9B9287));
+  --chart-accent: var(--loja-accent, var(--vd-accent, #B26A3C));
+  --chart-accent-gold: var(--loja-accent-gold, var(--vd-accent, #C9A227));
+  --chart-success: var(--loja-success, #2E7D5B);
+  --chart-success-bg: var(--loja-success-bg, #E0F2E8);
+  --chart-success-bg-strong: var(--loja-success-bg-strong, #9FD4B8);
+  --chart-danger: var(--loja-danger, #B83A3A);
+  --chart-danger-bg: var(--loja-danger-bg, #FBE5E9);
+  --chart-danger-border: var(--loja-danger-border, #F0A8B3);
+}
+
+[data-loja-theme='dark'],
+[data-vd-theme='dark'] {
+  --chart-bg: var(--loja-bg, var(--vd-bg, #17130F));
+  --chart-surface: var(--loja-surface, var(--vd-surface, #211C17));
+  --chart-bg-subtle: var(--loja-bg-subtle, var(--vd-bg-subtle, #2A241C));
+  --chart-bg-track: var(--loja-bg-track, #2F281F);
+  --chart-border: var(--loja-border, var(--vd-border, #3A332A));
+  --chart-border-strong: var(--loja-border-strong, #4A4033);
+  --chart-ink: var(--loja-ink, var(--vd-ink, #F5F0E6));
+  --chart-text-strong: var(--loja-text-strong, var(--vd-text-strong, #E4DCC9));
+  --chart-text-secondary: var(--loja-text-secondary, var(--vd-text-secondary, #B9AD98));
+  --chart-text-muted: var(--loja-text-muted, var(--vd-text-muted, #8C806C));
+  --chart-accent: var(--loja-accent, var(--vd-accent, #D9905C));
+  --chart-accent-gold: var(--loja-accent-gold, var(--vd-accent, #E3BE4E));
+  --chart-success: var(--loja-success, #4FBE87);
+  --chart-success-bg: var(--loja-success-bg, #1D3A2A);
+  --chart-success-bg-strong: var(--loja-success-bg-strong, #2E5C41);
+  --chart-danger: var(--loja-danger, #E2646B);
+  --chart-danger-bg: var(--loja-danger-bg, #3D2126);
+  --chart-danger-border: var(--loja-danger-border, #6B333C);
+}

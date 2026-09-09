@@ -16,13 +16,20 @@ import {
   TierMetrics,
 } from '../types/analytics';
 
-export function useFilteredOrders(): Order[] {
+/**
+ * `ignoreDateAndCycle` deixa de fora os filtros de ciclo/período — usado pela Comparação Semanal,
+ * que precisa enxergar vários ciclos/semanas ao mesmo tempo pra comparar entre eles; aplicar o
+ * filtro global de ciclo ali apagaria a própria comparação que a tela existe pra fazer. Os demais
+ * filtros (supervisor, estrutura, cidade, tier etc.) continuam valendo normalmente.
+ */
+export function useFilteredOrders(opts?: { ignoreDateAndCycle?: boolean }): Order[] {
   const orders = useOrderStore(s => s.orders);
   const filters = useFilterStore();
+  const ignoreDateAndCycle = opts?.ignoreDateAndCycle ?? false;
 
   return useMemo(() => {
     return orders.filter(order => {
-      if (filters.cycle?.length && !filters.cycle.includes(order.CicloMarketing)) return false;
+      if (!ignoreDateAndCycle && filters.cycle?.length && !filters.cycle.includes(order.CicloMarketing)) return false;
       if (filters.supervisor?.length && !filters.supervisor.includes(order.ResponsavelEstrutura)) return false;
       if (filters.structure?.length && !filters.structure.includes(order.Estrutura)) return false;
       if (filters.city?.length && !filters.city.includes(order.CidadeEntregaRetirada)) return false;
@@ -44,7 +51,7 @@ export function useFilteredOrders(): Order[] {
         if (!haystack.includes(q)) return false;
       }
 
-      if (filters.dateFrom || filters.dateTo) {
+      if (!ignoreDateAndCycle && (filters.dateFrom || filters.dateTo)) {
         const orderDate = parseBRDate(order.DataCaptacao);
         if (orderDate) {
           if (filters.dateFrom) {
@@ -60,7 +67,7 @@ export function useFilteredOrders(): Order[] {
 
       return true;
     });
-  }, [orders, filters]);
+  }, [orders, filters, ignoreDateAndCycle]);
 }
 
 export function useFinancialMetrics(): FinancialMetrics | null {

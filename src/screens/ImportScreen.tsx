@@ -68,13 +68,13 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
         Importar dados
       </div>
       <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 6px' }}>
         Importar planilha
       </h1>
-      <p style={{ color: '#6B6258', fontSize: 15, marginTop: 0, marginBottom: 28 }}>
+      <p style={{ color: 'var(--vd-text-secondary, #6B6258)', fontSize: 15, marginTop: 0, marginBottom: 28 }}>
         Arraste seu arquivo{' '}
         <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>.xlsx</code> ou{' '}
         <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>.csv</code> abaixo.
@@ -95,9 +95,9 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
         onDrop={handleDrop}
         onClick={handleClick}
         style={{
-          border: `2px dashed ${drag ? '#1C1814' : '#D8D0C0'}`,
+          border: `2px dashed ${drag ? 'var(--vd-ink, #1C1814)' : 'var(--vd-border-strong, #D8D0C0)'}`,
           borderRadius: 20, padding: 48,
-          background: drag ? '#FAF7F2' : 'white',
+          background: drag ? 'var(--vd-bg, #FAF7F2)' : 'var(--vd-surface, #FFFFFF)',
           textAlign: 'center',
           cursor: phase === 'loading' ? 'default' : 'pointer',
           transition: 'all 200ms cubic-bezier(0.22, 1, 0.36, 1)',
@@ -105,14 +105,14 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
       >
         {phase === 'idle' && (
           <>
-            <div style={{ fontSize: 48, color: '#9B9287', marginBottom: 12 }}>
+            <div style={{ fontSize: 48, color: 'var(--vd-text-muted, #9B9287)', marginBottom: 12 }}>
               <i className="ph ph-cloud-arrow-up" />
             </div>
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Arraste o arquivo aqui</div>
-            <div style={{ fontSize: 13, color: '#6B6258' }}>
-              ou <span style={{ color: '#1C1814', fontWeight: 600, textDecoration: 'underline' }}>selecione do computador</span>
+            <div style={{ fontSize: 13, color: 'var(--vd-text-secondary, #6B6258)' }}>
+              ou <span style={{ color: 'var(--vd-ink, #1C1814)', fontWeight: 600, textDecoration: 'underline' }}>selecione do computador</span>
             </div>
-            <div style={{ fontSize: 11, color: '#9B9287', marginTop: 16, fontFamily: 'JetBrains Mono, monospace' }}>
+            <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', marginTop: 16, fontFamily: 'JetBrains Mono, monospace' }}>
               .xlsx · .csv · até 50 MB
             </div>
           </>
@@ -120,43 +120,43 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
 
         {phase === 'loading' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontSize: 36, color: '#9B9287' }}>
+            <div style={{ fontSize: 36, color: 'var(--vd-text-muted, #9B9287)' }}>
               <i className="ph ph-spinner" />
             </div>
             <div style={{ fontSize: 15, fontWeight: 600 }}>Processando {file?.name}...</div>
-            <div style={{ fontSize: 13, color: '#6B6258' }}>Analisando colunas e validando dados</div>
+            <div style={{ fontSize: 13, color: 'var(--vd-text-secondary, #6B6258)' }}>Analisando colunas e validando dados</div>
           </div>
         )}
 
         {phase === 'done' && file && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: '#E0F2E8', color: '#2E7D5B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--vd-success-bg, #E0F2E8)', color: 'var(--vd-success, #2E7D5B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
               <i className="ph ph-check-circle" />
             </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 16 }}>{file.name}</div>
-              <div style={{ fontSize: 13, color: '#6B6258', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--vd-text-secondary, #6B6258)', marginTop: 4 }}>
                 {rowCount.toLocaleString('pt-BR')} pedidos importados com sucesso
               </div>
               {fvcExcluded > 0 && (
-                <div style={{ fontSize: 12, color: '#9B9287', marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: 'var(--vd-text-muted, #9B9287)', marginTop: 4 }}>
                   <i className="ph ph-funnel" style={{ marginRight: 4 }} />
                   {fvcExcluded.toLocaleString('pt-BR')} pedidos FVC (terceirizados) excluídos automaticamente
                 </div>
               )}
             </div>
             {errors.length > 0 && (
-              <div style={{ background: '#FBF3D0', border: '1px solid #E8C547', borderRadius: 10, padding: '10px 14px', textAlign: 'left', width: '100%', maxWidth: 480 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#5C4500', marginBottom: 6 }}>
+              <div style={{ background: 'var(--vd-warning-bg, #FBF3D0)', border: '1px solid var(--vd-warning-border, #E8C547)', borderRadius: 10, padding: '10px 14px', textAlign: 'left', width: '100%', maxWidth: 480 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--vd-warning-text, #5C4500)', marginBottom: 6 }}>
                   {errors.length} aviso(s) durante importação
                 </div>
                 {errors.map((e, i) => (
-                  <div key={i} style={{ fontSize: 11, color: '#5C4500', fontFamily: 'JetBrains Mono, monospace' }}>{e}</div>
+                  <div key={i} style={{ fontSize: 11, color: 'var(--vd-warning-text, #5C4500)', fontFamily: 'JetBrains Mono, monospace' }}>{e}</div>
                 ))}
               </div>
             )}
             {columns.length > 0 && (
-              <div style={{ fontSize: 12, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}>
+              <div style={{ fontSize: 12, color: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}>
                 Colunas: {columns.slice(0, 5).join(', ')}{columns.length > 5 ? ` +${columns.length - 5}` : ''}
               </div>
             )}
@@ -165,14 +165,14 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
 
         {phase === 'error' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: '#FBE5E9', color: '#B83A3A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--vd-danger-bg, #FBE5E9)', color: 'var(--vd-danger, #B83A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
               <i className="ph ph-warning-circle" />
             </div>
             <div style={{ fontWeight: 600 }}>Erro ao processar arquivo</div>
             {errors.map((e, i) => (
-              <div key={i} style={{ fontSize: 12, color: '#B83A3A', fontFamily: 'JetBrains Mono, monospace' }}>{e}</div>
+              <div key={i} style={{ fontSize: 12, color: 'var(--vd-danger, #B83A3A)', fontFamily: 'JetBrains Mono, monospace' }}>{e}</div>
             ))}
-            <div style={{ fontSize: 13, color: '#6B6258' }}>Clique para tentar outro arquivo</div>
+            <div style={{ fontSize: 13, color: 'var(--vd-text-secondary, #6B6258)' }}>Clique para tentar outro arquivo</div>
           </div>
         )}
       </div>

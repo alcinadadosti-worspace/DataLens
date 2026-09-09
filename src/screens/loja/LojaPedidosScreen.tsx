@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingChart from '../../components/loja/RankingChart';
+import RankingChart from '../../components/charts/RankingChart';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
 import { pedidosRates, classifyAbc, buildLojaNomeLookup } from '../../analytics/lojaMetrics';

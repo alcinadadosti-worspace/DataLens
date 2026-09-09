@@ -111,9 +111,9 @@ const SupervisorScreen: React.FC = () => {
       textAlign: 'left', cursor: 'pointer',
       fontSize: 11, fontWeight: 600,
       letterSpacing: '0.06em', textTransform: 'uppercase',
-      color: sortKey === key ? '#1C1814' : '#6B6258',
+      color: sortKey === key ? 'var(--vd-ink, #1C1814)' : 'var(--vd-text-secondary, #6B6258)',
       padding: '12px 14px',
-      background: '#F2EEE6', borderBottom: '1px solid #E8E2D6',
+      background: 'var(--vd-bg-track, #F2EEE6)', borderBottom: '1px solid var(--vd-border, #E8E2D6)',
       position: 'sticky', top: 0, userSelect: 'none',
       whiteSpace: 'nowrap',
     };
@@ -122,11 +122,11 @@ const SupervisorScreen: React.FC = () => {
   if (orders.length === 0) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, color: '#D8D0C0', marginBottom: 16 }}>
+        <div style={{ fontSize: 48, color: 'var(--vd-border-strong, #D8D0C0)', marginBottom: 16 }}>
           <i className="ph ph-users" />
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Sem dados de supervisores</h2>
-        <p style={{ color: '#6B6258', fontSize: 15 }}>Importe uma planilha para ver o ranking de supervisores.</p>
+        <p style={{ color: 'var(--vd-text-secondary, #6B6258)', fontSize: 15 }}>Importe uma planilha para ver o ranking de supervisores.</p>
       </div>
     );
   }
@@ -140,7 +140,7 @@ const SupervisorScreen: React.FC = () => {
     <div style={{ padding: '32px 32px 64px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
             Análise por estrutura
           </div>
           <h1 style={{ fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 0' }}>
@@ -158,22 +158,22 @@ const SupervisorScreen: React.FC = () => {
 
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
-        <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 4 }}>Estruturas ativas</div>
+        <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4 }}>Estruturas ativas</div>
           <div style={{ fontSize: 28, fontWeight: 600 }}>{fmtNumber(sorted.length)}</div>
         </div>
-        <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 4 }}>Receita total</div>
+        <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4 }}>Receita total</div>
           <div style={{ fontSize: 28, fontWeight: 600 }}>{fmtBRLshort(totalRevenue)}</div>
         </div>
-        <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 4 }}>ANS médio geral</div>
+        <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4 }}>ANS médio geral</div>
           <div style={{ fontSize: 28, fontWeight: 600 }}>{fmtMinutes(avgSLA)}</div>
         </div>
       </div>
 
       {/* Table */}
-      <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, overflow: 'hidden' }}>
         <div style={{ maxHeight: 600, overflowY: 'auto', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
@@ -208,36 +208,36 @@ const SupervisorScreen: React.FC = () => {
               {sorted.map((row, i) => (
                 <tr
                   key={row.name + i}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#FAF7F2')}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--vd-bg, #FAF7F2)')}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}
                 >
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', fontWeight: 500 }}>
+                  <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', fontWeight: 500 }}>
                     {row.name}
                   </td>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', color: '#6B6258', fontSize: 12 }}>
+                  <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', color: 'var(--vd-text-secondary, #6B6258)', fontSize: 12 }}>
                     {row.structure || '—'}
                   </td>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#3D362E' }}>
+                  <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--vd-text-strong, #3D362E)' }}>
                     {row.orderCount.toLocaleString('pt-BR')}
                   </td>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#3D362E' }}>
+                  <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--vd-text-strong, #3D362E)' }}>
                     {row.resellerCount.toLocaleString('pt-BR')}
                   </td>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+                  <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
                     {fmtBRL(Math.round(row.totalRevenue))}
                   </td>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#6B6258' }}>
+                  <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--vd-text-secondary, #6B6258)' }}>
                     {fmtBRLshort(row.avgTicket)}
                   </td>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                  <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                     <span style={{
-                      color: row.avgSLAMinutes > 1440 ? '#B83A3A' : row.avgSLAMinutes > 480 ? '#8B6914' : '#2E7D5B',
+                      color: row.avgSLAMinutes > 1440 ? 'var(--vd-danger, #B83A3A)' : row.avgSLAMinutes > 480 ? 'var(--vd-warning, #8B6914)' : 'var(--vd-success, #2E7D5B)',
                     }}>
                       {fmtMinutes(row.avgSLAMinutes)}
                     </span>
                   </td>
-                  <td style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    <span style={{ color: row.cancelledCount > 0 ? '#B83A3A' : '#9B9287' }}>
+                  <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ color: row.cancelledCount > 0 ? 'var(--vd-danger, #B83A3A)' : 'var(--vd-text-muted, #9B9287)' }}>
                       {row.cancelledCount}
                     </span>
                   </td>
@@ -246,7 +246,7 @@ const SupervisorScreen: React.FC = () => {
             </tbody>
           </table>
         </div>
-        <div style={{ padding: '10px 14px', borderTop: '1px solid #E8E2D6', fontSize: 12, color: '#6B6258' }}>
+        <div style={{ padding: '10px 14px', borderTop: '1px solid var(--vd-border, #E8E2D6)', fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)' }}>
           {sorted.length} estruturas
         </div>
       </div>

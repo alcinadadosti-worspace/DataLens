@@ -1,0 +1,112 @@
+/* Tokens de cor do Modo VD — tema claro (padrão) e escuro. Mesma técnica do Modo Loja
+   (design-system/lojaTheme.css): cada var tem fallback pro hex original em todo lugar que a usa,
+   então componentes ainda não migrados continuam com a aparência de sempre. A identidade própria
+   do VD vem da TierAmbience (metais/pedras), que fica por cima desses tokens em qualquer tema. */
+
+[data-vd-theme='light'] {
+  --vd-bg: #FAF7F2;
+  --vd-surface: #FFFFFF;
+  --vd-surface-translucent: rgba(255, 255, 255, 0.85);
+  --vd-bg-subtle: #F2EEE2;
+  --vd-bg-track: #F2EEE6;
+  --vd-border: #E8E2D6;
+  --vd-border-soft: rgba(28, 24, 20, 0.08);
+  --vd-border-strong: #D8D0C0;
+  --vd-ink: #1C1814;
+  --vd-text-strong: #3D362E;
+  --vd-text-secondary: #6B6258;
+  --vd-text-muted: #9B9287;
+  /* Ouro puro (#C9A227) como texto pequeno fica em ~2.4:1 de contraste sobre branco — bem abaixo do
+     mínimo de leitura (4.5:1). Esse tom mais escuro mantém a identidade dourada mas com ~4.9:1. */
+  --vd-accent: #8A6D00;
+  --vd-success: #2E7D5B;
+  --vd-success-bg: #E0F2E8;
+  --vd-danger: #B83A3A;
+  --vd-danger-bg: #FBE5E9;
+  --vd-danger-border: #F0A8B3;
+  --vd-warning: #8B6914;
+  --vd-warning-bg: #FBF3D0;
+  --vd-warning-border: #E8C547;
+  --vd-warning-text: #5C4500;
+  color-scheme: light;
+}
+
+[data-vd-theme='dark'] {
+  --vd-bg: #15120E;
+  --vd-surface: #1F1A14;
+  --vd-surface-translucent: rgba(21, 18, 14, 0.82);
+  --vd-bg-subtle: #29221A;
+  --vd-bg-track: #2F281F;
+  --vd-border: #392F22;
+  --vd-border-soft: rgba(245, 240, 230, 0.10);
+  --vd-border-strong: #4A4033;
+  --vd-ink: #F5F0E6;
+  --vd-text-strong: #E4DCC9;
+  --vd-text-secondary: #B9AD98;
+  --vd-text-muted: #8C806C;
+  --vd-accent: #E3BE4E;
+  --vd-success: #4FBE87;
+  --vd-success-bg: #1D3A2A;
+  --vd-danger: #E2646B;
+  --vd-danger-bg: #3D2126;
+  --vd-danger-border: #6B333C;
+  --vd-warning: #E6C765;
+  --vd-warning-bg: #362D18;
+  --vd-warning-border: #7A6220;
+  --vd-warning-text: #E6C765;
+  color-scheme: dark;
+}
+
+[data-vd-theme] {
+  background: var(--vd-bg);
+  color: var(--vd-ink);
+  min-height: 100vh;
+}
+
+/* Alguns componentes de UI compartilhados com o Modo Loja (KpiCard, ChartCard, InfoHint, TierBadge)
+   usam os nomes de variável --loja-* diretamente em vez de --chart-*. Em vez de duplicá-los ou
+   reescrevê-los, espelhamos aqui os mesmos nomes apontando pros tokens do VD — assim eles também
+   respondem ao tema do VD sem qualquer risco de regressão no Modo Loja. */
+[data-vd-theme] {
+  --loja-bg: var(--vd-bg);
+  --loja-surface: var(--vd-surface);
+  --loja-border: var(--vd-border);
+  --loja-ink: var(--vd-ink);
+  --loja-text-strong: var(--vd-text-strong);
+  --loja-text-secondary: var(--vd-text-secondary);
+  --loja-text-muted: var(--vd-text-muted);
+  --loja-accent: var(--vd-accent);
+  --loja-success: var(--vd-success);
+  --loja-danger: var(--vd-danger);
+}
+
+/* Troca de tema com um círculo se expandindo a partir do botão clicado (View Transitions API —
+   só existe em navegadores Chromium; nos demais a troca é instantânea, sem esse efeito extra). */
+@supports (view-transition-name: root) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-old(root) {
+    z-index: 1;
+  }
+
+  ::view-transition-new(root) {
+    z-index: 2;
+  }
+
+  [data-vd-theme-animating='true']::view-transition-new(root) {
+    animation: vd-theme-reveal 550ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes vd-theme-reveal {
+    from {
+      clip-path: circle(0px at var(--vd-theme-origin-x, 50%) var(--vd-theme-origin-y, 50%));
+    }
+    to {
+      clip-path: circle(var(--vd-theme-radius, 150%) at var(--vd-theme-origin-x, 50%) var(--vd-theme-origin-y, 50%));
+    }
+  }
+}

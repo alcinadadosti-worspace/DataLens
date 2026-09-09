@@ -56,14 +56,14 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
 
   const kpis = [
     { label: 'Receita total', value: fmtBRLshort(totalRevenue), sub: fmtBRL(totalRevenue), color: tierAccent },
-    { label: 'Finalizados', value: eligible.length.toLocaleString('pt-BR'), sub: `${orders.length > 0 ? ((eligible.length / orders.length) * 100).toFixed(0) : 0}% dos pedidos`, color: '#2E7D5B' },
-    { label: 'Cancelados', value: cancelled.length.toLocaleString('pt-BR'), sub: `${orders.length > 0 ? ((cancelled.length / orders.length) * 100).toFixed(0) : 0}% dos pedidos`, color: cancelled.length > 0 ? '#B83A3A' : '#9B9287' },
-    { label: 'Ticket médio', value: fmtBRLshort(avgTicket), sub: fmtBRL(avgTicket), color: '#6B6258' },
+    { label: 'Finalizados', value: eligible.length.toLocaleString('pt-BR'), sub: `${orders.length > 0 ? ((eligible.length / orders.length) * 100).toFixed(0) : 0}% dos pedidos`, color: 'var(--vd-success, #2E7D5B)' },
+    { label: 'Cancelados', value: cancelled.length.toLocaleString('pt-BR'), sub: `${orders.length > 0 ? ((cancelled.length / orders.length) * 100).toFixed(0) : 0}% dos pedidos`, color: cancelled.length > 0 ? 'var(--vd-danger, #B83A3A)' : 'var(--vd-text-muted, #9B9287)' },
+    { label: 'Ticket médio', value: fmtBRLshort(avgTicket), sub: fmtBRL(avgTicket), color: 'var(--vd-text-secondary, #6B6258)' },
   ];
 
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--vd-surface, #FFFFFF)',
       border: `1px solid ${tierAccent}44`,
       borderRadius: 14,
       overflow: 'hidden',
@@ -74,7 +74,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
       <div style={{ height: 3, background: tierAccent }} />
 
       {/* Header */}
-      <div style={{ padding: '14px 18px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F2EEE6' }}>
+      <div style={{ padding: '14px 18px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 32, height: 32, borderRadius: 8, flexShrink: 0,
@@ -84,10 +84,10 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
             <i className="ph ph-user" style={{ fontSize: 16, color: tierAccent }} />
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#1C1814', letterSpacing: '-0.01em' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--vd-ink, #1C1814)', letterSpacing: '-0.01em' }}>
               {reseller.name}
             </div>
-            <div style={{ fontSize: 11, color: '#9B9287', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
               <span style={{ width: 6, height: 6, borderRadius: 2, background: tierAccent, flexShrink: 0 }} />
               {tierDef?.name ?? tierId} · {orders.length} pedidos no período filtrado
             </div>
@@ -109,15 +109,15 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
         {kpis.map((k, i) => (
           <div key={k.label} style={{
             padding: '14px 18px',
-            borderRight: i < kpis.length - 1 ? '1px solid #F2EEE6' : 'none',
+            borderRight: i < kpis.length - 1 ? '1px solid var(--vd-bg-track, #F2EEE6)' : 'none',
           }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 4 }}>
               {k.label}
             </div>
             <div style={{ fontSize: 22, fontWeight: 700, color: k.color, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
               {k.value}
             </div>
-            <div style={{ fontSize: 11, color: '#9B9287', marginTop: 2, fontFamily: i === 0 || i === 3 ? 'JetBrains Mono, monospace' : undefined }}>
+            <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', marginTop: 2, fontFamily: i === 0 || i === 3 ? 'JetBrains Mono, monospace' : undefined }}>
               {k.sub}
             </div>
           </div>
@@ -126,8 +126,8 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
 
       {/* Daily chart */}
       {days.length > 1 && (
-        <div style={{ padding: '12px 18px 16px', borderTop: '1px solid #F2EEE6' }}>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 10 }}>
+        <div style={{ padding: '12px 18px 16px', borderTop: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 10 }}>
             Receita por dia do ciclo
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 72, position: 'relative' }}>
@@ -149,8 +149,8 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
                       bottom: 'calc(100% + 6px)',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      background: '#1C1814',
-                      color: '#FAF7F2',
+                      background: 'var(--vd-ink, #1C1814)',
+                      color: 'var(--vd-bg, #FAF7F2)',
                       borderRadius: 8,
                       padding: '6px 10px',
                       whiteSpace: 'nowrap',
@@ -159,7 +159,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
                       fontSize: 11,
                       boxShadow: '0 4px 16px rgba(28,24,20,0.3)',
                     }}>
-                      <div style={{ fontSize: 9, color: '#9B9287', marginBottom: 2, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: 9, color: 'var(--vd-text-muted, #9B9287)', marginBottom: 2, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                         Dia {d}
                       </div>
                       <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: tierAccent }}>
@@ -172,7 +172,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
                         width: 0, height: 0,
                         borderLeft: '5px solid transparent',
                         borderRight: '5px solid transparent',
-                        borderTop: '5px solid #1C1814',
+                        borderTop: '5px solid var(--vd-ink, #1C1814)',
                       }} />
                     </div>
                   )}
@@ -188,7 +188,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
                     boxShadow: isHov ? `0 0 8px ${tierAccent}88` : 'none',
                   }} />
                   {days.length <= 31 && (
-                    <div style={{ fontSize: 11, color: isHov ? tierAccent : '#9B9287', lineHeight: 1, fontWeight: isHov ? 700 : 400, transition: 'color 120ms' }}>{d}</div>
+                    <div style={{ fontSize: 11, color: isHov ? tierAccent : 'var(--vd-text-muted, #9B9287)', lineHeight: 1, fontWeight: isHov ? 700 : 400, transition: 'color 120ms' }}>{d}</div>
                   )}
                 </div>
               );
@@ -284,46 +284,46 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
   };
 
   return (
-    <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, marginBottom: 14, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, marginBottom: 14, overflow: 'hidden' }}>
       {/* Header */}
       <div
         onClick={() => setCollapsed(c => !c)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 18px', cursor: 'pointer', borderBottom: collapsed ? 'none' : '1px solid #F2EEE6',
+          padding: '12px 18px', cursor: 'pointer', borderBottom: collapsed ? 'none' : '1px solid var(--vd-bg-track, #F2EEE6)',
           userSelect: 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <i className="ph ph-chart-bar" style={{ fontSize: 16, color: '#C9A227' }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#1C1814' }}>Resumo financeiro</span>
-          <span style={{ fontSize: 11, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--vd-ink, #1C1814)' }}>Resumo financeiro</span>
+          <span style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}>
             {fmtNumber(metrics.total)} pedidos
           </span>
         </div>
-        <i className={`ph ph-caret-${collapsed ? 'down' : 'up'}`} style={{ fontSize: 14, color: '#9B9287' }} />
+        <i className={`ph ph-caret-${collapsed ? 'down' : 'up'}`} style={{ fontSize: 14, color: 'var(--vd-text-muted, #9B9287)' }} />
       </div>
 
       {!collapsed && (
         <>
           {/* KPI strip */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', borderBottom: '1px solid #F2EEE6' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
             {[
-              { label: 'Faturamento', value: fmtBRLshort(metrics.grossRevenue), sub: fmtBRL(metrics.grossRevenue), color: '#1C1814' },
-              { label: 'Finalizados', value: fmtNumber(metrics.finalizados), sub: `${finalizadosPct.toFixed(1).replace('.', ',')}% do total`, color: '#2E7D5B' },
-              { label: 'Cancelados', value: fmtNumber(metrics.cancelados), sub: `${canceladosPct.toFixed(1).replace('.', ',')}% do total`, color: metrics.cancelados > 0 ? '#B83A3A' : '#9B9287' },
-              { label: 'Taxa Cancelamento', value: `${metrics.cancellationRate.toFixed(1).replace('.', ',')}%`, sub: metrics.cancellationRate > 10 ? 'Acima do limite' : 'Dentro do esperado', color: metrics.cancellationRate > 10 ? '#B83A3A' : '#2E7D5B' },
-              { label: 'Ticket Médio', value: fmtBRLshort(metrics.avgTicket), sub: fmtBRL(metrics.avgTicket), color: '#1C1814' },
-              { label: 'RPA', value: fmtBRLshort(metrics.rpa), sub: `${fmtNumber(metrics.activeResellers)} rev. ativos`, color: '#1C1814' },
+              { label: 'Faturamento', value: fmtBRLshort(metrics.grossRevenue), sub: fmtBRL(metrics.grossRevenue), color: 'var(--vd-ink, #1C1814)' },
+              { label: 'Finalizados', value: fmtNumber(metrics.finalizados), sub: `${finalizadosPct.toFixed(1).replace('.', ',')}% do total`, color: 'var(--vd-success, #2E7D5B)' },
+              { label: 'Cancelados', value: fmtNumber(metrics.cancelados), sub: `${canceladosPct.toFixed(1).replace('.', ',')}% do total`, color: metrics.cancelados > 0 ? 'var(--vd-danger, #B83A3A)' : 'var(--vd-text-muted, #9B9287)' },
+              { label: 'Taxa Cancelamento', value: `${metrics.cancellationRate.toFixed(1).replace('.', ',')}%`, sub: metrics.cancellationRate > 10 ? 'Acima do limite' : 'Dentro do esperado', color: metrics.cancellationRate > 10 ? 'var(--vd-danger, #B83A3A)' : 'var(--vd-success, #2E7D5B)' },
+              { label: 'Ticket Médio', value: fmtBRLshort(metrics.avgTicket), sub: fmtBRL(metrics.avgTicket), color: 'var(--vd-ink, #1C1814)' },
+              { label: 'RPA', value: fmtBRLshort(metrics.rpa), sub: `${fmtNumber(metrics.activeResellers)} rev. ativos`, color: 'var(--vd-ink, #1C1814)' },
             ].map((k, i) => (
-              <div key={k.label} style={{ padding: '14px 16px', borderRight: i < 5 ? '1px solid #F2EEE6' : 'none' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 4 }}>
+              <div key={k.label} style={{ padding: '14px 16px', borderRight: i < 5 ? '1px solid var(--vd-bg-track, #F2EEE6)' : 'none' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 4 }}>
                   {k.label}
                 </div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: k.color, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
                   {k.value}
                 </div>
-                <div style={{ fontSize: 10, color: '#9B9287', marginTop: 2, fontFamily: 'JetBrains Mono, monospace' }}>
+                <div style={{ fontSize: 10, color: 'var(--vd-text-muted, #9B9287)', marginTop: 2, fontFamily: 'JetBrains Mono, monospace' }}>
                   {k.sub}
                 </div>
               </div>
@@ -331,11 +331,11 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
           </div>
 
           {/* Charts row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid #F2EEE6' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
 
             {/* Receita por segmentação */}
-            <div style={{ padding: '14px 18px', borderRight: '1px solid #F2EEE6' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 12 }}>
+            <div style={{ padding: '14px 18px', borderRight: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 12 }}>
                 Receita por Segmentação
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -345,10 +345,10 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
                   return (
                     <div key={t.id}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
-                        <span style={{ fontWeight: 500, color: '#1C1814' }}>{t.name}</span>
-                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#6B6258' }}>{fmtBRLshort(t.value)}</span>
+                        <span style={{ fontWeight: 500, color: 'var(--vd-ink, #1C1814)' }}>{t.name}</span>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>{fmtBRLshort(t.value)}</span>
                       </div>
-                      <div style={{ height: 5, background: '#F2EEE6', borderRadius: 3 }}>
+                      <div style={{ height: 5, background: 'var(--vd-bg-track, #F2EEE6)', borderRadius: 3 }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: style?.accent ?? '#C9A227', borderRadius: 3, transition: 'width 400ms' }} />
                       </div>
                     </div>
@@ -358,8 +358,8 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
             </div>
 
             {/* Status */}
-            <div style={{ padding: '14px 18px', borderRight: '1px solid #F2EEE6' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 12 }}>
+            <div style={{ padding: '14px 18px', borderRight: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 12 }}>
                 Status dos pedidos
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -396,13 +396,13 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 2 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                          <span style={{ color: '#1C1814', fontWeight: 500 }}>{s.label}</span>
+                          <span style={{ color: 'var(--vd-ink, #1C1814)', fontWeight: 500 }}>{s.label}</span>
                         </div>
-                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#6B6258' }}>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>
                           {fmtNumber(s.value)}
                         </span>
                       </div>
-                      <div style={{ height: 4, background: '#F2EEE6', borderRadius: 2 }}>
+                      <div style={{ height: 4, background: 'var(--vd-bg-track, #F2EEE6)', borderRadius: 2 }}>
                         <div style={{ height: '100%', width: `${s.pct}%`, background: s.color, borderRadius: 2, transition: 'width 400ms' }} />
                       </div>
                     </div>
@@ -413,20 +413,20 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
 
             {/* Modelo comercial + Top supervisores */}
             <div style={{ padding: '14px 18px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 12 }}>
                 Modelo Comercial
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {modeloEntries.map(([modelo, value]) => {
                   const pct = (value / maxModeloValue) * 100;
-                  const color = modeloColors[modelo] ?? '#6B6258';
+                  const color = modeloColors[modelo] ?? 'var(--vd-text-secondary, #6B6258)';
                   return (
                     <div key={modelo}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
-                        <span style={{ fontWeight: 500, color: '#1C1814' }}>{modelo}</span>
-                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#6B6258' }}>{fmtBRLshort(value)}</span>
+                        <span style={{ fontWeight: 500, color: 'var(--vd-ink, #1C1814)' }}>{modelo}</span>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>{fmtBRLshort(value)}</span>
                       </div>
-                      <div style={{ height: 5, background: '#F2EEE6', borderRadius: 3 }}>
+                      <div style={{ height: 5, background: 'var(--vd-bg-track, #F2EEE6)', borderRadius: 3 }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3, transition: 'width 400ms' }} />
                       </div>
                     </div>
@@ -435,7 +435,7 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
               </div>
               {supEntries.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 8 }}>
                     Top Supervisores
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -443,12 +443,12 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
                       <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                         <span style={{
                           width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                          background: i === 0 ? 'linear-gradient(135deg,#E8C547,#C9A227)' : '#F2EEE6',
+                          background: i === 0 ? 'linear-gradient(135deg,var(--vd-warning-border, #E8C547),#C9A227)' : 'var(--vd-bg-track, #F2EEE6)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 9, fontWeight: 700, color: i === 0 ? 'white' : '#6B6258',
+                          fontSize: 9, fontWeight: 700, color: i === 0 ? 'var(--vd-surface, #FFFFFF)' : 'var(--vd-text-secondary, #6B6258)',
                         }}>{i + 1}</span>
-                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1C1814' }}>{name}</span>
-                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#6B6258', flexShrink: 0 }}>{fmtBRLshort(value)}</span>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--vd-ink, #1C1814)' }}>{name}</span>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)', flexShrink: 0 }}>{fmtBRLshort(value)}</span>
                       </div>
                     ))}
                   </div>
@@ -460,7 +460,7 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
           {/* Daily revenue chart */}
           {dayEntries.length > 1 && (
             <div style={{ padding: '14px 18px 16px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9B9287', marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 10 }}>
                 Faturamento por dia do ciclo
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 80, position: 'relative' }}>
@@ -478,26 +478,26 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
                         <div style={{
                           position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
                           transform: 'translateX(-50%)',
-                          background: '#1C1814', color: '#FAF7F2',
+                          background: 'var(--vd-ink, #1C1814)', color: 'var(--vd-bg, #FAF7F2)',
                           borderRadius: 8, padding: '6px 10px', whiteSpace: 'nowrap',
                           pointerEvents: 'none', zIndex: 20, fontSize: 11,
                           boxShadow: '0 4px 16px rgba(28,24,20,0.3)',
                         }}>
-                          <div style={{ fontSize: 9, color: '#9B9287', marginBottom: 2, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Dia {d}</div>
+                          <div style={{ fontSize: 9, color: 'var(--vd-text-muted, #9B9287)', marginBottom: 2, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Dia {d}</div>
                           <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: '#C9A227' }}>{fmtBRL(v)}</div>
-                          <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #1C1814' }} />
+                          <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid var(--vd-ink, #1C1814)' }} />
                         </div>
                       )}
                       <div style={{
                         width: '100%', height: h, minHeight: 3,
-                        background: isHov ? '#C9A227' : '#E8C547',
+                        background: isHov ? '#C9A227' : 'var(--vd-warning-border, #E8C547)',
                         borderRadius: '3px 3px 0 0',
                         opacity: isHov ? 1 : 0.75,
                         transition: 'background 120ms, opacity 120ms',
                         boxShadow: isHov ? '0 0 6px rgba(201,162,39,0.6)' : 'none',
                       }} />
                       {dayEntries.length <= 31 && (
-                        <div style={{ fontSize: 9, color: isHov ? '#C9A227' : '#9B9287', lineHeight: 1, fontWeight: isHov ? 700 : 400, transition: 'color 120ms' }}>{d}</div>
+                        <div style={{ fontSize: 9, color: isHov ? '#C9A227' : 'var(--vd-text-muted, #9B9287)', lineHeight: 1, fontWeight: isHov ? 700 : 400, transition: 'color 120ms' }}>{d}</div>
                       )}
                     </div>
                   );
@@ -536,7 +536,7 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
     columnHelper.accessor('CodigoPedido', {
       header: 'Pedido',
       cell: info => (
-        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#6B6258' }}>
+        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)' }}>
           {info.getValue()}
         </span>
       ),
@@ -559,15 +559,15 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
     }),
     columnHelper.accessor('ResponsavelEstrutura', {
       header: 'Supervisor',
-      cell: info => <span style={{ color: '#3D362E', fontSize: 13 }}>{info.getValue()}</span>,
+      cell: info => <span style={{ color: 'var(--vd-text-strong, #3D362E)', fontSize: 13 }}>{info.getValue()}</span>,
     }),
     columnHelper.accessor('CidadeEntregaRetirada', {
       header: 'Cidade',
-      cell: info => <span style={{ color: '#3D362E', fontSize: 13 }}>{info.getValue()}</span>,
+      cell: info => <span style={{ color: 'var(--vd-text-strong, #3D362E)', fontSize: 13 }}>{info.getValue()}</span>,
     }),
     columnHelper.accessor('UFEntregaRetirada', {
       header: 'UF',
-      cell: info => <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#6B6258' }}>{info.getValue()}</span>,
+      cell: info => <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)' }}>{info.getValue()}</span>,
     }),
     columnHelper.accessor('ValorPraticado', {
       header: 'Valor Praticado',
@@ -581,11 +581,11 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
       header: 'Situação',
       cell: info => {
         const v = info.getValue();
-        const color = v === 'Cancelado' ? '#B83A3A' : v === 'Entregue' ? '#2E7D5B' : '#6B6258';
+        const color = v === 'Cancelado' ? 'var(--vd-danger, #B83A3A)' : v === 'Entregue' ? 'var(--vd-success, #2E7D5B)' : 'var(--vd-text-secondary, #6B6258)';
         return (
           <span style={{
             fontSize: 12, fontWeight: 500, color,
-            background: v === 'Cancelado' ? '#FBE5E9' : v === 'Entregue' ? '#E0F2E8' : '#F2EEE6',
+            background: v === 'Cancelado' ? 'var(--vd-danger-bg, #FBE5E9)' : v === 'Entregue' ? 'var(--vd-success-bg, #E0F2E8)' : 'var(--vd-bg-track, #F2EEE6)',
             padding: '2px 8px', borderRadius: 999,
           }}>
             {v}
@@ -595,7 +595,7 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
     }),
     columnHelper.accessor('ModeloComercial', {
       header: 'Modelo',
-      cell: info => <span style={{ fontSize: 12, color: '#6B6258' }}>{info.getValue()}</span>,
+      cell: info => <span style={{ fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)' }}>{info.getValue()}</span>,
     }),
   ], []);
 
@@ -619,7 +619,7 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
             Tabela completa
           </div>
           <h1 style={{ fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 0' }}>
@@ -656,8 +656,8 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
 
       {/* Filter builder — only shown when no reseller is locked in */}
       {!selectedReseller && (
-        <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 10 }}>
+        <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 10 }}>
             Filtros
           </div>
           <FilterBuilder />
@@ -669,12 +669,12 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
 
       {/* Table */}
       {orders.length === 0 ? (
-        <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, padding: 48, textAlign: 'center', color: '#6B6258' }}>
+        <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 48, textAlign: 'center', color: 'var(--vd-text-secondary, #6B6258)' }}>
           <i className="ph ph-table" style={{ fontSize: 32, display: 'block', marginBottom: 12 }} />
           Nenhum pedido encontrado com os filtros aplicados.
         </div>
       ) : (
-        <div style={{ background: 'white', border: '1px solid #E8E2D6', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, overflow: 'hidden' }}>
           <div style={{ maxHeight: 560, overflowY: 'auto', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
@@ -689,10 +689,10 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
                           cursor: header.column.getCanSort() ? 'pointer' : 'default',
                           fontSize: 11, fontWeight: 600,
                           letterSpacing: '0.06em', textTransform: 'uppercase',
-                          color: header.column.getIsSorted() ? '#1C1814' : '#6B6258',
+                          color: header.column.getIsSorted() ? 'var(--vd-ink, #1C1814)' : 'var(--vd-text-secondary, #6B6258)',
                           padding: '12px 14px',
-                          background: '#F2EEE6',
-                          borderBottom: '1px solid #E8E2D6',
+                          background: 'var(--vd-bg-track, #F2EEE6)',
+                          borderBottom: '1px solid var(--vd-border, #E8E2D6)',
                           position: 'sticky', top: 0,
                           userSelect: 'none',
                           whiteSpace: 'nowrap',
@@ -709,13 +709,13 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
                 {table.getRowModel().rows.map(row => (
                   <tr
                     key={row.id}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#FAF7F2')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--vd-bg, #FAF7F2)')}
                     onMouseLeave={e => (e.currentTarget.style.background = '')}
                   >
                     {row.getVisibleCells().map(cell => (
                       <td
                         key={cell.id}
-                        style={{ padding: '11px 14px', borderBottom: '1px solid #F2EEE6' }}
+                        style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)' }}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
@@ -728,9 +728,9 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
 
           {/* Pagination */}
           <div style={{
-            padding: '10px 14px', borderTop: '1px solid #E8E2D6',
+            padding: '10px 14px', borderTop: '1px solid var(--vd-border, #E8E2D6)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            fontSize: 12, color: '#6B6258',
+            fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)',
           }}>
             <span>
               {orders.length.toLocaleString('pt-BR')} pedidos ·{' '}

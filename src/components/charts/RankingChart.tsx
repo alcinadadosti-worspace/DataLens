@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,13 +11,14 @@ import RankingList, { RankingItem, BreakdownRow } from './RankingList';
 import { TIER_STYLES } from '../../design-system/tierStyles';
 import { fmtNumber } from '../../utils/formatters';
 import { useLojaThemeStore } from '../../store/useLojaThemeStore';
+import { useVDThemeStore } from '../../store/useVDThemeStore';
 
 // --- Categorias e estilos ------------------------------------------------
 // 3 botões, cada um é um "ciclo": o 1º clique ativa a categoria (mostrando o
 // estilo já selecionado nela); cliques seguintes, com a categoria já ativa,
 // avançam pro próximo estilo do ciclo.
 
-type Category = 'bar' | 'pie' | 'mais';
+export type Category = 'bar' | 'pie' | 'mais';
 type BarStyle = 'horizontal' | 'vertical' | 'stacked';
 type PieStyle = 'pie' | 'torta' | 'doughnut';
 type MaisStyle = 'treemap' | 'funil' | 'radar' | 'linha' | 'nuvem';
@@ -44,7 +45,7 @@ const MAIS_META: Record<MaisStyle, { icon: string; label: string }> = {
   nuvem: { icon: 'ph-cloud', label: 'Nuvem de palavras' },
 };
 
-const PALETTE = ['var(--loja-accent, #B26A3C)', 'var(--loja-accent-gold, #C9A227)', 'var(--loja-success, #2E7D5B)', '#6B7FE0', 'var(--loja-danger, #B83A3A)', 'var(--loja-text-secondary, #6B6258)', 'var(--loja-text-muted, #9B9287)', '#8A5CB8', '#3D9B9B', '#D88A4E'];
+const PALETTE = ['var(--chart-accent, #B26A3C)', 'var(--chart-accent-gold, #C9A227)', 'var(--chart-success, #2E7D5B)', '#6B7FE0', 'var(--chart-danger, #B83A3A)', 'var(--chart-text-secondary, #6B6258)', 'var(--chart-text-muted, #9B9287)', '#8A5CB8', '#3D9B9B', '#D88A4E'];
 const MEDAL_COLORS = [TIER_STYLES.ouro.accent, TIER_STYLES.prata.accent, TIER_STYLES.bronze.accent];
 const OTHERS_LABEL_PREFIX = 'Outros (';
 
@@ -60,7 +61,7 @@ function barColor(i: number, medals: boolean): string {
   return medals && i < 3 ? MEDAL_COLORS[i] : PALETTE[0];
 }
 
-const tooltipBoxStyle: React.CSSProperties = { background: 'var(--loja-ink, #1C1814)', border: 'none', borderRadius: 10, color: 'var(--loja-bg, #FAF7F2)', fontSize: 14, padding: '10px 14px' };
+const tooltipBoxStyle: React.CSSProperties = { background: 'var(--chart-ink, #1C1814)', border: 'none', borderRadius: 10, color: 'var(--chart-bg, #FAF7F2)', fontSize: 14, padding: '10px 14px' };
 
 /** Uma "página" do painel de detalhe (tela cheia) — clicar de novo no nome do item já selecionado avança pra próxima. */
 export interface DetailView {
@@ -90,6 +91,8 @@ interface RankingChartProps {
    * mostrada. Retornar null/lista vazia esconde a seção. Ignorado quando `detailViews` é passado.
    */
   getBreakdown?: (item: RankingItem) => BreakdownRow[] | null;
+  /** Título da seção de quebra quando `getBreakdown` é usado direto (sem `detailViews`, que já tem seu próprio título por página). Sem isso, cai no texto genérico "Colaboradores dessa unidade". */
+  breakdownLabel?: string;
   /**
    * Várias "páginas" de quebra para o painel de detalhe — clicar de novo no nome do item já
    * selecionado (no gráfico ou no próprio painel) avança pra próxima view do array, em ciclo.
@@ -98,6 +101,12 @@ interface RankingChartProps {
   detailViews?: DetailView[];
   /** Estatísticas extras (rótulo + valor) mostradas no painel de detalhe, acima da quebra. */
   getExtraStats?: (item: RankingItem) => ExtraStat[] | null;
+  /** Qual tema/modo pinta os tokens --chart-* deste gráfico (o painel em tela cheia escapa pra um portal, então precisa saber sozinho). */
+  mode?: 'loja' | 'vd';
+  /** Sobrescreve --chart-accent (ex. cor da segmentação ativa no Modo VD) neste gráfico específico. */
+  accentColor?: string;
+  /** Categoria de gráfico com que o componente abre (padrão 'bar') — ex. 'pie' para um painel de distribuição. */
+  initialCategory?: Category;
 }
 
 // --- Barras verticais ------------------------------------------------
@@ -105,13 +114,13 @@ interface RankingChartProps {
 const BarVerticalView: React.FC<{ items: RankingItem[]; medals: boolean; height: number; onSelect?: (i: RankingItem) => void }> = ({ items, medals, height, onSelect }) => (
   <ResponsiveContainer width="100%" height={height}>
     <BarChart data={items.map(i => ({ ...i, labelShort: truncateLabel(i.label) }))} margin={{ top: 10, right: 12, left: -10, bottom: 55 }}>
-      <CartesianGrid strokeDasharray="3 3" stroke="var(--loja-bg-subtle, #F2EEE2)" vertical={false} />
-      <XAxis dataKey="labelShort" tick={{ fontSize: 12, fill: 'var(--loja-text-secondary, #6B6258)' }} interval={0} angle={-30} textAnchor="end" height={64} />
-      <YAxis tick={{ fontSize: 12, fill: 'var(--loja-text-secondary, #6B6258)' }} />
+      <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-bg-subtle, #F2EEE2)" vertical={false} />
+      <XAxis dataKey="labelShort" tick={{ fontSize: 12, fill: 'var(--chart-text-secondary, #6B6258)' }} interval={0} angle={-30} textAnchor="end" height={64} />
+      <YAxis tick={{ fontSize: 12, fill: 'var(--chart-text-secondary, #6B6258)' }} />
       <Tooltip
         formatter={(_v: number, _n: string, p: any) => [p.payload.valueLabel, p.payload.label]}
         contentStyle={tooltipBoxStyle}
-        itemStyle={{ color: 'var(--loja-bg, #FAF7F2)' }}
+        itemStyle={{ color: 'var(--chart-bg, #FAF7F2)' }}
         cursor={{ fill: 'rgba(178,106,60,0.08)' }}
       />
       <Bar
@@ -136,7 +145,7 @@ function StackedTooltip({ active, payload }: any) {
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.label}</div>
       <div>Realizado: {item.valueLabel}</div>
       {item.metaTarget != null && (
-        <div style={{ color: item.value >= item.metaTarget ? 'var(--loja-success-bg-strong, #9FD4B8)' : 'var(--loja-danger-border, #F0A8B3)' }}>
+        <div style={{ color: item.value >= item.metaTarget ? 'var(--chart-success-bg-strong, #9FD4B8)' : 'var(--chart-danger-border, #F0A8B3)' }}>
           Meta PEF: {fmtNumber(item.metaTarget)} ({item.value >= item.metaTarget ? 'superada' : 'não superada'})
         </div>
       )}
@@ -158,14 +167,14 @@ const BarStackedView: React.FC<{ items: RankingItem[]; height: number; onSelect?
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 10, right: 12, left: -10, bottom: 55 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--loja-bg-subtle, #F2EEE2)" vertical={false} />
-        <XAxis dataKey="labelShort" tick={{ fontSize: 12, fill: 'var(--loja-text-secondary, #6B6258)' }} interval={0} angle={-30} textAnchor="end" height={64} />
-        <YAxis tick={{ fontSize: 12, fill: 'var(--loja-text-secondary, #6B6258)' }} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-bg-subtle, #F2EEE2)" vertical={false} />
+        <XAxis dataKey="labelShort" tick={{ fontSize: 12, fill: 'var(--chart-text-secondary, #6B6258)' }} interval={0} angle={-30} textAnchor="end" height={64} />
+        <YAxis tick={{ fontSize: 12, fill: 'var(--chart-text-secondary, #6B6258)' }} />
         <Tooltip content={<StackedTooltip />} cursor={{ fill: 'rgba(178,106,60,0.08)' }} />
         {hasMeta && <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v: string) => ({ atingido: 'Realizado', excedente: 'Acima da meta', faltante: 'Faltando p/ meta' } as Record<string, string>)[v] ?? v} />}
-        <Bar dataKey="atingido" stackId="a" name="atingido" fill="var(--loja-accent, #B26A3C)" radius={hasMeta ? [0, 0, 0, 0] : [6, 6, 0, 0]} onClick={click} cursor={onSelect ? 'pointer' : 'default'} />
-        <Bar dataKey="excedente" stackId="a" name="excedente" fill="var(--loja-success, #2E7D5B)" radius={[6, 6, 0, 0]} onClick={click} cursor={onSelect ? 'pointer' : 'default'} />
-        <Bar dataKey="faltante" stackId="a" name="faltante" fill="var(--loja-border, #E8E2D6)" radius={[6, 6, 0, 0]} onClick={click} cursor={onSelect ? 'pointer' : 'default'} />
+        <Bar dataKey="atingido" stackId="a" name="atingido" fill="var(--chart-accent, #B26A3C)" radius={hasMeta ? [0, 0, 0, 0] : [6, 6, 0, 0]} onClick={click} cursor={onSelect ? 'pointer' : 'default'} />
+        <Bar dataKey="excedente" stackId="a" name="excedente" fill="var(--chart-success, #2E7D5B)" radius={[6, 6, 0, 0]} onClick={click} cursor={onSelect ? 'pointer' : 'default'} />
+        <Bar dataKey="faltante" stackId="a" name="faltante" fill="var(--chart-border, #E8E2D6)" radius={[6, 6, 0, 0]} onClick={click} cursor={onSelect ? 'pointer' : 'default'} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -197,12 +206,15 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
   const containerRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<{ idx: number; x: number; y: number } | null>(null);
 
-  const sorted = [...items].sort((a, b) => b.value - a.value);
-  const top = sorted.slice(0, maxSlices);
-  const rest = sorted.slice(maxSlices);
-  const restTotal = rest.reduce((s, i) => s + i.value, 0);
-  const data: RankingItem[] = restTotal > 0 ? [...top, { label: `${OTHERS_LABEL_PREFIX}${rest.length})`, value: restTotal, valueLabel: fmtNumber(restTotal) }] : top;
-  const total = data.reduce((s, i) => s + i.value, 0) || 1;
+  // `hover` é estado local só desse view — sem memo, cada pointermove numa fatia (setHover)
+  // refazia sort/slice/reduce de `items` e remapeava todas as fatias à toa.
+  const data = useMemo<RankingItem[]>(() => {
+    const sorted = [...items].sort((a, b) => b.value - a.value);
+    const top = sorted.slice(0, maxSlices);
+    const rest = sorted.slice(maxSlices);
+    const restTotal = rest.reduce((s, i) => s + i.value, 0);
+    return restTotal > 0 ? [...top, { label: `${OTHERS_LABEL_PREFIX}${rest.length})`, value: restTotal, valueLabel: fmtNumber(restTotal) }] : top;
+  }, [items, maxSlices]);
 
   const size = 240;
   const cx = size / 2, cy = size / 2;
@@ -210,21 +222,25 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
   const rInner = style === 'doughnut' ? rOuter * 0.55 : 0;
   const explodeOffset = style === 'torta' ? 10 : 0;
 
-  let cursor = 0;
-  const slices = data.map((it, i) => {
-    const angleSpan = (it.value / total) * 360;
-    const startAngle = cursor;
-    const endAngle = cursor + angleSpan;
-    cursor = endAngle;
-    const midAngle = (startAngle + endAngle) / 2;
-    let sliceCx = cx, sliceCy = cy;
-    if (explodeOffset > 0) {
-      const off = polarToCartesian(cx, cy, explodeOffset, midAngle);
-      sliceCx = off.x;
-      sliceCy = off.y;
-    }
-    return { it, path: describeArc(sliceCx, sliceCy, rOuter, rInner, startAngle, endAngle), i };
-  });
+  const { slices, total } = useMemo(() => {
+    const total = data.reduce((s, i) => s + i.value, 0) || 1;
+    let cursor = 0;
+    const slices = data.map((it, i) => {
+      const angleSpan = (it.value / total) * 360;
+      const startAngle = cursor;
+      const endAngle = cursor + angleSpan;
+      cursor = endAngle;
+      const midAngle = (startAngle + endAngle) / 2;
+      let sliceCx = cx, sliceCy = cy;
+      if (explodeOffset > 0) {
+        const off = polarToCartesian(cx, cy, explodeOffset, midAngle);
+        sliceCx = off.x;
+        sliceCy = off.y;
+      }
+      return { it, path: describeArc(sliceCx, sliceCy, rOuter, rInner, startAngle, endAngle), i };
+    });
+    return { slices, total };
+  }, [data, cx, cy, rOuter, rInner, explodeOffset]);
 
   function handleMove(e: React.MouseEvent, idx: number) {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -250,7 +266,7 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
                 key={i}
                 d={path}
                 fill={PALETTE[i % PALETTE.length]}
-                stroke="var(--loja-bg, #FAF7F2)"
+                stroke="var(--chart-bg, #FAF7F2)"
                 strokeWidth={2}
                 opacity={hover && hover.idx !== i ? 0.72 : 1}
                 style={{ cursor: onSelect && !isOther ? 'pointer' : 'default', transition: 'opacity 150ms' }}
@@ -268,7 +284,7 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             pointerEvents: 'none', overflow: 'hidden', textAlign: 'center',
           }}>
-            <div style={{ fontSize: centerLabelFontSize, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</div>
+            <div style={{ fontSize: centerLabelFontSize, color: 'var(--chart-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</div>
             <div style={{ fontSize: centerValueFontSize, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.15 }}>{fmtNumber(total)}</div>
           </div>
         )}
@@ -283,7 +299,7 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginTop: 16 }}>
         {data.map((it, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--loja-text-strong, #3D362E)' }}>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--chart-text-strong, #3D362E)' }}>
             <span style={{ width: 11, height: 11, borderRadius: 3, background: PALETTE[i % PALETTE.length], display: 'inline-block', flexShrink: 0 }} />
             {it.label}
           </div>
@@ -314,7 +330,7 @@ const TreemapCell: React.FC<any> = ({ x, y, width, height, item, fill, onSelect 
 
   return (
     <g onClick={onSelect ? () => onSelect(item) : undefined} style={{ cursor: onSelect ? 'pointer' : 'default' }}>
-      <rect x={x} y={y} width={width} height={height} style={{ fill, stroke: 'var(--loja-bg, #FAF7F2)', strokeWidth: 2 }} />
+      <rect x={x} y={y} width={width} height={height} style={{ fill, stroke: 'var(--chart-bg, #FAF7F2)', strokeWidth: 2 }} />
       <title>{`${item.label}: ${item.valueLabel}`}</title>
       {!tiny && (
         <>
@@ -346,7 +362,7 @@ const TreemapView: React.FC<{ items: RankingItem[]; maxSlices: number; height: n
         data={data}
         dataKey="size"
         nameKey="name"
-        stroke="var(--loja-bg, #FAF7F2)"
+        stroke="var(--chart-bg, #FAF7F2)"
         isAnimationActive={false}
         content={<TreemapCell onSelect={onSelect} />}
       />
@@ -364,7 +380,7 @@ const FunnelView: React.FC<{ items: RankingItem[]; maxSlices: number; height: nu
         <Tooltip
           formatter={(_v: number, _n: string, p: any) => [p.payload.valueLabel, p.payload.label]}
           contentStyle={tooltipBoxStyle}
-          itemStyle={{ color: 'var(--loja-bg, #FAF7F2)' }}
+          itemStyle={{ color: 'var(--chart-bg, #FAF7F2)' }}
         />
         <Funnel
           dataKey="value"
@@ -374,7 +390,7 @@ const FunnelView: React.FC<{ items: RankingItem[]; maxSlices: number; height: nu
           onClick={onSelect ? (d: any) => onSelect(d.payload ?? d) : undefined}
           cursor={onSelect ? 'pointer' : 'default'}
         >
-          <LabelList position="right" dataKey="label" fill="var(--loja-text-strong, #3D362E)" fontSize={12} stroke="none" />
+          <LabelList position="right" dataKey="label" fill="var(--chart-text-strong, #3D362E)" fontSize={12} stroke="none" />
           {data.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
         </Funnel>
       </FunnelChart>
@@ -391,25 +407,25 @@ const RadarView: React.FC<{ items: RankingItem[]; maxSlices: number; height: num
   return (
     <ResponsiveContainer width="100%" height={height}>
       <RadarChart data={data} outerRadius="72%">
-        <PolarGrid stroke="var(--loja-border, #E8E2D6)" />
-        <PolarAngleAxis dataKey="labelShort" tick={{ fontSize: 11, fill: 'var(--loja-text-secondary, #6B6258)' }} />
-        <PolarRadiusAxis tick={{ fontSize: 10, fill: 'var(--loja-text-muted, #9B9287)' }} />
+        <PolarGrid stroke="var(--chart-border, #E8E2D6)" />
+        <PolarAngleAxis dataKey="labelShort" tick={{ fontSize: 11, fill: 'var(--chart-text-secondary, #6B6258)' }} />
+        <PolarRadiusAxis tick={{ fontSize: 10, fill: 'var(--chart-text-muted, #9B9287)' }} />
         <Tooltip
           formatter={(_v: number, _n: string, p: any) => [p.payload.fullItem.valueLabel, p.payload.fullItem.label]}
           contentStyle={tooltipBoxStyle}
-          itemStyle={{ color: 'var(--loja-bg, #FAF7F2)' }}
+          itemStyle={{ color: 'var(--chart-bg, #FAF7F2)' }}
         />
         <Radar
           dataKey="value"
-          stroke="var(--loja-accent, #B26A3C)"
-          fill="var(--loja-accent, #B26A3C)"
+          stroke="var(--chart-accent, #B26A3C)"
+          fill="var(--chart-accent, #B26A3C)"
           fillOpacity={0.32}
           isAnimationActive={false}
           dot={(props: any) => {
             const { cx, cy, payload, index } = props;
             return (
               <circle
-                key={index} cx={cx} cy={cy} r={4.5} fill="var(--loja-accent, #B26A3C)" stroke="var(--loja-bg, #FAF7F2)" strokeWidth={1.5}
+                key={index} cx={cx} cy={cy} r={4.5} fill="var(--chart-accent, #B26A3C)" stroke="var(--chart-bg, #FAF7F2)" strokeWidth={1.5}
                 style={{ cursor: onSelect ? 'pointer' : 'default' }}
                 onClick={onSelect ? () => onSelect(payload.fullItem) : undefined}
               />
@@ -430,22 +446,22 @@ const LineView: React.FC<{ items: RankingItem[]; maxSlices: number; height: numb
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 10, right: 16, left: -10, bottom: 14 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--loja-bg-subtle, #F2EEE2)" />
-        <XAxis dataKey="labelShort" tick={{ fontSize: 12, fill: 'var(--loja-text-secondary, #6B6258)' }} interval={0} angle={-25} textAnchor="end" height={56} />
-        <YAxis tick={{ fontSize: 12, fill: 'var(--loja-text-secondary, #6B6258)' }} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-bg-subtle, #F2EEE2)" />
+        <XAxis dataKey="labelShort" tick={{ fontSize: 12, fill: 'var(--chart-text-secondary, #6B6258)' }} interval={0} angle={-25} textAnchor="end" height={56} />
+        <YAxis tick={{ fontSize: 12, fill: 'var(--chart-text-secondary, #6B6258)' }} />
         <Tooltip
           formatter={(_v: number, _n: string, p: any) => [p.payload.valueLabel, p.payload.label]}
           contentStyle={tooltipBoxStyle}
-          itemStyle={{ color: 'var(--loja-bg, #FAF7F2)' }}
-          labelStyle={{ color: 'var(--loja-bg, #FAF7F2)' }}
+          itemStyle={{ color: 'var(--chart-bg, #FAF7F2)' }}
+          labelStyle={{ color: 'var(--chart-bg, #FAF7F2)' }}
         />
         <Line
-          type="monotone" dataKey="value" stroke="var(--loja-accent, #B26A3C)" strokeWidth={3}
+          type="monotone" dataKey="value" stroke="var(--chart-accent, #B26A3C)" strokeWidth={3}
           dot={(props: any) => {
             const { cx, cy, payload, index } = props;
             return (
               <circle
-                key={index} cx={cx} cy={cy} r={4} fill="var(--loja-accent, #B26A3C)" stroke="var(--loja-bg, #FAF7F2)" strokeWidth={1.5}
+                key={index} cx={cx} cy={cy} r={4} fill="var(--chart-accent, #B26A3C)" stroke="var(--chart-bg, #FAF7F2)" strokeWidth={1.5}
                 style={{ cursor: onSelect ? 'pointer' : 'default' }}
                 onClick={onSelect ? () => onSelect(payload) : undefined}
               />
@@ -508,12 +524,12 @@ const DetailPanel: React.FC<{
   }) : [];
 
   return (
-  <div style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--loja-border, #E8E2D6)', padding: 24, overflowY: 'auto' }}>
-    <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--loja-text-muted, #9B9287)', marginBottom: 14 }}>
+  <div style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--chart-border, #E8E2D6)', padding: 24, overflowY: 'auto' }}>
+    <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--chart-text-muted, #9B9287)', marginBottom: 14 }}>
       Detalhe
     </div>
     {!item ? (
-      <div style={{ color: 'var(--loja-text-muted, #9B9287)', fontSize: 14, lineHeight: 1.6 }}>
+      <div style={{ color: 'var(--chart-text-muted, #9B9287)', fontSize: 14, lineHeight: 1.6 }}>
         Clique numa barra, fatia, ponto ou palavra do gráfico para ver os detalhes aqui.
       </div>
     ) : (
@@ -524,20 +540,20 @@ const DetailPanel: React.FC<{
           style={{ cursor: visibleViews.length > 1 ? 'pointer' : 'default' }}
         >
           <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.25 }}>{item.label}</div>
-          {item.sublabel && <div style={{ fontSize: 13, color: 'var(--loja-text-muted, #9B9287)', marginTop: 4 }}>{item.sublabel}</div>}
+          {item.sublabel && <div style={{ fontSize: 13, color: 'var(--chart-text-muted, #9B9287)', marginTop: 4 }}>{item.sublabel}</div>}
         </div>
         <div style={{ fontSize: 30, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', marginTop: 16 }}>
           {item.valueLabel || fmtNumber(item.value)}
         </div>
-        {item.meta && <div style={{ fontSize: 13, color: 'var(--loja-text-secondary, #6B6258)', marginTop: 8 }}>{item.meta}</div>}
+        {item.meta && <div style={{ fontSize: 13, color: 'var(--chart-text-secondary, #6B6258)', marginTop: 8 }}>{item.meta}</div>}
         {item.metaTarget != null && (
           <div style={{
             marginTop: 18, padding: '12px 14px', borderRadius: 10,
-            background: item.value >= item.metaTarget ? 'var(--loja-success-bg, #E0F2E8)' : 'var(--loja-danger-bg, #FBE5E9)',
+            background: item.value >= item.metaTarget ? 'var(--chart-success-bg, #E0F2E8)' : 'var(--chart-danger-bg, #FBE5E9)',
           }}>
-            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--loja-text-secondary, #6B6258)' }}>Meta PEF</div>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--chart-text-secondary, #6B6258)' }}>Meta PEF</div>
             <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>{fmtNumber(item.metaTarget)}</div>
-            <div style={{ fontSize: 12, marginTop: 4, fontWeight: 600, color: item.value >= item.metaTarget ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-danger, #B83A3A)' }}>
+            <div style={{ fontSize: 12, marginTop: 4, fontWeight: 600, color: item.value >= item.metaTarget ? 'var(--chart-success, #2E7D5B)' : 'var(--chart-danger, #B83A3A)' }}>
               {item.value >= item.metaTarget ? 'Superou a meta' : 'Abaixo da meta'}
               {item.metaTarget > 0 && ` (${(((item.value - item.metaTarget) / item.metaTarget) * 100).toFixed(1).replace('.', ',')}%)`}
             </div>
@@ -549,10 +565,10 @@ const DetailPanel: React.FC<{
             {extraStats.map((s, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 12,
+                background: 'var(--chart-surface, #FFFFFF)', border: '1px solid var(--chart-border, #E8E2D6)', borderRadius: 12,
                 padding: '11px 14px', boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
               }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--loja-text-secondary, #6B6258)', minWidth: 0 }}>{s.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--chart-text-secondary, #6B6258)', minWidth: 0 }}>{s.label}</span>
                 <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap', flexShrink: 0 }}>{s.value}</span>
               </div>
             ))}
@@ -567,8 +583,8 @@ const DetailPanel: React.FC<{
                 title={v.label}
                 style={{
                   width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: v.key === activeViewKey ? 'var(--loja-ink, #1C1814)' : 'var(--loja-bg-subtle, #F2EEE2)',
-                  color: v.key === activeViewKey ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-text-muted, #9B9287)',
+                  background: v.key === activeViewKey ? 'var(--chart-ink, #1C1814)' : 'var(--chart-bg-subtle, #F2EEE2)',
+                  color: v.key === activeViewKey ? 'var(--chart-surface, #FFFFFF)' : 'var(--chart-text-muted, #9B9287)',
                 }}
               >
                 <i className={`ph ${v.icon}`} style={{ fontSize: 13 }} />
@@ -579,7 +595,7 @@ const DetailPanel: React.FC<{
 
         {breakdown && breakdown.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--loja-text-muted, #9B9287)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--chart-text-muted, #9B9287)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               {breakdownLabel ?? 'Colaboradores dessa unidade'}
               {visibleViews.length > 1 && <i className="ph ph-arrow-clockwise" style={{ fontSize: 12 }} title="Clique no nome da unidade acima para alternar" />}
             </div>
@@ -590,10 +606,10 @@ const DetailPanel: React.FC<{
                     <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.label}</span>
                     <span style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{b.valueLabel}</span>
                   </div>
-                  <div style={{ height: 6, borderRadius: 3, background: 'var(--loja-bg-track, #F2EEE6)', overflow: 'hidden', marginTop: 5 }}>
-                    <div style={{ height: '100%', width: `${Math.max(b.pct, 1.5)}%`, background: 'var(--loja-accent, #B26A3C)', borderRadius: 3 }} />
+                  <div style={{ height: 6, borderRadius: 3, background: 'var(--chart-bg-track, #F2EEE6)', overflow: 'hidden', marginTop: 5 }}>
+                    <div style={{ height: '100%', width: `${Math.max(b.pct, 1.5)}%`, background: 'var(--chart-accent, #B26A3C)', borderRadius: 3 }} />
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 3 }}>
+                  <div style={{ fontSize: 11, color: 'var(--chart-text-muted, #9B9287)', marginTop: 3 }}>
                     {b.meta ?? `${b.pct.toFixed(1).replace('.', ',')}% da métrica`}
                   </div>
                 </div>
@@ -602,7 +618,7 @@ const DetailPanel: React.FC<{
           </div>
         )}
         {detailViews && detailViews.length > 0 && visibleViews.length === 0 && (!breakdown || breakdown.length === 0) && (
-          <div style={{ marginTop: 20, fontSize: 12, color: 'var(--loja-text-muted, #9B9287)', fontStyle: 'italic' }}>
+          <div style={{ marginTop: 20, fontSize: 12, color: 'var(--chart-text-muted, #9B9287)', fontStyle: 'italic' }}>
             Nenhum dado extra disponível pra essa unidade.
           </div>
         )}
@@ -614,9 +630,13 @@ const DetailPanel: React.FC<{
 
 // --- Componente principal ------------------------------------------------
 
-const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, emptyMessage = 'Sem dados', maxSlices = 8, getBreakdown, detailViews, getExtraStats }) => {
-  const theme = useLojaThemeStore(s => s.theme);
-  const [category, setCategory] = useState<Category>('bar');
+const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, emptyMessage = 'Sem dados', maxSlices = 8, getBreakdown, breakdownLabel, detailViews, getExtraStats, mode = 'loja', accentColor, initialCategory = 'bar' }) => {
+  const lojaTheme = useLojaThemeStore(s => s.theme);
+  const vdTheme = useVDThemeStore(s => s.theme);
+  const themeAttr = mode === 'vd' ? 'data-vd-theme' : 'data-loja-theme';
+  const theme = mode === 'vd' ? vdTheme : lojaTheme;
+  const accentStyle = accentColor ? ({ '--chart-accent': accentColor, '--chart-accent-gold': accentColor } as React.CSSProperties) : undefined;
+  const [category, setCategory] = useState<Category>(initialCategory);
   const [barStyle, setBarStyle] = useState<BarStyle>('horizontal');
   const [pieStyle, setPieStyle] = useState<PieStyle>('pie');
   const [maisStyle, setMaisStyle] = useState<MaisStyle>('treemap');
@@ -692,7 +712,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
 
   const toolbar = (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: 3, background: 'var(--loja-bg-subtle, #F2EEE2)', borderRadius: 9, padding: 4 }}>
+      <div style={{ display: 'flex', gap: 3, background: 'var(--chart-bg-subtle, #F2EEE2)', borderRadius: 9, padding: 4 }}>
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => handleCategoryClick('bar')}
@@ -700,8 +720,8 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 32, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
-            background: category === 'bar' ? 'var(--loja-ink, #1C1814)' : 'transparent',
-            color: category === 'bar' ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-text-secondary, #6B6258)',
+            background: category === 'bar' ? 'var(--chart-ink, #1C1814)' : 'transparent',
+            color: category === 'bar' ? 'var(--chart-surface, #FFFFFF)' : 'var(--chart-text-secondary, #6B6258)',
             transition: 'background 220ms cubic-bezier(0.22, 1, 0.36, 1), color 220ms cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
@@ -714,8 +734,8 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 32, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
-            background: category === 'pie' ? 'var(--loja-ink, #1C1814)' : 'transparent',
-            color: category === 'pie' ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-text-secondary, #6B6258)',
+            background: category === 'pie' ? 'var(--chart-ink, #1C1814)' : 'transparent',
+            color: category === 'pie' ? 'var(--chart-surface, #FFFFFF)' : 'var(--chart-text-secondary, #6B6258)',
             transition: 'background 220ms cubic-bezier(0.22, 1, 0.36, 1), color 220ms cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
@@ -728,8 +748,8 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 32, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
-            background: category === 'mais' ? 'var(--loja-ink, #1C1814)' : 'transparent',
-            color: category === 'mais' ? 'var(--loja-surface, #FFFFFF)' : 'var(--loja-text-secondary, #6B6258)',
+            background: category === 'mais' ? 'var(--chart-ink, #1C1814)' : 'transparent',
+            color: category === 'mais' ? 'var(--chart-surface, #FFFFFF)' : 'var(--chart-text-secondary, #6B6258)',
             transition: 'background 220ms cubic-bezier(0.22, 1, 0.36, 1), color 220ms cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
@@ -742,8 +762,8 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
         title="Tela cheia — clique numa parte do gráfico para ver os detalhes ao lado"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 32, height: 32, borderRadius: 9, border: '1px solid var(--loja-border, #E8E2D6)', cursor: 'pointer',
-          background: 'var(--loja-surface, #FFFFFF)', color: 'var(--loja-text-secondary, #6B6258)',
+          width: 32, height: 32, borderRadius: 9, border: '1px solid var(--chart-border, #E8E2D6)', cursor: 'pointer',
+          background: 'var(--chart-surface, #FFFFFF)', color: 'var(--chart-text-secondary, #6B6258)',
         }}
       >
         <i className="ph ph-arrows-out" style={{ fontSize: 15 }} />
@@ -755,21 +775,24 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>{toolbar}</div>
-        <div style={{ padding: '28px 0', textAlign: 'center', color: 'var(--loja-text-muted, #9B9287)', fontSize: 14 }}>{emptyMessage}</div>
+        <div style={{ padding: '28px 0', textAlign: 'center', color: 'var(--chart-text-muted, #9B9287)', fontSize: 14 }}>{emptyMessage}</div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div style={accentStyle}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>{toolbar}</div>
-      {renderBody(300)}
+      {/* A versão compacta fica totalmente coberta pelo modal em tela cheia (z-index 1000) — não
+          desenhá-la enquanto ele está aberto evita manter 2 instâncias completas do Recharts
+          (ResponsiveContainer, ResizeObserver, listeners) vivas ao mesmo tempo pro mesmo dado. */}
+      {!fullscreen && renderBody(300)}
 
       {createPortal(
       <AnimatePresence>
       {fullscreen && (
         <motion.div
-          data-loja-theme={theme}
+          {...{ [themeAttr]: theme }}
           onClick={() => { setFullscreen(false); setSelected(null); }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -778,6 +801,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
           style={{
             position: 'fixed', inset: 0, background: 'rgba(28,24,20,0.6)', zIndex: 1000,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+            ...accentStyle,
           }}
         >
           <motion.div
@@ -787,16 +811,16 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             style={{
-              background: 'var(--loja-bg, #FAF7F2)', borderRadius: 20, width: 'min(1200px, 100%)', height: 'min(760px, 100%)',
+              background: 'var(--chart-bg, #FAF7F2)', borderRadius: 20, width: 'min(1200px, 100%)', height: 'min(760px, 100%)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--loja-border, #E8E2D6)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--chart-border, #E8E2D6)', flexShrink: 0 }}>
               {toolbar}
               <motion.button
           whileTap={{ scale: 0.9 }}
                 onClick={() => { setFullscreen(false); setSelected(null); }}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--loja-text-secondary, #6B6258)', fontSize: 20 }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--chart-text-secondary, #6B6258)', fontSize: 20 }}
               >
                 <i className="ph ph-x" />
               </motion.button>
@@ -814,7 +838,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
                   <DetailPanel
                     item={selected}
                     breakdown={currentBreakdown}
-                    breakdownLabel={activeView?.label}
+                    breakdownLabel={activeView?.label ?? breakdownLabel}
                     extraStats={selected && getExtraStats ? getExtraStats(selected) : null}
                     detailViews={detailViews}
                     activeViewKey={activeView?.key}

@@ -46,7 +46,7 @@ const TierDonutChart: React.FC<TierDonutChartProps> = ({ data, size = 180, cente
       {arcs.map((a, i) => {
         const style = TIER_STYLES[a.tierId];
         const isDiamante = a.tierId === 'diamante';
-        const fill = style ? style.accent : (a.color ?? '#6B6258');
+        const fill = a.color ?? (style ? style.accent : '#6B6258');
         return (
           <path key={a.tierId + i}
             d={arcPath(a.start, a.end)}
@@ -57,13 +57,13 @@ const TierDonutChart: React.FC<TierDonutChartProps> = ({ data, size = 180, cente
       })}
       {centerLabel && (
         <text x={cx} y={cy - 4} textAnchor="middle"
-          style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 11, fill: '#6B6258', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 11, fill: 'var(--chart-text-muted, #6B6258)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           {centerLabel}
         </text>
       )}
       {centerValue && (
         <text x={cx} y={cy + 16} textAnchor="middle"
-          style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 18, fill: '#1C1814', fontWeight: 600, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+          style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 18, fill: 'var(--chart-text-strong, #1C1814)', fontWeight: 600, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
           {centerValue}
         </text>
       )}

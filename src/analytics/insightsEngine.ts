@@ -106,11 +106,12 @@ export function generateInsights(
     .sort((a, b) => b[1] - a[1]);
   if (tierRevenues.length > 0) {
     const [tierId, value] = tierRevenues[0];
+    const tierName = TIER_DEFINITIONS.find(t => t.id === tierId)?.name ?? tierId;
     insights.push({
       id: 'top-tier-revenue',
       type: 'positive',
       icon: 'ph-medal',
-      title: `Tier ${tierId} lidera em receita`,
+      title: `Tier ${tierName} lidera em receita`,
       description: `Gerou ${fmtBRLshort(value)} no período selecionado.`,
     });
   }

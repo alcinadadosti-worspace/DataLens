@@ -17,6 +17,34 @@ export interface TierStyle {
 }
 
 export const TIER_STYLES: Record<string, TierStyle> = {
+  revendedor: {
+    grad: 'linear-gradient(135deg, #EBD9C4 0%, #B99172 45%, #6B4A32 100%)',
+    softGrad: 'linear-gradient(135deg, #F5EDE1 0%, #E3D2BE 100%)',
+    fg: '#3D2A1A', accent: '#9C7355', bg: '#F2E8DA',
+    glow: '0 8px 24px rgba(156,115,85,0.24)',
+    badgeFg: '#2A1C10',
+    intensity: 0,
+    metalGrad: 'linear-gradient(135deg, #F2E4D2 0%, #B99172 30%, #F7EFE2 50%, #4A3220 70%, #B99172 100%)',
+    bgFar:  '#F5EDE1',
+    bgMid:  '#E8D9C4',
+    bgNear: '#D3BC9E',
+    particle: '#B99172',
+    ringGlow: 'rgba(156,115,85,0.4)',
+  },
+  cobre: {
+    grad: 'linear-gradient(135deg, #F5CBA0 0%, #C87F42 45%, #7A3B10 100%)',
+    softGrad: 'linear-gradient(135deg, #FBE8D3 0%, #F0C9A0 100%)',
+    fg: '#4A2308', accent: '#B8703A', bg: '#FBE8D3',
+    glow: '0 8px 24px rgba(184,112,58,0.28)',
+    badgeFg: '#2E1404',
+    intensity: 0.5,
+    metalGrad: 'linear-gradient(135deg, #F8D9B8 0%, #C87F42 28%, #FFE9CC 48%, #5C2A08 70%, #C87F42 100%)',
+    bgFar:  '#FBE8D3',
+    bgMid:  '#F0D3AC',
+    bgNear: '#DCA26A',
+    particle: '#C87F42',
+    ringGlow: 'rgba(184,112,58,0.5)',
+  },
   bronze: {
     grad: 'linear-gradient(135deg, #F4D3B0 0%, #C9824D 45%, #8B4A1F 100%)',
     softGrad: 'linear-gradient(135deg, #FAEDDF 0%, #F4D3B0 100%)',
@@ -140,7 +168,9 @@ export interface TierDefinition {
 }
 
 export const TIER_DEFINITIONS: TierDefinition[] = [
-  { id: 'bronze', name: 'Bronze', material: 'Cobre', papelValue: 'Bronze' },
+  { id: 'revendedor', name: 'Revendedor', material: 'Inicial', papelValue: 'Revendedor' },
+  { id: 'cobre', name: 'Cobre', material: 'Cobre', papelValue: 'Cobre' },
+  { id: 'bronze', name: 'Bronze', material: 'Bronze', papelValue: 'Bronze' },
   { id: 'prata', name: 'Prata', material: 'Prata', papelValue: 'Prata' },
   { id: 'ouro', name: 'Ouro', material: 'Ouro', papelValue: 'Ouro' },
   { id: 'platina', name: 'Platina', material: 'Platina', papelValue: 'Platina' },

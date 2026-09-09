@@ -5,6 +5,7 @@ import { useFilterStore } from '../../store/useFilterStore';
 import { useOrderStore } from '../../store/useOrderStore';
 import { useAppModeStore } from '../../store/useAppModeStore';
 import GlossyContent from '../ui/GlossyContent';
+import VDThemeToggleButton from '../ui/VDThemeToggleButton';
 
 interface TopBarProps {
   onNavigate: (route: string) => void;
@@ -28,9 +29,9 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
       position: 'fixed',
       top: 0, left: 0, right: 0,
       height: 64,
-      background: 'rgba(255,255,255,0.85)',
+      background: 'var(--vd-surface-translucent, rgba(255,255,255,0.85))',
       backdropFilter: 'blur(8px)',
-      borderBottom: '1px solid #E8E2D6',
+      borderBottom: '1px solid var(--vd-border, #E8E2D6)',
       display: 'flex',
       alignItems: 'center',
       padding: '0 24px',
@@ -40,14 +41,19 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
           width: 32, height: 32, borderRadius: 8,
-          background: 'linear-gradient(135deg, #1C1814 0%, #3D362E 100%)',
+          background: 'linear-gradient(135deg, var(--vd-ink, #1C1814) 0%, var(--vd-text-strong, #3D362E) 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'Fraunces, serif', color: '#FAF7F2', fontSize: 18, fontWeight: 600,
+          fontFamily: 'Fraunces, serif', color: 'var(--vd-bg, #FAF7F2)', fontSize: 18, fontWeight: 600,
         }}>
           D
         </div>
-        <div style={{ fontFamily: 'Fraunces, serif', fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>
-          DataLens
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+          <div style={{ fontFamily: 'Fraunces, serif', fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--vd-ink, #1C1814)' }}>
+            DataLens
+          </div>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--vd-accent, #C9A227)' }}>
+            Modo VD
+          </div>
         </div>
       </div>
 
@@ -55,11 +61,11 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
 
       {fileName && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-          <div style={{ fontSize: 12, color: '#1C1814', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+          <div style={{ fontSize: 12, color: 'var(--vd-ink, #1C1814)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
             {fileName} · {rowCount.toLocaleString('pt-BR')} pedidos
           </div>
           {(dateRange.from || dateRange.to) && (
-            <div style={{ fontSize: 10, color: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}>
+            <div style={{ fontSize: 10, color: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}>
               {fmtDate(dateRange.from)} – {fmtDate(dateRange.to)}
             </div>
           )}
@@ -85,6 +91,8 @@ const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
           </button>
         )}
       </div>
+
+      <VDThemeToggleButton />
 
       <Button
         variant="secondary"

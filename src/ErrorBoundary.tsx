@@ -36,13 +36,27 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
             {'\n\n'}
             {this.state.error.stack}
           </div>
-          <button
-            className="glossy-btn"
-            onClick={() => this.setState({ error: null })}
-            style={{ borderRadius: 8, fontSize: 14 }}
-          >
-            <GlossyContent>Tentar novamente</GlossyContent>
-          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              className="glossy-btn"
+              onClick={() => this.setState({ error: null })}
+              style={{ borderRadius: 8, fontSize: 14 }}
+              title="Tenta renderizar de novo sem recarregar — resolve falhas pontuais de render"
+            >
+              <GlossyContent>Tentar novamente</GlossyContent>
+            </button>
+            {/* "Tentar novamente" só re-renderiza a mesma árvore com o mesmo estado dos stores — se
+                o erro veio de estado corrompido (não um glitch pontual de render), ele volta a
+                acontecer na hora. Esse botão dá uma saída real: recarrega a página do zero. */}
+            <button
+              className="glossy-btn"
+              onClick={() => window.location.reload()}
+              style={{ borderRadius: 8, fontSize: 14 }}
+              title="Recarrega a página do zero — use se 'Tentar novamente' não resolver"
+            >
+              <GlossyContent>Recarregar página</GlossyContent>
+            </button>
+          </div>
         </div>
       );
     }

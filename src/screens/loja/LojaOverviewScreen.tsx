@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import KpiCard from '../../components/ui/KpiCard';
 import ChartCard from '../../components/charts/ChartCard';
-import RankingChart from '../../components/loja/RankingChart';
+import RankingChart from '../../components/charts/RankingChart';
 import Button from '../../components/ui/Button';
 import PageTitle from '../../components/ui/PageTitle';
 import InfoHint from '../../components/ui/InfoHint';
@@ -10,8 +10,8 @@ import {
   computeOverallKPIs, rankLojas, consistencyCheck, crossInsights, optionalConsistencyWarnings, aggregateConsultoresPorLoja,
   findByPersonName, classifyAbcByLoja, dailySeries, dayOfWeekAverages, hourlyDistribution,
 } from '../../analytics/lojaMetrics';
-import { RankingItem, BreakdownRow } from '../../components/loja/RankingList';
-import { DetailView } from '../../components/loja/RankingChart';
+import { RankingItem, BreakdownRow } from '../../components/charts/RankingList';
+import { DetailView } from '../../components/charts/RankingChart';
 import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
 
 interface LojaOverviewScreenProps {
@@ -20,6 +20,47 @@ interface LojaOverviewScreenProps {
 
 const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
+
+  // Agregados caros desta tela (rankLojas, crossInsights — que por sua vez roda aggregateByName +
+  // consistencyCheck de novo por dentro — e a reconstrução da Meta PEF por loja), memoizados por
+  // `dataset`. Fica antes do guard de "sem dados" abaixo pra manter a ordem de hooks estável entre
+  // renders (o memo em si é seguro de chamar com dataset nulo, só devolve os defaults vazios).
+  const overview = useMemo(() => {
+    if (!dataset) {
+      return {
+        kpis: null, ranking: [], consistency: null, insights: [] as string[],
+        optionalWarnings: [] as string[], receitaTotalIndicador: undefined, rankingItems: [] as RankingItem[],
+      };
+    }
+    const kpis = computeOverallKPIs(dataset.lojas);
+    const ranking = rankLojas(dataset.lojas);
+    const consistency = consistencyCheck(dataset);
+    const insights = crossInsights(dataset);
+    const optionalWarnings = optionalConsistencyWarnings(dataset);
+    const receitaTotalIndicador = dataset.resumoPerformance?.cp?.find(i => i.indicador.toUpperCase().includes('RECEITA TOTAL'));
+
+    // Meta PEF por loja (Resumo_de_Performance_Indicadores_Loja.xlsx, aba PDV) — o arquivo só traz a
+    // variação % vs. a meta, não o valor absoluto, então a meta é reconstruída a partir dela:
+    // vsMetaPEFPct = (receita - meta) / meta * 100  =>  meta = receita / (1 + vsMetaPEFPct/100).
+    const metaPorLoja = new Map<string, number>();
+    for (const r of dataset.resumoPerformance?.pdv ?? []) {
+      if (r.vsMetaPEFPct != null && r.vsMetaPEFPct > -100) {
+        metaPorLoja.set(r.nome, r.receita / (1 + r.vsMetaPEFPct / 100));
+      }
+    }
+
+    const rankingItems: RankingItem[] = ranking.map(r => ({
+      label: r.key,
+      value: r.gmv,
+      valueLabel: fmtBRLshort(r.gmv),
+      meta: `${r.participacaoPct.toFixed(1).replace('.', ',')}% · ${fmtNumber(r.qtdBoletos)} boletos`,
+      metaTarget: r.lojaCodigos[0] ? metaPorLoja.get(r.lojaCodigos[0]) : undefined,
+      lojaCodigo: r.lojaCodigos[0],
+    }));
+
+    return { kpis, ranking, consistency, insights, optionalWarnings, receitaTotalIndicador, rankingItems };
+  }, [dataset]);
+  const { kpis, consistency, insights, optionalWarnings, receitaTotalIndicador, rankingItems } = overview;
 
   if (!dataset) {
     return (
@@ -37,32 +78,9 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       </div>
     );
   }
-
-  const kpis = computeOverallKPIs(dataset.lojas);
-  const ranking = rankLojas(dataset.lojas);
-  const consistency = consistencyCheck(dataset);
-  const insights = crossInsights(dataset);
-  const optionalWarnings = optionalConsistencyWarnings(dataset);
-  const receitaTotalIndicador = dataset.resumoPerformance?.cp?.find(i => i.indicador.toUpperCase().includes('RECEITA TOTAL'));
-
-  // Meta PEF por loja (Resumo_de_Performance_Indicadores_Loja.xlsx, aba PDV) — o arquivo só traz a
-  // variação % vs. a meta, não o valor absoluto, então a meta é reconstruída a partir dela:
-  // vsMetaPEFPct = (receita - meta) / meta * 100  =>  meta = receita / (1 + vsMetaPEFPct/100).
-  const metaPorLoja = new Map<string, number>();
-  for (const r of dataset.resumoPerformance?.pdv ?? []) {
-    if (r.vsMetaPEFPct != null && r.vsMetaPEFPct > -100) {
-      metaPorLoja.set(r.nome, r.receita / (1 + r.vsMetaPEFPct / 100));
-    }
-  }
-
-  const rankingItems: RankingItem[] = ranking.map(r => ({
-    label: r.key,
-    value: r.gmv,
-    valueLabel: fmtBRLshort(r.gmv),
-    meta: `${r.participacaoPct.toFixed(1).replace('.', ',')}% · ${fmtNumber(r.qtdBoletos)} boletos`,
-    metaTarget: r.lojaCodigos[0] ? metaPorLoja.get(r.lojaCodigos[0]) : undefined,
-    lojaCodigo: r.lojaCodigos[0],
-  }));
+  // O memo acima sempre computa kpis/consistency juntos com dataset não-nulo — nunca deveria cair
+  // aqui, mas estreita o tipo pro TS (em vez de espalhar `!` em cada uso abaixo).
+  if (!kpis || !consistency) return null;
 
   // Painel de detalhe (tela cheia) de uma loja: 8 "páginas" diferentes, alternadas clicando de
   // novo no nome da loja já selecionada (mesmo padrão de ciclo do seletor barra/pizza/mais).

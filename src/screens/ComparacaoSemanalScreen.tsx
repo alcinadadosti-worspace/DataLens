@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell, ReferenceLine,
 } from 'recharts';
-import { useOrderStore } from '../store/useOrderStore';
+import { useFilteredOrders } from '../hooks/useAnalytics';
 import { parseBRDate } from '../utils/dateUtils';
 import { fmtBRLshort, fmtNumber } from '../utils/formatters';
 import ChartCard from '../components/charts/ChartCard';
@@ -54,10 +54,10 @@ type MetricKey = 'faturamento' | 'pedidos' | 'finalizados' | 'cancelados' | 'tic
 
 const METRICS: { key: MetricKey; label: string; fmt: (v: number) => string; color: string }[] = [
   { key: 'faturamento',  label: 'Faturamento',   fmt: fmtBRLshort,                               color: '#5B6BBF' },
-  { key: 'pedidos',      label: 'Pedidos',        fmt: fmtNumber,                                 color: '#2E7D5B' },
+  { key: 'pedidos',      label: 'Pedidos',        fmt: fmtNumber,                                 color: 'var(--vd-success, #2E7D5B)' },
   { key: 'ticketMedio',  label: 'Ticket Médio',   fmt: fmtBRLshort,                               color: '#C07A2B' },
   { key: 'ansRate',      label: 'ANS %',          fmt: v => v.toFixed(1).replace('.', ',') + '%', color: '#8B3A8F' },
-  { key: 'rpa',          label: 'RPA',            fmt: fmtBRLshort,                               color: '#B83A3A' },
+  { key: 'rpa',          label: 'RPA',            fmt: fmtBRLshort,                               color: 'var(--vd-danger, #B83A3A)' },
   { key: 'cancelados',   label: 'Cancelamentos',  fmt: fmtNumber,                                 color: '#D97B3A' },
 ];
 
@@ -67,7 +67,7 @@ const WINDOW_LABELS: Record<number, string> = { 4: 'Últimas 4', 8: 'Últimas 8'
 const COMP_WINDOW_OPTIONS: (2 | 3 | 4)[] = [2, 3, 4];
 
 const COLOR_A = '#5B6BBF';
-const COLOR_B = '#2E7D5B';
+const COLOR_B = 'var(--vd-success, #2E7D5B)';
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 
@@ -279,18 +279,18 @@ const RankCard: React.FC<RankCardProps> = ({ icon, label, accentColor, itemA, it
       {item ? (
         <>
           <div style={{
-            fontSize: 13, fontWeight: 600, color: '#1C1814',
+            fontSize: 13, fontWeight: 600, color: 'var(--vd-ink, #1C1814)',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             maxWidth: '100%',
           }} title={item.name}>
             {item.name}
           </div>
           {item.sub && (
-            <div style={{ fontSize: 11, color: '#6B6258', marginBottom: 4 }}>{item.sub}</div>
+            <div style={{ fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4 }}>{item.sub}</div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
-              flex: 1, height: 5, background: '#F2EEE6', borderRadius: 3, overflow: 'hidden',
+              flex: 1, height: 5, background: 'var(--vd-bg-track, #F2EEE6)', borderRadius: 3, overflow: 'hidden',
             }}>
               <div style={{
                 width: `${(item.value / maxVal) * 100}%`,
@@ -304,14 +304,14 @@ const RankCard: React.FC<RankCardProps> = ({ icon, label, accentColor, itemA, it
           </div>
         </>
       ) : (
-        <div style={{ fontSize: 12, color: '#9B9287', fontStyle: 'italic' }}>Sem dados</div>
+        <div style={{ fontSize: 12, color: 'var(--vd-text-muted, #9B9287)', fontStyle: 'italic' }}>Sem dados</div>
       )}
     </div>
   );
 
   return (
     <div style={{
-      background: 'white', border: '1px solid #E8E2D6', borderRadius: 12,
+      background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 12,
       padding: '14px 16px',
       borderLeft: `3px solid ${accentColor}`,
       boxShadow: '0 1px 4px rgba(28,24,20,0.05)',
@@ -319,7 +319,7 @@ const RankCard: React.FC<RankCardProps> = ({ icon, label, accentColor, itemA, it
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
         <i className={`ph ph-${icon}`} style={{ fontSize: 14, color: accentColor }} />
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
           {label}
         </span>
       </div>
@@ -349,23 +349,23 @@ const MetricCompCard: React.FC<MetricCompCardProps> = ({
 
   return (
     <div style={{
-      background: 'white', border: '1px solid #E8E2D6', borderRadius: 12,
+      background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 12,
       padding: '14px 16px', boxShadow: '0 1px 4px rgba(28,24,20,0.05)',
     }}>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 10 }}>
         {label}
       </div>
 
       {[
-        { val: prevValue, lbl: prevLabel, barColor: '#D8D0C0', textColor: '#6B6258' },
-        { val: lastValue, lbl: lastLabel, barColor: color, textColor: '#1C1814' },
+        { val: prevValue, lbl: prevLabel, barColor: 'var(--vd-border-strong, #D8D0C0)', textColor: 'var(--vd-text-secondary, #6B6258)' },
+        { val: lastValue, lbl: lastLabel, barColor: color, textColor: 'var(--vd-ink, #1C1814)' },
       ].map(row => (
         <div key={row.lbl} style={{ marginBottom: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: row.textColor, marginBottom: 3, fontWeight: row.textColor === '#1C1814' ? 600 : 400 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: row.textColor, marginBottom: 3, fontWeight: row.textColor === 'var(--vd-ink, #1C1814)' ? 600 : 400 }}>
             <span>{row.lbl}</span>
             <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{fmt(row.val)}</span>
           </div>
-          <div style={{ height: 6, background: '#F2EEE6', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: 6, background: 'var(--vd-bg-track, #F2EEE6)', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{
               width: `${(row.val / maxVal) * 100}%`,
               height: '100%', background: row.barColor, borderRadius: 3,
@@ -376,7 +376,7 @@ const MetricCompCard: React.FC<MetricCompCardProps> = ({
       ))}
 
       {delta != null && (
-        <div style={{ fontSize: 11, fontWeight: 600, color: isUp ? '#2E7D5B' : '#B83A3A', marginTop: 6 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: isUp ? 'var(--vd-success, #2E7D5B)' : 'var(--vd-danger, #B83A3A)', marginTop: 6 }}>
           {isUp ? '↑' : '↓'} {Math.abs(delta).toFixed(1).replace('.', ',')}%
         </div>
       )}
@@ -391,7 +391,10 @@ interface ComparacaoSemanalScreenProps {
 }
 
 const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNavigate }) => {
-  const orders = useOrderStore(s => s.orders);
+  // Ignora ciclo/período do filtro global — essa tela precisa enxergar vários ciclos/semanas ao
+  // mesmo tempo pra comparar entre eles; os demais filtros (supervisor, estrutura etc.) continuam
+  // valendo, então filtrar por supervisor em Pedidos e vir pra cá mostra só o supervisor filtrado.
+  const orders = useFilteredOrders({ ignoreDateAndCycle: true });
   const [activeMetric, setActiveMetric] = useState<MetricKey>('faturamento');
   const [weekWindow, setWeekWindow] = useState<2 | 3 | 4>(4);
   const [evolWindow, setEvolWindow] = useState<2 | 3 | 4>(4);
@@ -500,8 +503,14 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
         import('html2canvas'),
       ]);
 
+      // html2canvas não resolve custom properties CSS — passar 'var(--vd-bg, ...)' direto sempre
+      // desenhava o PDF com o fundo claro fixo, mesmo com o tema escuro ativo. Resolve o valor
+      // computado real (que já reflete o tema aplicado no ancestral com data-vd-theme) antes de
+      // repassar pro html2canvas.
+      const resolvedBg = getComputedStyle(exportRef.current).getPropertyValue('--vd-bg').trim() || '#FAF7F2';
+
       const canvas = await html2canvas(exportRef.current, {
-        scale: 2, useCORS: true, backgroundColor: '#FAF7F2',
+        scale: 2, useCORS: true, backgroundColor: resolvedBg,
         logging: false,
       });
 
@@ -531,7 +540,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
 
   /* ── Tooltip helpers ── */
   const ttStyle: React.CSSProperties = {
-    background: '#1C1814', color: '#FAF7F2', borderRadius: 10,
+    background: 'var(--vd-ink, #1C1814)', color: 'var(--vd-bg, #FAF7F2)', borderRadius: 10,
     padding: '10px 14px', fontSize: 12, lineHeight: 1.75,
     boxShadow: '0 4px 20px rgba(28,24,20,0.3)',
   };
@@ -606,7 +615,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       <div style={ttStyle}>
         <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
         <div style={{ color: '#C07A2B' }}>Pico diário: <strong>{fmtNumber(payload[0]?.value ?? 0)} pedidos</strong></div>
-        {w?.peakDayLabel && <div style={{ color: '#9B9287', fontSize: 11 }}>Dia: {w.peakDayLabel}</div>}
+        {w?.peakDayLabel && <div style={{ color: 'var(--vd-text-muted, #9B9287)', fontSize: 11 }}>Dia: {w.peakDayLabel}</div>}
       </div>
     );
   };
@@ -618,18 +627,18 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
   const cycleLabel = (ciclo: string, weeks: WeekData[]) =>
     ciclo ? `Ciclo ${ciclo}${weeks.length ? ` — ${periodLabel(weeks)}` : ''}` : '—';
 
-  const pillBtn = (active: boolean, color = '#1C1814'): React.CSSProperties => ({
+  const pillBtn = (active: boolean, color = 'var(--vd-ink, #1C1814)'): React.CSSProperties => ({
     padding: '5px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-    border: `1px solid ${active ? color : '#E8E2D6'}`,
-    background: active ? color : 'white',
-    color: active ? 'white' : '#6B6258',
+    border: `1px solid ${active ? color : 'var(--vd-border, #E8E2D6)'}`,
+    background: active ? color : 'var(--vd-surface, #FFFFFF)',
+    color: active ? 'var(--vd-surface, #FFFFFF)' : 'var(--vd-text-secondary, #6B6258)',
     cursor: 'pointer', transition: 'all 150ms',
   });
 
   const sectionLabel = (text: string) => (
     <div style={{
       fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-      color: '#6B6258', margin: '32px 0 12px',
+      color: 'var(--vd-text-secondary, #6B6258)', margin: '32px 0 12px',
     }}>{text}</div>
   );
 
@@ -640,22 +649,22 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
   /* ── Comparison direct metrics (one card per metric) ── */
   const directCompMetrics = lastWeek && prevWeek ? [
     { label: 'Faturamento',  last: lastWeek.faturamento,  prev: prevWeek.faturamento,  fmt: fmtBRLshort, color: '#5B6BBF' },
-    { label: 'Pedidos',      last: lastWeek.pedidos,      prev: prevWeek.pedidos,      fmt: fmtNumber,   color: '#2E7D5B' },
-    { label: 'Finalizados',  last: lastWeek.finalizados,  prev: prevWeek.finalizados,  fmt: fmtNumber,   color: '#2E7D5B' },
+    { label: 'Pedidos',      last: lastWeek.pedidos,      prev: prevWeek.pedidos,      fmt: fmtNumber,   color: 'var(--vd-success, #2E7D5B)' },
+    { label: 'Finalizados',  last: lastWeek.finalizados,  prev: prevWeek.finalizados,  fmt: fmtNumber,   color: 'var(--vd-success, #2E7D5B)' },
     { label: 'Cancelados',   last: lastWeek.cancelados,   prev: prevWeek.cancelados,   fmt: fmtNumber,   color: '#D97B3A' },
     { label: 'Ticket Médio', last: lastWeek.ticketMedio,  prev: prevWeek.ticketMedio,  fmt: fmtBRLshort, color: '#C07A2B' },
-    { label: 'RPA',          last: lastWeek.rpa,          prev: prevWeek.rpa,          fmt: fmtBRLshort, color: '#B83A3A' },
+    { label: 'RPA',          last: lastWeek.rpa,          prev: prevWeek.rpa,          fmt: fmtBRLshort, color: 'var(--vd-danger, #B83A3A)' },
     { label: 'ANS %',        last: lastWeek.ansRate,      prev: prevWeek.ansRate,      fmt: (v: number) => v.toFixed(1).replace('.',',' ) + '%', color: '#8B3A8F' },
   ] : [];
 
   if (orders.length === 0) {
     return (
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, color: '#D8D0C0', marginBottom: 16 }}>
+        <div style={{ fontSize: 48, color: 'var(--vd-border-strong, #D8D0C0)', marginBottom: 16 }}>
           <i className="ph ph-calendar-dots" />
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Sem dados para comparar</h2>
-        <p style={{ color: '#6B6258', fontSize: 15, marginBottom: 24 }}>
+        <p style={{ color: 'var(--vd-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>
           Importe uma planilha para visualizar a evolução semanal.
         </p>
         <Button
@@ -675,13 +684,13 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
             Análise temporal
           </div>
           <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 4px' }}>
             Comparação Semanal
           </h1>
-          <p style={{ fontSize: 14, color: '#6B6258', margin: 0 }}>
+          <p style={{ fontSize: 14, color: 'var(--vd-text-secondary, #6B6258)', margin: 0 }}>
             {weeklyData.length} semana{weeklyData.length !== 1 ? 's' : ''} com dados
           </p>
         </div>
@@ -710,18 +719,18 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
             const isUp = d != null && d >= 0;
             return (
               <div key={kpi.label} style={{
-                background: 'white', border: '1px solid #E8E2D6',
+                background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)',
                 borderRadius: 14, padding: 18, boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
               }}>
-                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
                   {kpi.label}
                 </div>
                 <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 4px', fontVariantNumeric: 'tabular-nums' }}>
                   {kpi.value}
                 </div>
-                <div style={{ fontSize: 11, color: '#9B9287' }}>{lastWeek.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)' }}>{lastWeek.label}</div>
                 {d != null && (
-                  <div style={{ fontSize: 12, fontWeight: 500, color: isUp ? '#2E7D5B' : '#B83A3A', marginTop: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: isUp ? 'var(--vd-success, #2E7D5B)' : 'var(--vd-danger, #B83A3A)', marginTop: 4 }}>
                     {isUp ? '↑' : '↓'} {Math.abs(d).toFixed(1).replace('.', ',')}% vs semana anterior
                   </div>
                 )}
@@ -751,14 +760,14 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                 <stop offset="95%" stopColor={COLOR_A} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F2EEE6" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6B6258' }} angle={-25} textAnchor="end" height={44} />
-            <YAxis tick={{ fontSize: 9, fill: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--vd-bg-track, #F2EEE6)" />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--vd-text-secondary, #6B6258)' }} angle={-25} textAnchor="end" height={44} />
+            <YAxis tick={{ fontSize: 9, fill: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}
               tickFormatter={v => yFmt(v)} width={56} />
             <Tooltip content={ttFat} />
             <Area type="monotone" dataKey="faturamento" name="Faturamento"
               stroke={COLOR_A} fill="url(#fatGrad)" strokeWidth={2.5}
-              dot={{ r: 3, fill: COLOR_A, stroke: 'white', strokeWidth: 2 }} activeDot={{ r: 5 }} />
+              dot={{ r: 3, fill: COLOR_A, stroke: 'var(--vd-surface, #FFFFFF)', strokeWidth: 2 }} activeDot={{ r: 5 }} />
           </AreaChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -772,14 +781,14 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           <ChartCard title="Cancelamentos por semana" subtitle="Pedidos com status cancelado">
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={visibleWeeks} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F2EEE6" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6B6258' }} angle={-25} textAnchor="end" height={44} />
-                <YAxis tick={{ fontSize: 9, fill: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--vd-bg-track, #F2EEE6)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--vd-text-secondary, #6B6258)' }} angle={-25} textAnchor="end" height={44} />
+                <YAxis tick={{ fontSize: 9, fill: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}
                   tickFormatter={v => String(Math.round(v))} width={36} />
                 <Tooltip content={ttCanc} />
                 <Bar dataKey="cancelados" name="Cancelados" radius={[4, 4, 0, 0]}>
                   {visibleWeeks.map((w, i) => (
-                    <Cell key={i} fill={w.cancelados > 0 ? '#D97B3A' : '#E8E2D6'} />
+                    <Cell key={i} fill={w.cancelados > 0 ? '#D97B3A' : 'var(--vd-border, #E8E2D6)'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -795,9 +804,9 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       <ChartCard title="Pico diário de pedidos por semana" subtitle="Maior volume em um único dia de cada semana">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={visibleWeeks} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F2EEE6" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6B6258' }} angle={-25} textAnchor="end" height={44} />
-            <YAxis tick={{ fontSize: 9, fill: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--vd-bg-track, #F2EEE6)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--vd-text-secondary, #6B6258)' }} angle={-25} textAnchor="end" height={44} />
+            <YAxis tick={{ fontSize: 9, fill: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}
               tickFormatter={v => String(Math.round(v))} width={36} />
             <Tooltip content={ttPeak} />
             {maxPeakInVisible > 0 && (
@@ -806,7 +815,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
             )}
             <Bar dataKey="peakDayOrders" name="Pico diário" radius={[4, 4, 0, 0]}>
               {visibleWeeks.map((w, i) => (
-                <Cell key={i} fill={w.peakDayOrders === maxPeakInVisible && maxPeakInVisible > 0 ? '#C07A2B' : '#D8D0C0'} />
+                <Cell key={i} fill={w.peakDayOrders === maxPeakInVisible && maxPeakInVisible > 0 ? '#C07A2B' : 'var(--vd-border-strong, #D8D0C0)'} />
               ))}
             </Bar>
           </BarChart>
@@ -820,7 +829,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
 
       {/* Period selector panel */}
       <div style={{
-        background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
+        background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14,
         padding: '18px 20px', marginBottom: 16, boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 24 }}>
@@ -829,7 +838,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
               <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_A, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
                 Ciclo A
               </span>
             </div>
@@ -841,7 +850,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
               ))}
             </div>
             {periodAWeeks.length > 0 && (
-              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 5 }}>{periodLabel(periodAWeeks)}</div>
+              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', marginTop: 5 }}>{periodLabel(periodAWeeks)}</div>
             )}
           </div>
 
@@ -849,7 +858,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
               <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_B, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
                 Ciclo B
               </span>
             </div>
@@ -861,16 +870,16 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
               ))}
             </div>
             {periodBWeeks.length > 0 && (
-              <div style={{ fontSize: 11, color: '#9B9287', marginTop: 5 }}>{periodLabel(periodBWeeks)}</div>
+              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', marginTop: 5 }}>{periodLabel(periodBWeeks)}</div>
             )}
             {cicloB === '' && (
-              <div style={{ fontSize: 11, color: '#9B9287', fontStyle: 'italic', marginTop: 5 }}>Nenhum selecionado</div>
+              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', fontStyle: 'italic', marginTop: 5 }}>Nenhum selecionado</div>
             )}
           </div>
 
           {/* Metric selector */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 8 }}>
               Métrica
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -894,18 +903,18 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           <ChartCard title={`${compMetricDef.label} — semana a semana`} subtitle="Períodos alinhados relativamente">
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={compLineData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F2EEE6" />
-                <XAxis dataKey="semana" tick={{ fontSize: 10, fill: '#6B6258' }} />
-                <YAxis tick={{ fontSize: 9, fill: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--vd-bg-track, #F2EEE6)" />
+                <XAxis dataKey="semana" tick={{ fontSize: 10, fill: 'var(--vd-text-secondary, #6B6258)' }} />
+                <YAxis tick={{ fontSize: 9, fill: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}
                   tickFormatter={v => yFmt(v, compMetric === 'ansRate')} width={52} />
                 <Tooltip content={ttCompLine} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                 <Line type="monotone" dataKey="periodoA" name={`Período A`}
-                  stroke={COLOR_A} strokeWidth={2.5} dot={{ r: 4, fill: COLOR_A, stroke: 'white', strokeWidth: 2 }}
+                  stroke={COLOR_A} strokeWidth={2.5} dot={{ r: 4, fill: COLOR_A, stroke: 'var(--vd-surface, #FFFFFF)', strokeWidth: 2 }}
                   connectNulls activeDot={{ r: 5 }} />
                 <Line type="monotone" dataKey="periodoB" name={`Período B`}
                   stroke={COLOR_B} strokeWidth={2.5} strokeDasharray="5 3"
-                  dot={{ r: 4, fill: COLOR_B, stroke: 'white', strokeWidth: 2 }}
+                  dot={{ r: 4, fill: COLOR_B, stroke: 'var(--vd-surface, #FFFFFF)', strokeWidth: 2 }}
                   connectNulls activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -913,19 +922,19 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             <div style={{
-              background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
+              background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14,
               padding: '14px 18px 10px', boxShadow: '0 1px 4px rgba(28,24,20,0.05)',
             }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#1C1814', marginBottom: 2 }}>Totais agregados por período</div>
-              <div style={{ fontSize: 11, color: '#9B9287', marginBottom: 14 }}>Soma / média das métricas em cada período</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--vd-ink, #1C1814)', marginBottom: 2 }}>Totais agregados por período</div>
+              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', marginBottom: 14 }}>Soma / média das métricas em cada período</div>
               <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_A }} />
-                  <span style={{ fontSize: 11, color: '#6B6258' }}>Período A</span>
+                  <span style={{ fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>Período A</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_B }} />
-                  <span style={{ fontSize: 11, color: '#6B6258' }}>Período B</span>
+                  <span style={{ fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>Período B</span>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
@@ -935,9 +944,9 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                   const isUp = delta != null && delta >= 0;
                   return (
                     <div key={row.name} style={{
-                      background: '#FAF7F2', borderRadius: 10, padding: '10px 12px',
+                      background: 'var(--vd-bg, #FAF7F2)', borderRadius: 10, padding: '10px 12px',
                     }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B6258', marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 8 }}>
                         {row.name}
                       </div>
                       {[
@@ -947,9 +956,9 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                         <div key={p.lbl} style={{ marginBottom: 6 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 2 }}>
                             <span style={{ color: p.color, fontWeight: 600 }}>Período {p.lbl}</span>
-                            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#1C1814' }}>{row.fmt(p.val)}</span>
+                            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'var(--vd-ink, #1C1814)' }}>{row.fmt(p.val)}</span>
                           </div>
-                          <div style={{ height: 5, background: '#E8E2D6', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ height: 5, background: 'var(--vd-border, #E8E2D6)', borderRadius: 3, overflow: 'hidden' }}>
                             <div style={{
                               width: `${(p.val / maxVal) * 100}%`, height: '100%',
                               background: p.color, borderRadius: 3,
@@ -959,7 +968,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                         </div>
                       ))}
                       {delta != null && (
-                        <div style={{ fontSize: 10, fontWeight: 600, color: isUp ? '#2E7D5B' : '#B83A3A', marginTop: 4 }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: isUp ? 'var(--vd-success, #2E7D5B)' : 'var(--vd-danger, #B83A3A)', marginTop: 4 }}>
                           {isUp ? '↑' : '↓'} {Math.abs(delta).toFixed(1).replace('.', ',')}%
                         </div>
                       )}
@@ -972,10 +981,10 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
         </div>
       ) : (
         <div style={{
-          background: 'white', border: '1px solid #E8E2D6', borderRadius: 14,
-          padding: '28px 24px', textAlign: 'center', color: '#9B9287', fontSize: 14, marginBottom: 20,
+          background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14,
+          padding: '28px 24px', textAlign: 'center', color: 'var(--vd-text-muted, #9B9287)', fontSize: 14, marginBottom: 20,
         }}>
-          <i className="ph ph-warning" style={{ fontSize: 28, display: 'block', marginBottom: 8, color: '#D8D0C0' }} />
+          <i className="ph ph-warning" style={{ fontSize: 28, display: 'block', marginBottom: 8, color: 'var(--vd-border-strong, #D8D0C0)' }} />
           {cicloB ? `Nenhum dado encontrado para o Ciclo B (${cicloB}).` : 'Selecione um Ciclo B para habilitar a comparação.'}
         </div>
       )}
@@ -987,24 +996,24 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
 
       {/* Category header legend */}
       <div style={{
-        background: '#1C1814', borderRadius: 14, padding: '16px 20px', marginBottom: 16,
+        background: 'var(--vd-ink, #1C1814)', borderRadius: 14, padding: '16px 20px', marginBottom: 16,
         display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center',
       }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#FAF7F2', marginBottom: 2 }}>Rankings comparativos</div>
-          <div style={{ fontSize: 11, color: '#9B9287' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--vd-bg, #FAF7F2)', marginBottom: 2 }}>Rankings comparativos</div>
+          <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)' }}>
             Baseado nos pedidos de cada período selecionado
           </div>
         </div>
         <div style={{ display: 'flex', gap: 20, marginLeft: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_A }} />
-            <span style={{ fontSize: 11, color: '#D8D0C0' }}>Período A — {cycleLabel(cicloA, periodAWeeks)}</span>
+            <span style={{ fontSize: 11, color: 'var(--vd-border-strong, #D8D0C0)' }}>Período A — {cycleLabel(cicloA, periodAWeeks)}</span>
           </div>
           {hasPeriodB && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_B }} />
-              <span style={{ fontSize: 11, color: '#D8D0C0' }}>Período B — {cycleLabel(cicloB, periodBWeeks)}</span>
+              <span style={{ fontSize: 11, color: 'var(--vd-border-strong, #D8D0C0)' }}>Período B — {cycleLabel(cicloB, periodBWeeks)}</span>
             </div>
           )}
         </div>
@@ -1078,7 +1087,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
         {
           category: 'Meio de Captação',
           icon: 'device-mobile',
-          color: '#2E7D5B',
+          color: 'var(--vd-success, #2E7D5B)',
           rows: [
             {
               icon: 'star', label: 'Canal mais utilizado',
@@ -1179,14 +1188,14 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                 <stop offset="95%" stopColor={metric.color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F2EEE6" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6B6258' }} angle={-30} textAnchor="end" height={48} />
-            <YAxis tick={{ fontSize: 9, fill: '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--vd-bg-track, #F2EEE6)" />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--vd-text-secondary, #6B6258)' }} angle={-30} textAnchor="end" height={48} />
+            <YAxis tick={{ fontSize: 9, fill: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}
               tickFormatter={v => yFmt(v, activeMetric === 'ansRate')} width={52} />
             <Tooltip content={ttEvol} />
             <Area type="monotone" dataKey={activeMetric} name={metric.label}
               stroke={metric.color} fill="url(#metricGrad)" strokeWidth={2.5}
-              dot={{ r: 3, fill: metric.color, stroke: 'white', strokeWidth: 2 }} activeDot={{ r: 5 }} />
+              dot={{ r: 3, fill: metric.color, stroke: 'var(--vd-surface, #FFFFFF)', strokeWidth: 2 }} activeDot={{ r: 5 }} />
           </AreaChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -1203,9 +1212,9 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                   {['Semana', 'Faturamento', 'Pedidos', 'Finalizados', 'Cancelados', 'Ticket Médio', 'Ativos', 'RPA', 'ANS %', 'Pico/dia'].map(h => (
                     <th key={h} style={{
                       textAlign: h === 'Semana' ? 'left' : 'right', padding: '8px 12px',
-                      borderBottom: '1px solid #E8E2D6',
+                      borderBottom: '1px solid var(--vd-border, #E8E2D6)',
                       fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
-                      textTransform: 'uppercase', color: '#6B6258', whiteSpace: 'nowrap',
+                      textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', whiteSpace: 'nowrap',
                     }}>{h}</th>
                   ))}
                 </tr>
@@ -1215,23 +1224,23 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                   const isLast = idx === 0;
                   return (
                     <tr key={w.weekKey} style={{ background: isLast ? 'rgba(91,107,191,0.04)' : 'transparent' }}>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', fontWeight: isLast ? 600 : 400 }}>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', fontWeight: isLast ? 600 : 400 }}>
                         {w.label}
-                        {isLast && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: '#5B6BBF', color: 'white', padding: '1px 6px', borderRadius: 4 }}>última</span>}
+                        {isLast && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: '#5B6BBF', color: 'var(--vd-surface, #FFFFFF)', padding: '1px 6px', borderRadius: 4 }}>última</span>}
                       </td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500 }}>{fmtBRLshort(w.faturamento)}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(w.pedidos)}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', color: '#2E7D5B', fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(w.finalizados)}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', color: w.cancelados > 0 ? '#B83A3A' : '#9B9287', fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(w.cancelados)}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRLshort(w.ticketMedio)}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(w.ativos)}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRLshort(w.rpa)}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: w.ansRate >= 80 ? '#2E7D5B' : w.ansRate >= 60 ? '#C07A2B' : '#B83A3A' }}>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500 }}>{fmtBRLshort(w.faturamento)}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(w.pedidos)}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', color: 'var(--vd-success, #2E7D5B)', fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(w.finalizados)}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', color: w.cancelados > 0 ? 'var(--vd-danger, #B83A3A)' : 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(w.cancelados)}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRLshort(w.ticketMedio)}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{fmtNumber(w.ativos)}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRLshort(w.rpa)}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: w.ansRate >= 80 ? 'var(--vd-success, #2E7D5B)' : w.ansRate >= 60 ? '#C07A2B' : 'var(--vd-danger, #B83A3A)' }}>
                         {w.ansRate.toFixed(1).replace('.', ',')}%
                       </td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #F2EEE6', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: w.peakDayOrders === maxPeakInVisible && maxPeakInVisible > 0 ? '#C07A2B' : '#3D362E', fontWeight: w.peakDayOrders === maxPeakInVisible && maxPeakInVisible > 0 ? 600 : 400 }}>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: w.peakDayOrders === maxPeakInVisible && maxPeakInVisible > 0 ? '#C07A2B' : 'var(--vd-text-strong, #3D362E)', fontWeight: w.peakDayOrders === maxPeakInVisible && maxPeakInVisible > 0 ? 600 : 400 }}>
                         {fmtNumber(w.peakDayOrders)}
-                        {w.peakDayLabel && <span style={{ fontSize: 10, color: '#9B9287', marginLeft: 4 }}>({w.peakDayLabel})</span>}
+                        {w.peakDayLabel && <span style={{ fontSize: 10, color: 'var(--vd-text-muted, #9B9287)', marginLeft: 4 }}>({w.peakDayLabel})</span>}
                       </td>
                     </tr>
                   );
