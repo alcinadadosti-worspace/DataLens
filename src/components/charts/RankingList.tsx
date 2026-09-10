@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 import { TIER_STYLES } from '../../design-system/tierStyles';
 
 export interface RankingItem {
+  /** Chave de identidade estável (ex. ID único do revendedor), usada por quem consome o item pra
+   * localizar o dado original — evita colidir dois itens que por acaso têm o mesmo `label` exibido. */
+  id?: string;
   label: string;
   sublabel?: string;
   value: number;
@@ -12,6 +15,23 @@ export interface RankingItem {
   metaTarget?: number;
   /** Código de loja, quando esse item representa uma unidade — habilita a quebra por colaborador no painel de detalhe em tela cheia. */
   lojaCodigo?: string;
+  /** Quando esse item representa um tier de segmentação, usa a cor do próprio metal/pedra (em vez de ouro/prata/bronze fixo ou da paleta genérica) em todas as views do gráfico. */
+  tierId?: string;
+  /** Cor de identidade explícita (hex) — tem prioridade sobre `tierId`. Usada, por ex., pra fixar a cor de um supervisor específico em todos os gráficos. */
+  color?: string;
+}
+
+/** Cor "oficial" de um item (tier ou identidade explícita), se houver — undefined cai pro esquema padrão do gráfico (medalha/paleta). */
+export function resolveItemColor(item: RankingItem, fallback: string): string {
+  if (item.color) return item.color;
+  if (item.tierId) return TIER_STYLES[item.tierId]?.accent ?? fallback;
+  return fallback;
+}
+
+function resolveItemBg(item: RankingItem, fallback: string): string {
+  if (item.color) return `${item.color}22`;
+  if (item.tierId) return TIER_STYLES[item.tierId]?.bg ?? fallback;
+  return fallback;
 }
 
 /** Uma linha da quebra por colaborador mostrada no painel de detalhe (tela cheia) de um item que representa uma loja. */
@@ -45,8 +65,13 @@ const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMe
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {items.map((item, i) => {
         const isMedal = medals && i < 3;
-        const badgeColor = isMedal ? MEDAL_COLORS[i] : 'var(--chart-text-secondary, #6B6258)';
-        const badgeBg = isMedal ? MEDAL_BG[i] : 'var(--chart-bg-subtle, #F2EEE2)';
+        // Um item com identidade própria (tier ou cor explícita, ex. supervisor mapeado) sempre usa
+        // a sua cor real, em qualquer posição — só cai pro ouro/prata/bronze de posição quando o
+        // item não tem identidade conhecida (ex. ranking genérico de revendedores).
+        const hasIdentity = !!(item.color || item.tierId);
+        const highlighted = hasIdentity || isMedal;
+        const badgeColor = resolveItemColor(item, isMedal ? MEDAL_COLORS[i] : 'var(--chart-text-secondary, #6B6258)');
+        const badgeBg = resolveItemBg(item, isMedal ? MEDAL_BG[i] : 'var(--chart-bg-subtle, #F2EEE2)');
         const pct = Math.max((item.value / max) * 100, 1.5);
 
         return (
@@ -66,7 +91,7 @@ const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMe
               background: badgeBg, color: badgeColor,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
-              border: isMedal ? `1px solid ${badgeColor}55` : '1px solid var(--chart-border, #E8E2D6)',
+              border: highlighted ? `1px solid ${badgeColor}55` : '1px solid var(--chart-border, #E8E2D6)',
             }}>
               {i + 1}
             </div>
@@ -90,7 +115,7 @@ const RankingList: React.FC<RankingListProps> = ({ items, medals = true, emptyMe
                   transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                   style={{
                     height: '100%', width: '100%', borderRadius: 4, transformOrigin: 'left',
-                    background: isMedal ? badgeColor : 'var(--chart-border-strong, #D8D0C0)',
+                    background: highlighted ? badgeColor : 'var(--chart-border-strong, #D8D0C0)',
                   }}
                 />
               </div>

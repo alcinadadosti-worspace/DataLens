@@ -10,6 +10,7 @@ import { fmtBRLshort, fmtNumber } from '../utils/formatters';
 import ChartCard from '../components/charts/ChartCard';
 import Button from '../components/ui/Button';
 import GlossyContent from '../components/ui/GlossyContent';
+import InfoHint from '../components/ui/InfoHint';
 import { Order } from '../types/order';
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -52,13 +53,13 @@ type MetricKey = 'faturamento' | 'pedidos' | 'finalizados' | 'cancelados' | 'tic
 
 /* ─── Constants ──────────────────────────────────────────────── */
 
-const METRICS: { key: MetricKey; label: string; fmt: (v: number) => string; color: string }[] = [
-  { key: 'faturamento',  label: 'Faturamento',   fmt: fmtBRLshort,                               color: '#5B6BBF' },
-  { key: 'pedidos',      label: 'Pedidos',        fmt: fmtNumber,                                 color: 'var(--vd-success, #2E7D5B)' },
-  { key: 'ticketMedio',  label: 'Ticket Médio',   fmt: fmtBRLshort,                               color: '#C07A2B' },
-  { key: 'ansRate',      label: 'ANS %',          fmt: v => v.toFixed(1).replace('.', ',') + '%', color: '#8B3A8F' },
-  { key: 'rpa',          label: 'RPA',            fmt: fmtBRLshort,                               color: 'var(--vd-danger, #B83A3A)' },
-  { key: 'cancelados',   label: 'Cancelamentos',  fmt: fmtNumber,                                 color: '#D97B3A' },
+const METRICS: { key: MetricKey; label: string; fmt: (v: number) => string; color: string; hint: string }[] = [
+  { key: 'faturamento',  label: 'Faturamento',   fmt: fmtBRLshort,                               color: '#5B6BBF',                    hint: 'Receita total (Valor Praticado) da semana.' },
+  { key: 'pedidos',      label: 'Pedidos',        fmt: fmtNumber,                                 color: 'var(--vd-success, #2E7D5B)', hint: 'Total de pedidos registrados na semana.' },
+  { key: 'ticketMedio',  label: 'Ticket Médio',   fmt: fmtBRLshort,                               color: '#C07A2B',                    hint: 'Receita total dividida pelo número de pedidos elegíveis (não cancelados) da semana.' },
+  { key: 'ansRate',      label: 'ANS %',          fmt: v => v.toFixed(1).replace('.', ',') + '%', color: '#8B3A8F',                    hint: 'ANS — Acordo de Nível de Serviço: % de pedidos da semana atendidos dentro do prazo esperado entre aprovação e autorização de faturamento.' },
+  { key: 'rpa',          label: 'RPA',            fmt: fmtBRLshort,                               color: 'var(--vd-danger, #B83A3A)',  hint: 'RPA — Receita Por Ativo: faturamento da semana dividido pelo número de revendedores ativos.' },
+  { key: 'cancelados',   label: 'Cancelamentos',  fmt: fmtNumber,                                 color: '#D97B3A',                    hint: 'Total de pedidos cancelados na semana.' },
 ];
 
 const WEEK_WINDOW_OPTIONS = [4, 8, 12, 0] as const;
@@ -751,7 +752,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           </button>
         ))}
       </div>
-      <ChartCard title="Faturamento semanal" subtitle={`${visibleWeeks.length} semanas`}>
+      <ChartCard title="Faturamento semanal" subtitle={`${visibleWeeks.length} semanas`} hint="Receita total (Valor Praticado) somada por semana do calendário.">
         <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={visibleWeeks} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
             <defs>
@@ -778,7 +779,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       {hasCancelamentos && (
         <>
           {sectionLabel('Cancelamentos Semanais')}
-          <ChartCard title="Cancelamentos por semana" subtitle="Pedidos com status cancelado">
+          <ChartCard title="Cancelamentos por semana" subtitle="Pedidos com status cancelado" hint="Quantidade de pedidos cancelados em cada semana do calendário.">
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={visibleWeeks} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--vd-bg-track, #F2EEE6)" vertical={false} />
@@ -801,7 +802,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           SEÇÃO: PICOS DE PEDIDOS
       ═══════════════════════════════════════════════════════ */}
       {sectionLabel('Picos de Pedidos')}
-      <ChartCard title="Pico diário de pedidos por semana" subtitle="Maior volume em um único dia de cada semana">
+      <ChartCard title="Pico diário de pedidos por semana" subtitle="Maior volume em um único dia de cada semana" hint="Para cada semana, o dia com o maior número de pedidos — útil para identificar picos de demanda.">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={visibleWeeks} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--vd-bg-track, #F2EEE6)" vertical={false} />
@@ -1165,6 +1166,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
               key={m.key}
               className={`glossy-btn${activeMetric === m.key ? ' glossy-active' : ''}`}
               onClick={() => setActiveMetric(m.key)}
+              title={m.hint}
               style={{ borderRadius: 8, fontSize: 13 }}
             >
               <GlossyContent compact>{m.label}</GlossyContent>
@@ -1179,7 +1181,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           ))}
         </div>
       </div>
-      <ChartCard title={`Evolução semanal — ${metric.label}`} subtitle={`${evolWeeks.length} semanas`}>
+      <ChartCard title={`Evolução semanal — ${metric.label}`} subtitle={`${evolWeeks.length} semanas`} hint={metric.hint}>
         <ResponsiveContainer width="100%" height={260}>
           <AreaChart data={evolWeeks} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
             <defs>
@@ -1204,19 +1206,27 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           SEÇÃO: TABELA RESUMO
       ═══════════════════════════════════════════════════════ */}
       <div style={{ marginTop: 20 }}>
-        <ChartCard title="Resumo por semana" subtitle={`${visibleWeeks.length} semanas`}>
+        <ChartCard title="Resumo por semana" subtitle={`${visibleWeeks.length} semanas`} hint="Tabela com todas as métricas de cada semana, lado a lado, para comparação detalhada.">
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
-                  {['Semana', 'Faturamento', 'Pedidos', 'Finalizados', 'Cancelados', 'Ticket Médio', 'Ativos', 'RPA', 'ANS %', 'Pico/dia'].map(h => (
+                  {['Semana', 'Faturamento', 'Pedidos', 'Finalizados', 'Cancelados', 'Ticket Médio', 'Ativos', 'RPA', 'ANS %', 'Pico/dia'].map(h => {
+                    const metricHint = METRICS.find(m => m.label === h)?.hint;
+                    return (
                     <th key={h} style={{
                       textAlign: h === 'Semana' ? 'left' : 'right', padding: '8px 12px',
                       borderBottom: '1px solid var(--vd-border, #E8E2D6)',
                       fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
                       textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', whiteSpace: 'nowrap',
-                    }}>{h}</th>
-                  ))}
+                    }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        {h}
+                        {metricHint && <InfoHint text={metricHint} size={13} direction="down" />}
+                      </span>
+                    </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>

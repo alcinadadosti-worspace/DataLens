@@ -36,7 +36,8 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
         gap: 5,
         position: 'relative',
         transition: 'box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
-        transform: glow && hovered ? 'translateY(-2px)' : 'translateY(0)',
+        transform: glow && hovered ? 'translateY(-2px)' : undefined,
+        zIndex: hovered ? 20 : undefined,
       }}
     >
       <div style={{

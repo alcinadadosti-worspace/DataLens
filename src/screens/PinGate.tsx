@@ -1,24 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { sha256Hex } from '../utils/sha256';
 
-const PIN_HASH = '744b93f9950fc38dad705556931ea48193b99dcb191cc9bd77097f65fbe2f0b8';
-const STORAGE_KEY = 'datalens_unlocked';
-
-async function sha256Hex(text: string): Promise<string> {
-  const bytes = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-interface LoginGateProps {
+interface PinGateProps {
+  pinHash: string;
+  storageKey: string;
+  title?: string;
+  subtitle?: string;
   children: React.ReactNode;
 }
 
-const LoginGate: React.FC<LoginGateProps> = ({ children }) => {
+const PinGate: React.FC<PinGateProps> = ({
+  pinHash,
+  storageKey,
+  title = 'Acesso restrito',
+  subtitle = 'Digite o código de acesso para continuar.',
+  children,
+}) => {
+  // Guarda o próprio hash do PIN que desbloqueou, não só um "1" — se o PIN for trocado no código,
+  // o valor salvo não bate mais com o novo `pinHash` e o acesso é pedido de novo.
   const [unlocked, setUnlocked] = useState(() => {
     try {
-      return localStorage.getItem(STORAGE_KEY) === '1';
+      return localStorage.getItem(storageKey) === pinHash;
     } catch {
       return false;
     }
@@ -36,9 +38,9 @@ const LoginGate: React.FC<LoginGateProps> = ({ children }) => {
     let cancelled = false;
     sha256Hex(digits).then((hash) => {
       if (cancelled) return;
-      if (hash === PIN_HASH) {
+      if (hash === pinHash) {
         try {
-          localStorage.setItem(STORAGE_KEY, '1');
+          localStorage.setItem(storageKey, pinHash);
         } catch {
           /* ignore */
         }
@@ -54,7 +56,7 @@ const LoginGate: React.FC<LoginGateProps> = ({ children }) => {
     return () => {
       cancelled = true;
     };
-  }, [digits]);
+  }, [digits, pinHash, storageKey]);
 
   if (unlocked) return <>{children}</>;
 
@@ -89,10 +91,10 @@ const LoginGate: React.FC<LoginGateProps> = ({ children }) => {
           D
         </div>
         <h1 style={{ fontFamily: 'Fraunces, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', margin: 0 }}>
-          Acesso restrito
+          {title}
         </h1>
         <p style={{ color: '#6B6258', fontSize: 14, marginTop: 8, marginBottom: 28 }}>
-          Digite o código de acesso para continuar.
+          {subtitle}
         </p>
 
         <div
@@ -146,4 +148,4 @@ const LoginGate: React.FC<LoginGateProps> = ({ children }) => {
   );
 };
 
-export default LoginGate;
+export default PinGate;

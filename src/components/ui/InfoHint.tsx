@@ -3,11 +3,16 @@ import React, { useState } from 'react';
 interface InfoHintProps {
   text: string;
   size?: number;
+  /** Lado pro qual o balão abre — 'up' (padrão) sobe a partir do ícone; 'down' desce. Use 'down'
+   * quando o ícone fica perto do topo de um contêiner com scroll (ex. cabeçalho de tabela), onde
+   * um balão que sobe seria cortado pelo overflow do contêiner. */
+  direction?: 'up' | 'down';
 }
 
 /** Ícone "i" com tooltip escuro ao passar o mouse — usado para explicar títulos e siglas. */
-const InfoHint: React.FC<InfoHintProps> = ({ text, size = 14 }) => {
+const InfoHint: React.FC<InfoHintProps> = ({ text, size = 14, direction = 'up' }) => {
   const [hovered, setHovered] = useState(false);
+  const isDown = direction === 'down';
 
   return (
     <span
@@ -21,7 +26,7 @@ const InfoHint: React.FC<InfoHintProps> = ({ text, size = 14 }) => {
           role="tooltip"
           style={{
             position: 'absolute',
-            bottom: 'calc(100% + 8px)',
+            ...(isDown ? { top: 'calc(100% + 8px)' } : { bottom: 'calc(100% + 8px)' }),
             left: '50%',
             transform: 'translateX(-50%)',
             background: 'var(--loja-ink, #1C1814)',
@@ -44,9 +49,14 @@ const InfoHint: React.FC<InfoHintProps> = ({ text, size = 14 }) => {
         >
           {text}
           <div style={{
-            position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute',
+            ...(isDown ? { bottom: '100%' } : { top: '100%' }),
+            left: '50%', transform: 'translateX(-50%)',
             width: 0, height: 0,
-            borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid var(--loja-ink, #1C1814)',
+            borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+            ...(isDown
+              ? { borderBottom: '5px solid var(--loja-ink, #1C1814)' }
+              : { borderTop: '5px solid var(--loja-ink, #1C1814)' }),
           }} />
         </div>
       )}

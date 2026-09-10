@@ -66,7 +66,7 @@ function VDApp() {
   } else if (route === 'comparacao-semanal') {
     screen = <ComparacaoSemanalScreen onNavigate={navigate} />;
   } else if (route === 'supervisors') {
-    screen = <SupervisorScreen />;
+    screen = <SupervisorScreen onNavigate={navigate} />;
   } else if (activeTier) {
     screen = <DetailScreen tierId={activeTier} onBack={() => navigate('tiers')} onNavigate={navigate} onResellerClick={(id, name) => setSelectedReseller({ id, name })} />;
   }

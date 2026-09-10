@@ -12,7 +12,7 @@ const TEXT_GRADS: Record<string, string> = {
   bronze:    'linear-gradient(90deg, #6B3815 0%, #C9824D 28%, #F4D3B0 48%, #C9824D 68%, #6B3815 100%)',
   prata:     'linear-gradient(90deg, #3A4249 0%, #8A929B 28%, #D8DDE3 48%, #8A929B 68%, #3A4249 100%)',
   ouro:      'linear-gradient(90deg, #5C3D00 0%, #C9A227 28%, #FFF0A0 48%, #C9A227 68%, #5C3D00 100%)',
-  platina:   'linear-gradient(90deg, #1E3340 0%, #6B8A9E 28%, #C5D2DC 48%, #6B8A9E 68%, #1E3340 100%)',
+  platina:   'linear-gradient(90deg, #1E3340 0%, #5F86A6 28%, #BDD2E3 48%, #5F86A6 68%, #1E3340 100%)',
   rubi:      'linear-gradient(90deg, #4A0A14 0%, #C32E47 28%, #FF8099 48%, #C32E47 68%, #4A0A14 100%)',
   esmeralda: 'linear-gradient(90deg, #082A1C 0%, #1F8A5B 28%, #7FD4A8 48%, #1F8A5B 68%, #082A1C 100%)',
   diamante:  'linear-gradient(90deg, #2A3580 0%, #6B7DD9 18%, #FCE4F0 36%, #DCEAFE 50%, #C4F4E5 64%, #6B7DD9 82%, #2A3580 100%)',
@@ -186,7 +186,8 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
 
   // Ranking visual (tela cheia) dos revendedores dessa segmentação — clicar num revendedor no
   // gráfico ou na tela cheia mostra a quebra de pedidos por status dele.
-  const rankingItems: RankingItem[] = topResellers.map(([, data]) => ({
+  const rankingItems: RankingItem[] = topResellers.map(([id, data]) => ({
+    id,
     label: data.name,
     value: data.value,
     valueLabel: fmtBRLshort(data.value),
@@ -194,7 +195,7 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
   }));
 
   function getResellerBreakdown(item: RankingItem): BreakdownRow[] | null {
-    const entry = topResellers.find(([, data]) => data.name === item.label);
+    const entry = topResellers.find(([id]) => id === item.id);
     if (!entry) return null;
     const [id] = entry;
     const orders = tierOrders.filter(o => o.Pessoa === id);
@@ -207,7 +208,7 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
   }
 
   function getResellerOrdersBreakdown(item: RankingItem): BreakdownRow[] | null {
-    const entry = topResellers.find(([, data]) => data.name === item.label);
+    const entry = topResellers.find(([id]) => id === item.id);
     if (!entry) return null;
     const [id] = entry;
     const orders = tierOrders.filter(o => o.Pessoa === id)
@@ -231,7 +232,7 @@ const DetailScreen: React.FC<DetailScreenProps> = ({ tierId, onBack, onNavigate,
   ];
 
   function getResellerExtraStats(item: RankingItem): ExtraStat[] | null {
-    const entry = topResellers.find(([, data]) => data.name === item.label);
+    const entry = topResellers.find(([id]) => id === item.id);
     if (!entry) return null;
     const [, data] = entry;
     const avg = data.orders > 0 ? data.value / data.orders : 0;

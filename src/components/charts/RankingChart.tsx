@@ -7,7 +7,7 @@ import {
   Treemap, FunnelChart, Funnel, LabelList,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
 } from 'recharts';
-import RankingList, { RankingItem, BreakdownRow } from './RankingList';
+import RankingList, { RankingItem, BreakdownRow, resolveItemColor } from './RankingList';
 import { TIER_STYLES } from '../../design-system/tierStyles';
 import { fmtNumber } from '../../utils/formatters';
 import { useLojaThemeStore } from '../../store/useLojaThemeStore';
@@ -57,8 +57,11 @@ function truncateLabel(s: string, max = 14): string {
   return s.length > max ? s.slice(0, max - 1) + '…' : s;
 }
 
-function barColor(i: number, medals: boolean): string {
-  return medals && i < 3 ? MEDAL_COLORS[i] : PALETTE[0];
+function barColor(item: RankingItem, i: number, medals: boolean): string {
+  // Item com identidade própria (tier ou cor explícita) sempre usa sua cor real, em qualquer
+  // posição — evita, por ex., o 1º lugar (Platina) ganhar cor de "ouro" só por estar em 1º.
+  const fallback = medals && i < 3 ? MEDAL_COLORS[i] : PALETTE[0];
+  return resolveItemColor(item, fallback);
 }
 
 const tooltipBoxStyle: React.CSSProperties = { background: 'var(--chart-ink, #1C1814)', border: 'none', borderRadius: 10, color: 'var(--chart-bg, #FAF7F2)', fontSize: 14, padding: '10px 14px' };
@@ -129,7 +132,7 @@ const BarVerticalView: React.FC<{ items: RankingItem[]; medals: boolean; height:
         onClick={onSelect ? (d: any) => onSelect(d.payload ?? d) : undefined}
         cursor={onSelect ? 'pointer' : 'default'}
       >
-        {items.map((_, i) => <Cell key={i} fill={barColor(i, medals)} />)}
+        {items.map((item, i) => <Cell key={i} fill={barColor(item, i, medals)} />)}
       </Bar>
     </BarChart>
   </ResponsiveContainer>
@@ -265,7 +268,7 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
               <path
                 key={i}
                 d={path}
-                fill={PALETTE[i % PALETTE.length]}
+                fill={resolveItemColor(it, PALETTE[i % PALETTE.length])}
                 stroke="var(--chart-bg, #FAF7F2)"
                 strokeWidth={2}
                 opacity={hover && hover.idx !== i ? 0.72 : 1}
@@ -300,7 +303,7 @@ const PieView: React.FC<{ items: RankingItem[]; style: PieStyle; maxSlices: numb
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginTop: 16 }}>
         {data.map((it, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--chart-text-strong, #3D362E)' }}>
-            <span style={{ width: 11, height: 11, borderRadius: 3, background: PALETTE[i % PALETTE.length], display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ width: 11, height: 11, borderRadius: 3, background: resolveItemColor(it, PALETTE[i % PALETTE.length]), display: 'inline-block', flexShrink: 0 }} />
             {it.label}
           </div>
         ))}
@@ -354,7 +357,7 @@ const TreemapView: React.FC<{ items: RankingItem[]; maxSlices: number; height: n
   const rest = sorted.slice(maxSlices);
   const restTotal = rest.reduce((s, i) => s + i.value, 0);
   const list: RankingItem[] = restTotal > 0 ? [...top, { label: `${OTHERS_LABEL_PREFIX}${rest.length})`, value: restTotal, valueLabel: fmtNumber(restTotal) }] : top;
-  const data = list.map((it, i) => ({ name: it.label, size: Math.max(it.value, 0.01), fill: PALETTE[i % PALETTE.length], item: it }));
+  const data = list.map((it, i) => ({ name: it.label, size: Math.max(it.value, 0.01), fill: resolveItemColor(it, PALETTE[i % PALETTE.length]), item: it }));
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -373,7 +376,7 @@ const TreemapView: React.FC<{ items: RankingItem[]; maxSlices: number; height: n
 // --- Funil ------------------------------------------------
 
 const FunnelView: React.FC<{ items: RankingItem[]; maxSlices: number; height: number; onSelect?: (i: RankingItem) => void }> = ({ items, maxSlices, height, onSelect }) => {
-  const data = [...items].sort((a, b) => b.value - a.value).slice(0, maxSlices).map((it, i) => ({ ...it, fill: PALETTE[i % PALETTE.length] }));
+  const data = [...items].sort((a, b) => b.value - a.value).slice(0, maxSlices).map((it, i) => ({ ...it, fill: resolveItemColor(it, PALETTE[i % PALETTE.length]) }));
   return (
     <ResponsiveContainer width="100%" height={height}>
       <FunnelChart>
@@ -391,7 +394,7 @@ const FunnelView: React.FC<{ items: RankingItem[]; maxSlices: number; height: nu
           cursor={onSelect ? 'pointer' : 'default'}
         >
           <LabelList position="right" dataKey="label" fill="var(--chart-text-strong, #3D362E)" fontSize={12} stroke="none" />
-          {data.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+          {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
         </Funnel>
       </FunnelChart>
     </ResponsiveContainer>
@@ -493,7 +496,7 @@ const WordCloudView: React.FC<{ items: RankingItem[]; maxSlices: number; onSelec
             onClick={onSelect ? () => onSelect(it) : undefined}
             title={`${it.label}: ${it.valueLabel}`}
             style={{
-              fontSize, fontWeight, color: PALETTE[i % PALETTE.length], lineHeight: 1,
+              fontSize, fontWeight, color: resolveItemColor(it, PALETTE[i % PALETTE.length]), lineHeight: 1,
               cursor: onSelect ? 'pointer' : 'default', fontFamily: 'Inter Tight, sans-serif',
             }}
           >
@@ -631,11 +634,18 @@ const DetailPanel: React.FC<{
 // --- Componente principal ------------------------------------------------
 
 const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, emptyMessage = 'Sem dados', maxSlices = 8, getBreakdown, breakdownLabel, detailViews, getExtraStats, mode = 'loja', accentColor, initialCategory = 'bar' }) => {
+  // Não reordenamos `items` aqui: várias telas (ex. padrão por horário, média por dia da semana)
+  // dependem da ordem cronológica/categórica que já vem pronta do chamador, não de um ranking por
+  // valor. Quem precisa de fato de um ranking (receita por tier, por supervisor...) já deve
+  // entregar `items` pré-ordenado por valor — é o que corrigimos na origem desses dados.
   const lojaTheme = useLojaThemeStore(s => s.theme);
   const vdTheme = useVDThemeStore(s => s.theme);
   const themeAttr = mode === 'vd' ? 'data-vd-theme' : 'data-loja-theme';
   const theme = mode === 'vd' ? vdTheme : lojaTheme;
-  const accentStyle = accentColor ? ({ '--chart-accent': accentColor, '--chart-accent-gold': accentColor } as React.CSSProperties) : undefined;
+  // Só sobrescreve --chart-accent (PALETTE[0]) — deixar --chart-accent-gold (PALETTE[1]) seguir o
+  // padrão evita que o 1º e o 2º item de views sem cor própria (pizza/treemap/etc.) saiam
+  // exatamente da mesma cor quando accentColor é passado.
+  const accentStyle = accentColor ? ({ '--chart-accent': accentColor } as React.CSSProperties) : undefined;
   const [category, setCategory] = useState<Category>(initialCategory);
   const [barStyle, setBarStyle] = useState<BarStyle>('horizontal');
   const [pieStyle, setPieStyle] = useState<PieStyle>('pie');
@@ -661,7 +671,7 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
   // cálculo puro), isso avançava o índice em 2 por clique em vez de 1 — daí só os ímpares
   // apareciam. Lendo `selected` direto do closure evita isso.
   function handleSelect(it: RankingItem) {
-    if (selected && selected.label === it.label && detailViews && detailViews.length > 1) {
+    if (selected && (selected.id ?? selected.label) === (it.id ?? it.label) && detailViews && detailViews.length > 1) {
       setViewIndex(v => findValidViewIndex(it, (v + 1) % detailViews.length));
     } else {
       setSelected(it);

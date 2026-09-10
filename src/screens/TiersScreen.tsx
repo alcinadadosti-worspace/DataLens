@@ -10,6 +10,7 @@ import { isRevenueEligible } from '../analytics/financialMetrics';
 import { useOrderStore } from '../store/useOrderStore';
 import { fmtBRLshort, fmtBRL, fmtPct } from '../utils/formatters';
 import { TIER_DEFINITIONS } from '../design-system/tierStyles';
+import { getSupervisorColor } from '../design-system/supervisorColors';
 import Button from '../components/ui/Button';
 
 interface TiersScreenProps {
@@ -29,12 +30,13 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
   // loop (mais o sub-objeto por revendedor) refazia em toda re-renderização da tela. Fica antes do
   // guard de "sem dados" abaixo pra manter a ordem de hooks estável entre renders.
   const supervisorAgg = useMemo(() => {
-    const agg: Record<string, { orderCount: number; revenue: number; resellers: Record<string, { name: string; value: number }> }> = {};
+    const agg: Record<string, { orderCount: number; eligibleOrderCount: number; revenue: number; resellers: Record<string, { name: string; value: number }> }> = {};
     for (const o of allOrders) {
       const key = o.ResponsavelEstrutura || 'Sem supervisor';
-      if (!agg[key]) agg[key] = { orderCount: 0, revenue: 0, resellers: {} };
+      if (!agg[key]) agg[key] = { orderCount: 0, eligibleOrderCount: 0, revenue: 0, resellers: {} };
       agg[key].orderCount++;
       if (!isRevenueEligible(o)) continue;
+      agg[key].eligibleOrderCount++;
       agg[key].revenue += o.ValorPraticado;
       if (o.Pessoa) {
         if (!agg[key].resellers[o.Pessoa]) agg[key].resellers[o.Pessoa] = { name: o.NomePessoa, value: 0 };
@@ -53,6 +55,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
       value: s.revenue,
       valueLabel: fmtBRLshort(s.revenue),
       meta: `${s.orderCount} pedido${s.orderCount === 1 ? '' : 's'}`,
+      color: getSupervisorColor(name)?.accent,
     })), [supervisorAgg]);
 
   if (!financial || tierMetrics.every(t => t.orderCount === 0)) {
@@ -78,12 +81,15 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
 
   // Dados por tier pro painel "Receita por tier" — ganha o alternador completo de estilos de
   // gráfico e o modo tela cheia do RankingChart.
-  const tiersWithRevenue = TIER_DEFINITIONS.filter(t => (financial.revenueByTier[t.id] ?? 0) > 0);
+  const tiersWithRevenue = TIER_DEFINITIONS
+    .filter(t => (financial.revenueByTier[t.id] ?? 0) > 0)
+    .sort((a, b) => (financial.revenueByTier[b.id] ?? 0) - (financial.revenueByTier[a.id] ?? 0));
   const tierRankingItems: RankingItem[] = tiersWithRevenue.map(t => ({
     label: t.name,
     value: financial.revenueByTier[t.id] ?? 0,
     valueLabel: fmtBRLshort(financial.revenueByTier[t.id] ?? 0),
     meta: `${financial.ordersByTier[t.id] ?? 0} pedidos`,
+    tierId: t.id,
   }));
 
   function tierIdFromLabel(label: string): string | undefined {
@@ -133,7 +139,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
     const s = supervisorAgg[item.label];
     if (!s) return null;
     const resellerCount = Object.keys(s.resellers).length;
-    const avgTicket = resellerCount > 0 ? s.revenue / s.orderCount : 0;
+    const avgTicket = s.eligibleOrderCount > 0 ? s.revenue / s.eligibleOrderCount : 0;
     return [
       { label: 'Revendedores', value: resellerCount.toLocaleString('pt-BR') },
       { label: 'Ticket médio', value: fmtBRL(Math.round(avgTicket)) },
@@ -166,6 +172,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
         <KpiCard
           eyebrow="Valor Praticado"
           value={fmtBRLshort(financial.grossRevenue)}
+          hint="Soma da receita (Valor Praticado) de todos os pedidos elegíveis no período filtrado."
           tooltip={
             <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
               {fmtBRL(financial.grossRevenue)}
@@ -177,6 +184,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
           value={financial.totalOrders.toLocaleString('pt-BR')}
           delta={((financial.finalizados / financial.totalOrders) * 100).toFixed(1).replace('.', ',') + '% fin.'}
           deltaDirection="up"
+          hint="Total de pedidos importados, com a % de pedidos finalizados sobre o total."
           tooltip={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
@@ -187,7 +195,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
                 <span style={{ color: 'var(--vd-text-muted, #9B9287)' }}>Cancelados</span>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#C04040' }}>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--vd-danger, #B83A3A)' }}>
                   {financial.cancelados.toLocaleString('pt-BR')}
                 </span>
               </div>
@@ -197,6 +205,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
         <KpiCard
           eyebrow="RPA"
           value={fmtBRLshort(financial.activeResellers > 0 ? financial.grossRevenue / financial.activeResellers : 0)}
+          hint="RPA — Receita Por Ativo: faturamento total dividido pelo número de revendedores ativos no período."
           tooltip={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
@@ -217,6 +226,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
         <KpiCard
           eyebrow="Ticket Médio"
           value={fmtBRLshort(financial.avgTicket)}
+          hint="Receita total dividida pelo número de pedidos elegíveis (não cancelados)."
           tooltip={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
@@ -234,7 +244,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
 
       {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginTop: 28 }}>
-        <ChartCard title="Receita por tier" subtitle="Comparativo de receita por grupo">
+        <ChartCard title="Receita por tier" subtitle="Comparativo de receita por grupo" hint="Comparativo de receita total entre os tiers. Clique numa barra/fatia para abrir o detalhe com os principais revendedores.">
           <RankingChart
             items={tierRankingItems}
             mode="vd"
@@ -245,7 +255,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
             getExtraStats={getTierExtraStats}
           />
         </ChartCard>
-        <ChartCard title="Receita por supervisor" subtitle="Ranking dos supervisores que mais venderam">
+        <ChartCard title="Receita por supervisor" subtitle="Ranking dos supervisores que mais venderam" hint="Ranking de supervisores/estruturas por receita total gerada. Clique num item para ver os principais revendedores dessa estrutura.">
           <RankingChart
             items={supervisorRankingItems}
             mode="vd"
@@ -261,7 +271,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
       {/* Revenue by cycle trend */}
       {cycles.length > 1 && (
         <div style={{ marginTop: 14 }}>
-          <ChartCard title="Receita por ciclo" subtitle="Evolução da receita ao longo dos ciclos">
+          <ChartCard title="Receita por ciclo" subtitle="Evolução da receita ao longo dos ciclos" hint="Receita total (Valor Praticado) somada por ciclo de faturamento.">
             <TrendLineChart
               series={[{
                 tierId: 'ouro',

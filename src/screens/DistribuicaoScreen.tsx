@@ -5,7 +5,8 @@ import { useFilterStore } from '../store/useFilterStore';
 import { TIER_DEFINITIONS, TIER_STYLES } from '../design-system/tierStyles';
 import { fmtBRLshort, fmtBRL } from '../utils/formatters';
 import ChartCard from '../components/charts/ChartCard';
-import TierPieChart from '../components/charts/TierPieChart';
+import RankingChart from '../components/charts/RankingChart';
+import { RankingItem } from '../components/charts/RankingList';
 import DailyCycleChart from '../components/charts/DailyCycleChart';
 import KpiCard from '../components/ui/KpiCard';
 import Button from '../components/ui/Button';
@@ -87,6 +88,20 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
 
   const filteredTierPieData = tierPieData.filter(t => selectedTiers.includes(t.tierId));
   const filteredPieTotal = filteredTierPieData.reduce((s, t) => s + t.value, 0);
+
+  // Ordenado do tier que mais faturou pro que menos faturou — RankingChart não reordena sozinho
+  // (outras telas dependem da ordem original, ex. cronológica), então quem monta um ranking real
+  // precisa entregar os itens já na ordem certa.
+  const tierRankingItems: RankingItem[] = [...filteredTierPieData].sort((a, b) => b.value - a.value).map(t => {
+    const pct = filteredPieTotal > 0 ? (t.value / filteredPieTotal) * 100 : 0;
+    return {
+      label: t.label,
+      value: t.value,
+      valueLabel: fmtBRLshort(t.value),
+      meta: `${pct.toFixed(1).replace('.', ',')}%`,
+      tierId: t.tierId,
+    };
+  });
 
   const activeTiersInChart = selectedTiers.filter(id =>
     Object.values(financial.revenueByDayAndTier).some(d => (d[id] ?? 0) > 0)
@@ -194,11 +209,13 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
         <KpiCard
           eyebrow="Receita Total"
           value={fmtBRLshort(grandTotal)}
+          hint="Soma da receita (Valor Praticado) de todos os pedidos elegíveis, considerando os filtros de ciclo e tier ativos."
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(grandTotal)}</span>}
         />
         <KpiCard
           eyebrow="Dia de Pico"
           value={peakDay.day !== '-' ? `Dia ${peakDay.day}` : '—'}
+          hint="Dia do ciclo com a maior receita realizada no período filtrado."
           tooltip={peakDay.day !== '-'
             ? <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
@@ -217,11 +234,13 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
         <KpiCard
           eyebrow="Média Diária"
           value={fmtBRLshort(avgDaily)}
+          hint="Receita total dividida pelo número de dias com pedidos no ciclo filtrado."
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(avgDaily)}</span>}
         />
         <KpiCard
           eyebrow="Tier Líder"
           value={topTier?.name ?? '—'}
+          hint="Tier com maior receita no período filtrado, e sua participação (share) sobre a receita total."
           tooltip={topTier && topTierEntry
             ? <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
@@ -240,43 +259,29 @@ const DistribuicaoScreen: React.FC<DistribuicaoScreenProps> = ({ onNavigate }) =
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, marginTop: 14 }}>
-        {/* Pie */}
-        <ChartCard title="Receita por tier" subtitle={`Total ${fmtBRLshort(filteredPieTotal)}`}>
-          {filteredTierPieData.length > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <TierPieChart data={filteredTierPieData} size={180} hoverReveal />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, fontSize: 11, flex: 1 }}>
-                {filteredTierPieData.map(t => {
-                  const pct = filteredPieTotal > 0 ? (t.value / filteredPieTotal) * 100 : 0;
-                  const style = TIER_STYLES[t.tierId];
-                  return (
-                    <div key={t.tierId} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{
-                        width: 8, height: 8, borderRadius: 2, flexShrink: 0,
-                        background: style?.accent ?? 'var(--vd-text-secondary, #6B6258)',
-                        boxShadow: t.tierId === 'diamante' ? '0 0 4px rgba(107,125,217,0.6)' : 'none',
-                      }} />
-                      <span style={{ flex: 1, color: 'var(--vd-text-strong, #3D362E)' }}>{t.label}</span>
-                      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--vd-text-secondary, #6B6258)' }}>
-                        {pct.toFixed(1).replace('.', ',')}%
-                      </span>
-                    </div>
-                  );
-                })}
-                <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid var(--vd-bg-track, #F2EEE6)', fontSize: 10, color: 'var(--vd-text-muted, #9B9287)' }}>
-                  Passe o cursor para revelar os valores
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--vd-text-muted, #9B9287)' }}>
-              Sem dados
-            </div>
-          )}
+        {/* Pie / bar / mais + tela cheia */}
+        <ChartCard
+          title="Receita por tier"
+          subtitle={`Total ${fmtBRLshort(filteredPieTotal)}`}
+          hint="Participação de cada tier na receita total do período filtrado. Use os botões acima do gráfico para alternar entre barras, pizza e outras visualizações, ou abra em tela cheia para ver mais detalhes."
+        >
+          <RankingChart
+            items={tierRankingItems}
+            mode="vd"
+            initialCategory="pie"
+            medals={false}
+            maxSlices={TIER_IDS_CHART.length}
+            emptyMessage="Sem dados"
+            accentColor={topTierStyle?.accent}
+          />
         </ChartCard>
 
         {/* Daily cycle chart */}
-        <ChartCard title="Receita diária por tier" subtitle="Evolução da receita pelos dias do ciclo">
+        <ChartCard
+          title="Receita diária por tier"
+          subtitle="Evolução da receita pelos dias do ciclo"
+          hint="Receita realizada em cada dia do ciclo, aberta por tier. A linha tracejada mostra o faturamento geral do dia."
+        >
           <DailyCycleChart
             revenueByDayAndTier={financial.revenueByDayAndTier}
             topResellersByDay={financial.topResellersByDay}

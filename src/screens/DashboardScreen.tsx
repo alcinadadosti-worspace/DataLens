@@ -8,6 +8,7 @@ import { useOrderStore } from '../store/useOrderStore';
 import { useFilterStore } from '../store/useFilterStore';
 import { fmtBRLshort, fmtBRL, fmtMinutes, fmtNumber } from '../utils/formatters';
 import { TIER_DEFINITIONS, TIER_STYLES } from '../design-system/tierStyles';
+import { getSupervisorColor } from '../design-system/supervisorColors';
 import Button from '../components/ui/Button';
 import { cycleSortKey } from '../utils/dateUtils';
 
@@ -131,6 +132,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
           delta={sortedCycles.length >= 2 ? `${Math.abs(cycleGrowth).toFixed(1).replace('.', ',')}%` : undefined}
           deltaDirection={cycleGrowth >= 0 ? 'up' : 'down'}
           meta="vs ciclo ant."
+          hint="Soma da receita (Valor Praticado) de todos os pedidos elegíveis. A variação compara com o ciclo anterior."
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(financial.grossRevenue)}</span>}
         />
         <KpiCard
@@ -138,6 +140,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
           value={fmtNumber(financial.totalOrders)}
           delta={financial.totalOrders > 0 ? `${((financial.finalizados / financial.totalOrders) * 100).toFixed(1).replace('.', ',')}% fin.` : undefined}
           deltaDirection="up"
+          hint="Total de pedidos importados, com a % de pedidos finalizados sobre o total."
           tooltip={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
@@ -146,7 +149,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
                 <span style={{ color: 'var(--vd-text-muted, #9B9287)' }}>Cancelados</span>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#C04040' }}>{financial.cancelados.toLocaleString('pt-BR')}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--vd-danger, #B83A3A)' }}>{financial.cancelados.toLocaleString('pt-BR')}</span>
               </div>
             </div>
           }
@@ -154,11 +157,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
         <KpiCard
           eyebrow="Ticket Médio"
           value={fmtBRLshort(financial.avgTicket)}
+          hint="Receita total dividida pelo número de pedidos elegíveis (não cancelados)."
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(financial.avgTicket)}</span>}
         />
         <KpiCard
           eyebrow="Revendedores ativos"
           value={commercial ? fmtNumber(commercial.activeResellers) : '-'}
+          hint="Número de revendedores com pelo menos um pedido no período filtrado, com a distribuição pelos 3 tiers com mais revendedores."
           tooltip={commercial ? (() => {
             const top3 = Object.entries(commercial.resellersByTier)
               .sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -187,21 +192,25 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
           <KpiCard
             eyebrow="ANS médio"
             value={fmtMinutes(operational.avgSLAMinutes)}
+            hint="ANS — Acordo de Nível de Serviço: tempo médio entre a aprovação e a autorização de faturamento do pedido."
           />
           <KpiCard
             eyebrow="ANS mínimo"
             value={fmtMinutes(operational.minSLAMinutes)}
             deltaDirection="up"
+            hint="Menor tempo de ANS (aprovação até autorização de faturamento) registrado no período filtrado."
           />
           <KpiCard
             eyebrow="ANS máximo"
             value={fmtMinutes(operational.maxSLAMinutes)}
             deltaDirection={operational.maxSLAMinutes > 1440 ? 'down' : 'up'}
+            hint="Maior tempo de ANS (aprovação até autorização de faturamento) registrado no período filtrado."
           />
           <KpiCard
             eyebrow="Pedidos atrasados"
             value={fmtNumber(operational.delayedOrders)}
             deltaDirection={operational.delayedOrders > 0 ? 'down' : 'up'}
+            hint="Pedidos cujo ANS ultrapassou o limite esperado de atendimento."
           />
         </div>
       )}
@@ -209,7 +218,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       {/* Charts Row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginTop: 14 }}>
         {/* Revenue by cycle */}
-        <ChartCard title="Receita por ciclo" subtitle="Evolução da receita total">
+        <ChartCard title="Receita por ciclo" subtitle="Evolução da receita total" hint="Receita total (Valor Praticado) somada por ciclo de faturamento.">
           {sortedCycles.length > 0 ? (
             <TrendLineChart
               series={[{
@@ -225,7 +234,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
         </ChartCard>
 
         {/* Status donut */}
-        <ChartCard title="Status dos pedidos" subtitle={`${financial.totalOrders.toLocaleString('pt-BR')} total`}>
+        <ChartCard title="Status dos pedidos" subtitle={`${financial.totalOrders.toLocaleString('pt-BR')} total`} hint="Distribuição dos pedidos por status (finalizado, cancelado, etc.) no período filtrado.">
           {donutStatusData.length > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <TierDonutChart
@@ -258,11 +267,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       {/* Row 2: Supervisors + Modelo Comercial + Meio de Captação */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginTop: 14 }}>
         {/* Top supervisors */}
-        <ChartCard title="Top supervisores" subtitle="Por receita gerada · clique para filtrar pedidos">
+        <ChartCard title="Top supervisores" subtitle="Por receita gerada · clique para filtrar pedidos" hint="Supervisores/estruturas com maior receita total no período filtrado. Clique em um nome para ver os pedidos dele na tabela.">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {topSupervisors.map(([name, value], idx) => {
               const isHov = hoveredSup === name;
               const pct = (value / topSupervisorMax) * 100;
+              // Supervisor com identidade conhecida (mapeada pra uma segmentação específica) sempre
+              // usa a cor real dela, em vez do ouro/prata/bronze de posição no ranking.
+              const identityColor = getSupervisorColor(name)?.accent;
+              const accent = identityColor ?? '#C9A227';
               return (
                 <div
                   key={name}
@@ -279,29 +292,30 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
                       {/* Rank badge */}
                       <span style={{
                         width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                        background: idx === 0 ? 'linear-gradient(135deg, var(--vd-warning-border, #E8C547), #C9A227)' :
+                        background: identityColor ? `linear-gradient(135deg, ${identityColor}, ${identityColor}CC)` :
+                                    idx === 0 ? 'linear-gradient(135deg, var(--vd-warning-border, #E8C547), #C9A227)' :
                                     idx === 1 ? 'linear-gradient(135deg, var(--vd-border-strong, #D8D0C0), var(--vd-text-muted, #9B9287))' :
                                     idx === 2 ? 'linear-gradient(135deg, #E8B68A, #C9824D)' : 'var(--vd-bg-track, #F2EEE6)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 9, fontWeight: 700,
-                        color: idx < 3 ? 'var(--vd-surface, #FFFFFF)' : 'var(--vd-text-secondary, #6B6258)',
-                        boxShadow: idx === 0 ? '0 1px 4px rgba(201,162,39,0.4)' : 'none',
+                        color: identityColor || idx < 3 ? 'var(--vd-surface, #FFFFFF)' : 'var(--vd-text-secondary, #6B6258)',
+                        boxShadow: identityColor ? `0 1px 4px ${identityColor}66` : idx === 0 ? '0 1px 4px rgba(201,162,39,0.4)' : 'none',
                       }}>{idx + 1}</span>
                       <span style={{
                         fontWeight: isHov ? 600 : 500,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        color: isHov ? '#C9A227' : 'var(--vd-ink, #1C1814)',
+                        color: isHov ? accent : 'var(--vd-ink, #1C1814)',
                         textDecoration: isHov ? 'underline' : 'none',
-                        textDecorationColor: '#C9A22766',
+                        textDecorationColor: `${accent}66`,
                         transition: 'color 150ms',
                       }}>{name}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 8 }}>
-                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: isHov ? '#C9A227' : 'var(--vd-text-secondary, #6B6258)', transition: 'color 150ms' }}>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: isHov ? accent : 'var(--vd-text-secondary, #6B6258)', transition: 'color 150ms' }}>
                         {fmtBRLshort(value)}
                       </span>
                       <i className="ph ph-arrow-right" style={{
-                        fontSize: 12, color: '#C9A227',
+                        fontSize: 12, color: accent,
                         opacity: isHov ? 1 : 0,
                         transform: isHov ? 'translateX(0)' : 'translateX(-4px)',
                         transition: 'opacity 150ms, transform 150ms',
@@ -313,11 +327,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
                       height: '100%',
                       width: `${pct}%`,
                       background: isHov
-                        ? 'linear-gradient(90deg, #C9A227, var(--vd-warning-border, #E8C547), #FFF3B0)'
-                        : 'linear-gradient(90deg, #C9A227, var(--vd-warning-border, #E8C547))',
+                        ? `linear-gradient(90deg, ${accent}, ${accent}CC, ${accent}88)`
+                        : `linear-gradient(90deg, ${accent}, ${accent}CC)`,
                       borderRadius: 2,
                       transition: 'width 600ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms',
-                      boxShadow: isHov ? '0 0 6px rgba(201,162,39,0.5)' : 'none',
+                      boxShadow: isHov ? `0 0 6px ${accent}80` : 'none',
                     }} />
                   </div>
                 </div>
@@ -330,7 +344,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
         </ChartCard>
 
         {/* Modelo Comercial */}
-        <ChartCard title="Modelo comercial" subtitle="Distribuição de receita por canal">
+        <ChartCard title="Modelo comercial" subtitle="Distribuição de receita por canal" hint="Participação de cada modelo comercial (Online, OMNIChannel, Presencial) na receita total.">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {Object.entries(financial.revenueByModeloComercial)
               .sort((a, b) => b[1] - a[1])
@@ -362,7 +376,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
 
         {/* Meio de Captação — financial.revenueByMeioCaptacao já vinha calculado (por APP
             Revendedor, VD+, Portal, VDI...) mas não aparecia em nenhuma tela do Modo VD. */}
-        <ChartCard title="Meio de captação" subtitle="Distribuição de receita por canal de pedido">
+        <ChartCard title="Meio de captação" subtitle="Distribuição de receita por canal de pedido" hint="Participação de cada canal de captação do pedido (APP Revendedor, VD+, Portal, VDI, Omnichannel) na receita total.">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {Object.entries(financial.revenueByMeioCaptacao)
               .sort((a, b) => b[1] - a[1])
@@ -401,7 +415,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       {/* Insights panel */}
       {insights.length > 0 && (
         <div style={{ marginTop: 14 }}>
-          <ChartCard title="Insights automáticos" subtitle="Gerados a partir dos dados importados">
+          <ChartCard title="Insights automáticos" subtitle="Gerados a partir dos dados importados" hint="Observações geradas automaticamente a partir dos dados importados — destacam variações, riscos e oportunidades relevantes no período.">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
               {insights.map(insight => {
                 const bg = insight.type === 'positive' ? 'var(--vd-success-bg, #E0F2E8)' : insight.type === 'negative' ? 'var(--vd-danger-bg, #FBE5E9)' : 'var(--vd-bg-track, #F2EEE6)';
@@ -429,7 +443,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       {/* SLA distribution */}
       {operational && operational.slaDistribution.some(d => d.count > 0) && (
         <div style={{ marginTop: 14 }}>
-          <ChartCard title="Distribuição de ANS" subtitle="Tempo entre aprovação e autorização de faturamento">
+          <ChartCard title="Distribuição de ANS" subtitle="Tempo entre aprovação e autorização de faturamento" hint="ANS — Acordo de Nível de Serviço: quantidade de pedidos agrupados por faixa de tempo entre aprovação e autorização de faturamento.">
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               {operational.slaDistribution.map((bucket, i) => {
                 const maxCount = Math.max(...operational.slaDistribution.map(d => d.count), 1);

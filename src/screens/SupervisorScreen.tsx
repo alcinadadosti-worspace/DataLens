@@ -4,8 +4,13 @@ import { isRevenueEligible } from '../analytics/financialMetrics';
 import { parseBRDate, diffInMinutes } from '../utils/dateUtils';
 import { fmtBRLshort, fmtBRL, fmtMinutes, fmtNumber } from '../utils/formatters';
 import ChartCard from '../components/charts/ChartCard';
+import RankingChart from '../components/charts/RankingChart';
+import { RankingItem } from '../components/charts/RankingList';
+import InfoHint from '../components/ui/InfoHint';
 import Button from '../components/ui/Button';
 import { useExport } from '../hooks/useExport';
+import { useFilterStore } from '../store/useFilterStore';
+import { getSupervisorColor } from '../design-system/supervisorColors';
 import { Order } from '../types/order';
 
 interface SupervisorRow {
@@ -22,10 +27,21 @@ interface SupervisorRow {
 
 type SortKey = keyof SupervisorRow;
 
-const SupervisorScreen: React.FC = () => {
+interface SupervisorScreenProps {
+  onNavigate: (route: string) => void;
+}
+
+const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
   const orders = useFilteredOrders();
+  const setFilter = useFilterStore(s => s.setFilter);
   const [sortKey, setSortKey] = useState<SortKey>('totalRevenue');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [hoveredName, setHoveredName] = useState<string | null>(null);
+
+  function goToSupervisorOrders(name: string) {
+    setFilter('supervisor', name);
+    onNavigate('table');
+  }
 
   const supervisorData = useMemo<SupervisorRow[]>(() => {
     const map: Record<string, {
@@ -136,6 +152,18 @@ const SupervisorScreen: React.FC = () => {
     ? sorted.reduce((s, r) => s + r.avgSLAMinutes, 0) / sorted.length
     : 0;
 
+  // Sempre por receita, independente da ordenação atual da tabela (que o usuário pode mudar pra
+  // qualquer coluna) — o gráfico de participação é um ranking de receita, não deve seguir isso.
+  const participationItems: RankingItem[] = [...sorted]
+    .sort((a, b) => b.totalRevenue - a.totalRevenue)
+    .map(row => ({
+      label: row.name,
+      value: row.totalRevenue,
+      valueLabel: fmtBRLshort(row.totalRevenue),
+      meta: totalRevenue > 0 ? `${((row.totalRevenue / totalRevenue) * 100).toFixed(1).replace('.', ',')}%` : '0,0%',
+      color: getSupervisorColor(row.name)?.accent,
+    }));
+
   return (
     <div style={{ padding: '32px 32px 64px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -159,18 +187,42 @@ const SupervisorScreen: React.FC = () => {
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
         <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4 }}>Estruturas ativas</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4, display: 'flex', alignItems: 'center' }}>
+            Estruturas ativas
+            <InfoHint text="Quantidade de supervisores/estruturas com pelo menos um pedido no período filtrado." />
+          </div>
           <div style={{ fontSize: 28, fontWeight: 600 }}>{fmtNumber(sorted.length)}</div>
         </div>
         <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4 }}>Receita total</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4, display: 'flex', alignItems: 'center' }}>
+            Receita total
+            <InfoHint text="Soma da receita (Valor Praticado) de todos os pedidos elegíveis, de todas as estruturas, no período filtrado." />
+          </div>
           <div style={{ fontSize: 28, fontWeight: 600 }}>{fmtBRLshort(totalRevenue)}</div>
         </div>
         <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4 }}>ANS médio geral</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 4, display: 'flex', alignItems: 'center' }}>
+            ANS médio geral
+            <InfoHint text="ANS — Acordo de Nível de Serviço: tempo médio entre a aprovação e a autorização de faturamento do pedido, em minutos, considerando todas as estruturas." />
+          </div>
           <div style={{ fontSize: 28, fontWeight: 600 }}>{fmtMinutes(avgSLA)}</div>
         </div>
       </div>
+
+      {/* Participação na receita geral */}
+      <ChartCard
+        title="Participação dos supervisores na receita"
+        subtitle="Receita total por estrutura, no período filtrado"
+        hint="Quanto cada supervisor/estrutura contribui para a receita total do grupo. Use os botões acima do gráfico para alternar entre barras, pizza e outras visualizações, ou abra em tela cheia para clicar num supervisor e ver mais detalhes."
+      >
+        <RankingChart
+          items={participationItems}
+          mode="vd"
+          initialCategory="bar"
+          emptyMessage="Sem dados"
+        />
+      </ChartCard>
+      <div style={{ height: 20 }} />
 
       {/* Table */}
       <div style={{ background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14, overflow: 'hidden' }}>
@@ -194,10 +246,20 @@ const SupervisorScreen: React.FC = () => {
                   Receita {sortKey === 'totalRevenue' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                 </th>
                 <th style={{ ...thStyle('avgTicket'), textAlign: 'right' }} onClick={() => toggleSort('avgTicket')}>
-                  Ticket Médio {sortKey === 'avgTicket' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    Ticket Médio {sortKey === 'avgTicket' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                    <span onClick={e => e.stopPropagation()}>
+                      <InfoHint direction="down" text="Receita total dividida pelo número de pedidos elegíveis (não cancelados) da estrutura." />
+                    </span>
+                  </span>
                 </th>
                 <th style={{ ...thStyle('avgSLAMinutes'), textAlign: 'right' }} onClick={() => toggleSort('avgSLAMinutes')}>
-                  ANS Médio {sortKey === 'avgSLAMinutes' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    ANS Médio {sortKey === 'avgSLAMinutes' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                    <span onClick={e => e.stopPropagation()}>
+                      <InfoHint direction="down" text="ANS — Acordo de Nível de Serviço: tempo médio, em minutos, entre a aprovação e a autorização de faturamento dos pedidos dessa estrutura." />
+                    </span>
+                  </span>
                 </th>
                 <th style={{ ...thStyle('cancelledCount'), textAlign: 'right' }} onClick={() => toggleSort('cancelledCount')}>
                   Cancelados {sortKey === 'cancelledCount' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
@@ -212,7 +274,24 @@ const SupervisorScreen: React.FC = () => {
                   onMouseLeave={e => (e.currentTarget.style.background = '')}
                 >
                   <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', fontWeight: 500 }}>
-                    {row.name}
+                    <span
+                      onClick={() => goToSupervisorOrders(row.name)}
+                      onMouseEnter={() => setHoveredName(row.name)}
+                      onMouseLeave={() => setHoveredName(null)}
+                      title="Ver pedidos dessa estrutura na tabela"
+                      style={{
+                        cursor: 'pointer',
+                        color: hoveredName === row.name ? 'var(--vd-accent, #B26A3C)' : 'inherit',
+                        textDecoration: hoveredName === row.name ? 'underline' : 'none',
+                        textUnderlineOffset: 3,
+                      }}
+                    >
+                      {row.name}
+                      <i
+                        className="ph ph-arrow-square-out"
+                        style={{ fontSize: 12, marginLeft: 6, opacity: hoveredName === row.name ? 1 : 0, transition: 'opacity 150ms' }}
+                      />
+                    </span>
                   </td>
                   <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', color: 'var(--vd-text-secondary, #6B6258)', fontSize: 12 }}>
                     {row.structure || '—'}
