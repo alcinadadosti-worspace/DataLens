@@ -1,6 +1,7 @@
 import {
   AbcRow, AggregatedRow, LojaDataset, LojaMetricRow, PedidoHistoricoRow, VendaHoraRow,
   FidelidadeRow, LojaDigitalRow, ServicoConsultorRow, CuidadosFaciaisRow,
+  PedidoDetalhamentoSkuRow, LogisticaAdesaoDetalheRow,
 } from '../types/loja';
 import { normalizeStoreDisplayName } from '../parsers/lojaParser';
 import { resolveLojaNome } from './lojaStoreAliases';
@@ -405,6 +406,26 @@ export function crossInsights(dataset: LojaDataset): string[] {
     }
   }
 
+  if (dataset.canal && dataset.canal.length > 0) {
+    const canaisVenda = aggregateByName(dataset.canal).filter(c => !/^loja$/i.test(c.key.trim()));
+    if (canaisVenda.length > 0) {
+      const top = canaisVenda[0];
+      insights.push(
+        `Fora da loja física, o canal de venda "${top.key}" é o que mais gera GMV (${top.participacaoPct.toFixed(1).replace('.', ',')}% do total da rede) — oportunidade de ativação fora do PDV.`
+      );
+    }
+  }
+
+  if (dataset.logisticaAdesaoDetalhe && dataset.logisticaAdesaoDetalhe.length > 0) {
+    const porPdv = logisticaAdesaoResumoPorPdv(dataset.logisticaAdesaoDetalhe);
+    const pior = [...porPdv].filter(p => p.total >= 5).sort((a, b) => a.usaBemPct - b.usaBemPct)[0];
+    if (pior) {
+      insights.push(
+        `A loja ${resolveLojaNome(pior.pdvCodigo, pior.pdvCodigo)} tem a pior adesão à plataforma logística de transferência entre lojas (${pior.usaBemPct.toFixed(0)}% "Usa Bem" em ${pior.total} pedidos) — vale reforçar o treinamento de uso da ferramenta ali.`
+      );
+    }
+  }
+
   if (dataset.servicos && dataset.servicos.pdv.length >= 2) {
     const top = [...dataset.servicos.pdv].sort((a, b) => b.gmv - a.gmv)[0];
     insights.push(
@@ -588,7 +609,188 @@ export function pedidosRates(rows: PedidoHistoricoRow[], groupBy: 'loja' | 'cate
   })).sort((a, b) => b.volumeColocado - a.volumeColocado);
 }
 
+// --- Sell-in por SKU (GestaoPedidos_Detalhamento_por_Sku_meta_Sell_In_por_Ciclo) ---
+
+export interface SkuSellInRankItem {
+  skuCodigo: string;
+  skuDescricao: string;
+  sugestaoComercial: number;
+  pedidoRealizado: number;
+  atingimentoMetaPct: number;
+  pdvCount: number;
+}
+
+/** Ranking de SKUs por atingimento da meta de sell-in (rede toda), do pior para o melhor. */
+export function sellInSkuRanking(rows: PedidoDetalhamentoSkuRow[]): SkuSellInRankItem[] {
+  const groups = new Map<string, { skuDescricao: string; sugestaoComercial: number; pedidoRealizado: number; pdvs: Set<string> }>();
+  for (const r of rows) {
+    let g = groups.get(r.skuCodigo);
+    if (!g) {
+      g = { skuDescricao: r.skuDescricao, sugestaoComercial: 0, pedidoRealizado: 0, pdvs: new Set() };
+      groups.set(r.skuCodigo, g);
+    }
+    g.sugestaoComercial += r.sugestaoComercial;
+    g.pedidoRealizado += r.pedidoRealizado;
+    g.pdvs.add(r.pdvCodigo);
+  }
+  return Array.from(groups.entries())
+    .map(([skuCodigo, g]) => ({
+      skuCodigo,
+      skuDescricao: g.skuDescricao,
+      sugestaoComercial: g.sugestaoComercial,
+      pedidoRealizado: g.pedidoRealizado,
+      atingimentoMetaPct: g.sugestaoComercial > 0 ? (g.pedidoRealizado / g.sugestaoComercial) * 100 : 0,
+      pdvCount: g.pdvs.size,
+    } as SkuSellInRankItem))
+    .sort((a, b) => a.atingimentoMetaPct - b.atingimentoMetaPct);
+}
+
+// --- Adesão à plataforma logística (GestaoPedidos_Visão_detalhada_da_utilização_por_pedido) ---
+
+export interface LogisticaAdesaoPdvSummary {
+  pdvCodigo: string;
+  total: number;
+  usaBem: number;
+  usaBemPct: number;
+  dentroDoPrazoPct: number;
+  slaMedioDiasUteis: number | null;
+}
+
+/** Reagrupa o detalhe pedido a pedido por PDV (loja de destino) — o arquivo-resumo não tem essa quebra. */
+export function logisticaAdesaoResumoPorPdv(rows: LogisticaAdesaoDetalheRow[]): LogisticaAdesaoPdvSummary[] {
+  const groups = new Map<string, { total: number; usaBem: number; dentroDoPrazo: number; slaSum: number; slaCount: number }>();
+  for (const r of rows) {
+    let g = groups.get(r.pdvCodigo);
+    if (!g) {
+      g = { total: 0, usaBem: 0, dentroDoPrazo: 0, slaSum: 0, slaCount: 0 };
+      groups.set(r.pdvCodigo, g);
+    }
+    g.total += 1;
+    if (r.categoriaAdesao.trim().toLowerCase() === 'usa bem') g.usaBem += 1;
+    if (r.statusPrazo.trim().toLowerCase() === 'dentro do prazo') g.dentroDoPrazo += 1;
+    if (r.qtdDiasUteisEntrega != null) {
+      g.slaSum += r.qtdDiasUteisEntrega;
+      g.slaCount += 1;
+    }
+  }
+  return Array.from(groups.entries())
+    .map(([pdvCodigo, g]) => ({
+      pdvCodigo,
+      total: g.total,
+      usaBem: g.usaBem,
+      usaBemPct: g.total > 0 ? (g.usaBem / g.total) * 100 : 0,
+      dentroDoPrazoPct: g.total > 0 ? (g.dentroDoPrazo / g.total) * 100 : 0,
+      slaMedioDiasUteis: g.slaCount > 0 ? g.slaSum / g.slaCount : null,
+    } as LogisticaAdesaoPdvSummary))
+    .sort((a, b) => b.usaBemPct - a.usaBemPct);
+}
+
+export interface LogisticaRotaSummary {
+  origem: string;
+  destino: string;
+  qtdPedidos: number;
+  slaMedioDiasUteis: number | null;
+  usaBemPct: number;
+}
+
+/** Agrupa o detalhe de adesão logística por rota (cidade/UF origem → cidade/UF destino). */
+export function logisticaRotas(rows: LogisticaAdesaoDetalheRow[]): LogisticaRotaSummary[] {
+  const groups = new Map<string, { origem: string; destino: string; total: number; usaBem: number; slaSum: number; slaCount: number }>();
+  for (const r of rows) {
+    const origem = `${r.cidadeOrigem}/${r.ufOrigem}`;
+    const destino = `${r.cidadeDestino}/${r.ufDestino}`;
+    const key = `${origem}→${destino}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = { origem, destino, total: 0, usaBem: 0, slaSum: 0, slaCount: 0 };
+      groups.set(key, g);
+    }
+    g.total += 1;
+    if (r.categoriaAdesao.trim().toLowerCase() === 'usa bem') g.usaBem += 1;
+    if (r.qtdDiasUteisEntrega != null) {
+      g.slaSum += r.qtdDiasUteisEntrega;
+      g.slaCount += 1;
+    }
+  }
+  return Array.from(groups.values())
+    .map(g => ({
+      origem: g.origem,
+      destino: g.destino,
+      qtdPedidos: g.total,
+      slaMedioDiasUteis: g.slaCount > 0 ? g.slaSum / g.slaCount : null,
+      usaBemPct: g.total > 0 ? (g.usaBem / g.total) * 100 : 0,
+    } as LogisticaRotaSummary))
+    .sort((a, b) => b.qtdPedidos - a.qtdPedidos);
+}
+
+/** Pedidos ainda em aberto (sem data de finalização), ordenados dos mais parados pro mais recentes. */
+export function logisticaPedidosEmAberto(rows: LogisticaAdesaoDetalheRow[]): LogisticaAdesaoDetalheRow[] {
+  return rows
+    .filter(r => r.qtdDiasUteisEmAberto != null)
+    .sort((a, b) => (b.qtdDiasUteisEmAberto ?? 0) - (a.qtdDiasUteisEmAberto ?? 0));
+}
+
 // --- Validações cruzadas dos arquivos opcionais ---
+
+/**
+ * Correspondência entre o nome de cada indicador na aba CP do Resumo de Performance e o nome do
+ * mesmo indicador nas abas PDV/CONSULTOR — os dois lados descrevem o mesmo conceito, mas o
+ * sistema de origem não usa o texto exatamente igual entre as abas (ex. "Share de alavancas BT e
+ * BP" na CP vs. "Share de Alavancas BT/BP" na PDV), então a correspondência é mapeada à mão a
+ * partir dos nomes reais observados nos exports — comparar por nome exato ou por similaridade de
+ * texto deixaria passar pares válidos ou juntaria pares errados.
+ */
+const CP_TO_PDV_INDICADOR: Record<string, string> = {
+  'Receita Total': 'Receita',
+  'Quantidade de Boletos': 'Quantidade de Boletos',
+  'Boleto Médio': 'Boleto Médio',
+  'Quantidade de Itens': 'Quantidade de Itens',
+  'Itens por Boleto': 'Itens por Boleto',
+  'Preço Médio': 'Preço Médio',
+  'Share de alavancas BT e BP': 'Share de Alavancas BT/BP',
+  'Penetração de Boleto B1': 'Penetração de Boletos 1',
+  'Penetração de Boleto Turbinado': 'Penetração de Boleto Turbinado',
+  'Penetração de Boleto Promocional': 'Penetração de Boleto Promocional',
+  'Penetração de Receita Mobshop': 'Penetração de Receita Mobshop',
+  'Penetração de Boletos Fidelidade': 'Penetração de Boletos Fidelidade',
+  'Resgate Fidelidade': 'Resgate Fidelidade',
+  'Conversão de Ação de Fluxo': 'Conversão de Ação de Fluxo',
+  'Penetração de Cuidados Faciais': 'Penetração de Cuidados Faciais',
+  '% Boletos ID Cliente': '% Boletos ID Cliente',
+  'Quantidade de Serviços em Loja': 'Quantidade de Serviços em Loja',
+  'Clique & Retire - % de separação no prazo': 'Clique & Retire',
+  'Loja Digital Ativo - % de atendimento': 'Loja Digital Ativo - % de Atendimento',
+  'Loja Digital Receptivo - TME 1ª resposta': 'Loja Digital Receptivo - TME 1ª resposta',
+};
+
+export interface ReceitaBaseMismatch {
+  indicadorCp: string;
+  indicadorPdv: string;
+  tipoReceitaCp: string;
+  tipoReceitaPdv: string;
+}
+
+/**
+ * Indicadores em que a aba CP e a aba PDV do MESMO arquivo Resumo de Performance declaram uma
+ * base de receita diferente pro mesmo conceito (ex. um diz "GMV", o outro diz "Receita Líquida").
+ * Não é bug deste app — é o próprio sistema de origem exportando de forma inconsistente — mas
+ * precisa aparecer pra quem for usar esse número saber que a base pode não ser a que ele espera.
+ */
+export function receitaBaseMismatches(dataset: LojaDataset): ReceitaBaseMismatch[] {
+  const rp = dataset.resumoPerformance;
+  if (!rp || rp.cp.length === 0 || rp.pdv.length === 0) return [];
+  const pdvMetricas = rp.pdv[0].metricas;
+  const mismatches: ReceitaBaseMismatch[] = [];
+  for (const [cpNome, pdvNome] of Object.entries(CP_TO_PDV_INDICADOR)) {
+    const cpInd = rp.cp.find(i => i.indicador === cpNome);
+    const pdvMetrica = pdvMetricas.find(m => m.metrica === pdvNome);
+    if (!cpInd?.tipoReceita || !pdvMetrica?.tipoReceita) continue;
+    if (cpInd.tipoReceita !== pdvMetrica.tipoReceita) {
+      mismatches.push({ indicadorCp: cpNome, indicadorPdv: pdvNome, tipoReceitaCp: cpInd.tipoReceita, tipoReceitaPdv: pdvMetrica.tipoReceita });
+    }
+  }
+  return mismatches;
+}
 
 export function optionalConsistencyWarnings(dataset: LojaDataset): string[] {
   const warnings: string[] = [];
@@ -628,6 +830,45 @@ export function optionalConsistencyWarnings(dataset: LojaDataset): string[] {
         if (diffPct > TOL) {
           warnings.push(`Volume "${label}" somado do histórico de colocação (${a.toLocaleString('pt-BR')}) diverge ${diffPct.toFixed(1)}% do total da Visão Geral do Ciclo (${b.toLocaleString('pt-BR')}).`);
         }
+      }
+    }
+  }
+
+  if (dataset.pedidosDetalhamentoSku && dataset.pedidosMetaSellIn && dataset.pedidosMetaSellIn.length > 0) {
+    const skuTotal = dataset.pedidosDetalhamentoSku.reduce((s, r) => s + r.pedidoRealizado, 0);
+    const metaTotal = dataset.pedidosMetaSellIn.reduce((s, r) => s + r.pedidoRealizado, 0);
+    if (metaTotal > 0) {
+      const diffPct = Math.abs(skuTotal - metaTotal) / metaTotal * 100;
+      if (diffPct > TOL) {
+        warnings.push(`Pedido Realizado somado por SKU (${skuTotal.toLocaleString('pt-BR')}) diverge ${diffPct.toFixed(1)}% do total de Meta Sell-In por Ciclo (${metaTotal.toLocaleString('pt-BR')}).`);
+      }
+    }
+  }
+
+  for (const m of receitaBaseMismatches(dataset)) {
+    warnings.push(`"${m.indicadorCp}" é declarado com base ${m.tipoReceitaCp} na aba CP (visão Rede), mas ${m.tipoReceitaPdv} na aba PDV/CONSULTOR (visões Por loja/Por consultor) do Resumo de Performance — mesmo indicador, base diferente conforme o recorte.`);
+  }
+
+  if (dataset.resumoPerformance) {
+    const receitaTotalCP = dataset.resumoPerformance.cp.find(i => i.indicador.trim().toUpperCase() === 'RECEITA TOTAL');
+    if (receitaTotalCP?.realizado != null) {
+      const gmvLojas = dataset.lojas.reduce((s, r) => s + r.gmv, 0);
+      if (gmvLojas > 0) {
+        const diffPct = Math.abs(receitaTotalCP.realizado - gmvLojas) / gmvLojas * 100;
+        if (diffPct > TOL) {
+          warnings.push(`Receita Total do Resumo de Performance (${receitaTotalCP.realizado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}, base ${receitaTotalCP.tipoReceita ?? 'GMV'}) diverge ${diffPct.toFixed(1)}% do GMV somado em LOJAS.csv (${gmvLojas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) — confira se os dois arquivos foram exportados no mesmo momento/período.`);
+        }
+      }
+    }
+  }
+
+  if (dataset.logisticaAdesaoResumo && dataset.logisticaAdesaoDetalhe) {
+    for (const resumoRow of dataset.logisticaAdesaoResumo) {
+      const count = dataset.logisticaAdesaoDetalhe.filter(
+        d => d.categoriaAdesao.trim().toLowerCase() === resumoRow.categoria.trim().toLowerCase()
+      ).length;
+      if (count !== resumoRow.qtdPedidos) {
+        warnings.push(`Categoria de adesão "${resumoRow.categoria}": resumo aponta ${resumoRow.qtdPedidos} pedidos, mas o detalhe tem ${count} linhas dessa categoria.`);
       }
     }
   }

@@ -7,25 +7,30 @@ import { useLojaStore } from '../../store/useLojaStore';
 import { LOJA_DIMENSIONS, LOJA_DIMENSION_LABELS, LOJA_OPTIONAL_FILES, LOJA_OPTIONAL_FILE_LABELS, LojaParseResult } from '../../types/loja';
 
 const DEFAULT_FILE_NAMES = [
-  'GerencialVendas-01-09-2026CANAL.csv',
-  'GerencialVendas-01-09-2026CONSULTOR.csv',
-  'GerencialVendas-01-09-2026DATA.csv',
-  'GerencialVendas-01-09-2026FORMA.csv',
-  'GerencialVendas-01-09-2026GESTAO.csv',
-  'GerencialVendas-01-09-2026LOJAS.csv',
-  'GerencialVendas-01-09-2026OPERADOR.csv',
-  'relatorioABCVenda.csv',
+  'GerencialVendas-21-09-2026CANAL.csv',
+  'GerencialVendas-21-09-2026CONSULTOR.csv',
+  'GerencialVendas-21-09-2026DATA.csv',
+  'GerencialVendas-21-09-2026FORMA.csv',
+  'GerencialVendas-21-09-2026GESTAO.csv',
+  'GerencialVendas-21-09-2026LOJAS.csv',
+  'GerencialVendas-21-09-2026OPERADOR.csv',
+  'relatorioABCVenda(5).csv',
   'relatorioVendaPorHora.csv',
-  '20260902_GestaoPedidos_Visao_Geral_por_Ciclo_0a4eefbbbfbe.csv',
-  '20260902_GestaoPedidos_Giro_Pedidos_Canais_por_Ciclo_178adeb05957.csv',
-  '20260902_GestaoPedidos_Historico_Colocacao_Pedido_0a97308d4986.csv',
-  '20260902_Receita_por_Canal_UN_047811f18f65.xlsx',
-  '20260902_Receita_por_Cat_Sub_Mar_7edb29665699.xlsx',
-  '20260904_Resumo_de_Performance_Indicadores_Loja_c7007cbcf310.xlsx',
-  '20260904_Loja_cuidados_faciais_iaf_a288d7bf06ba.xlsx',
-  '20260904_LojaDigital_Performance_por_Pdv_Consultor_a673a862600f.xlsx',
-  '20260904_ProgramaFidelidade_Distribuicao_Penetracao_boleto_Fidelidade_8b55d0b32e4d.xlsx',
-  '20260904_Servicos_em_loja_5b5eb7906d4e.xlsx',
+  '20260921_GestaoPedidos_Visao_Geral_por_Ciclo_27bf98b01d4a.csv',
+  '20260921_GestaoPedidos_Giro_Pedidos_Canais_por_Ciclo_c8782b0aeb91.csv',
+  '20260921_GestaoPedidos_Historico_Colocacao_Pedido_e024717a4c09.csv',
+  '20260921_GestaoPedidos_Detalhamento_por_Sku_meta_Sell_In_por_Ciclo_5db71d8866fa.csv',
+  '20260921_GestaoPedidos_Meta_Sell_In_Por_Ciclo_494853b48c32.csv',
+  '20260921_GestaoPedidos_usage-by-usage-category-adherence_15fc62f83e55.xlsx',
+  '20260921_GestaoPedidos_Visão_detalhada_da_utilização_por_pedido_5e28b9f486db.xlsx',
+  '20260921_ReceitaCanalLoja_Performance_por_PDV_182802327f4d.xlsx',
+  '20260921_ReceitaCanalLoja_por_Periodo_506833ba858f.xlsx',
+  '20260921_ReceitaCanalLoja_por_UN_d75c6175b6f9.xlsx',
+  '20260921_Resumo_de_Performance_Indicadores_Loja_147460e90c01.xlsx',
+  '20260921_Loja_cuidados_faciais_iaf_3f5e28513349.xlsx',
+  '20260921_LojaDigital_Performance_por_Pdv_Consultor_d8446984162e.xlsx',
+  '20260921_ProgramaFidelidade_Distribuicao_Penetracao_boleto_Fidelidade_5ea83e291cfb.xlsx',
+  '20260921_Servicos_em_loja_b789c2ba7572.xlsx',
 ];
 
 interface LojaImportScreenProps {
@@ -60,7 +65,7 @@ const LojaImportScreen: React.FC<LojaImportScreenProps> = ({ onComplete }) => {
     setLoadingDefaults(true);
     Promise.all(
       DEFAULT_FILE_NAMES.map(name =>
-        fetch(`/dados-padrao-loja/${name}`)
+        fetch(`/dados-padrao-loja/${encodeURIComponent(name)}`)
           .then(r => (r.ok ? r.blob() : null))
           .then(blob => (blob ? new File([blob], name, { type: blob.type }) : null))
           .catch(() => null)

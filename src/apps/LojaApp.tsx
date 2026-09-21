@@ -15,6 +15,9 @@ import LojaAbcScreen from '../screens/loja/LojaAbcScreen';
 import LojaPedidosScreen from '../screens/loja/LojaPedidosScreen';
 import LojaHorarioScreen from '../screens/loja/LojaHorarioScreen';
 import LojaFidelidadeServicosScreen from '../screens/loja/LojaFidelidadeServicosScreen';
+import LojaScorecardScreen from '../screens/loja/LojaScorecardScreen';
+import LojaPerfilScreen from '../screens/loja/LojaPerfilScreen';
+import LojaLogisticaScreen from '../screens/loja/LojaLogisticaScreen';
 import { useLojaStore } from '../store/useLojaStore';
 import { useLojaThemeStore } from '../store/useLojaThemeStore';
 
@@ -48,6 +51,12 @@ function LojaApp() {
     screen = <LojaHorarioScreen onNavigate={navigate} />;
   } else if (route === 'loja-fidelidade-servicos') {
     screen = <LojaFidelidadeServicosScreen onNavigate={navigate} />;
+  } else if (route === 'loja-scorecard') {
+    screen = <LojaScorecardScreen onNavigate={navigate} />;
+  } else if (route === 'loja-perfil') {
+    screen = <LojaPerfilScreen onNavigate={navigate} />;
+  } else if (route === 'loja-logistica') {
+    screen = <LojaLogisticaScreen onNavigate={navigate} />;
   }
 
   return (

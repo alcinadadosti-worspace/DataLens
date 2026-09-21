@@ -29,13 +29,20 @@ export type LojaOptionalFile =
   | 'pedidosVisaoGeral'
   | 'pedidosGiroCanais'
   | 'pedidosHistorico'
+  | 'pedidosDetalhamentoSku'
+  | 'pedidosMetaSellIn'
   | 'resumoPerformance'
   | 'receitaCanal'
   | 'receitaCategoria'
+  | 'receitaCanalLojaPdv'
+  | 'receitaCanalLojaUn'
+  | 'receitaCanalLojaPeriodo'
   | 'servicos'
   | 'fidelidade'
   | 'lojaDigital'
-  | 'cuidadosFaciais';
+  | 'cuidadosFaciais'
+  | 'logisticaAdesaoResumo'
+  | 'logisticaAdesaoDetalhe';
 
 export const LOJA_OPTIONAL_FILES: LojaOptionalFile[] = [
   'abc',
@@ -43,13 +50,20 @@ export const LOJA_OPTIONAL_FILES: LojaOptionalFile[] = [
   'pedidosVisaoGeral',
   'pedidosGiroCanais',
   'pedidosHistorico',
+  'pedidosDetalhamentoSku',
+  'pedidosMetaSellIn',
   'resumoPerformance',
   'receitaCanal',
   'receitaCategoria',
+  'receitaCanalLojaPdv',
+  'receitaCanalLojaUn',
+  'receitaCanalLojaPeriodo',
   'servicos',
   'fidelidade',
   'lojaDigital',
   'cuidadosFaciais',
+  'logisticaAdesaoResumo',
+  'logisticaAdesaoDetalhe',
 ];
 
 export const LOJA_OPTIONAL_FILE_LABELS: Record<LojaOptionalFile, string> = {
@@ -58,13 +72,20 @@ export const LOJA_OPTIONAL_FILE_LABELS: Record<LojaOptionalFile, string> = {
   pedidosVisaoGeral: 'Gestão de pedidos — visão geral',
   pedidosGiroCanais: 'Gestão de pedidos — giro por canal',
   pedidosHistorico: 'Gestão de pedidos — histórico de colocação',
+  pedidosDetalhamentoSku: 'Gestão de pedidos — detalhamento de sell-in por SKU',
+  pedidosMetaSellIn: 'Gestão de pedidos — meta de sell-in por ciclo',
   resumoPerformance: 'Resumo de performance (indicadores)',
-  receitaCanal: 'Receita por canal / UN',
+  receitaCanal: 'Receita por canal / UN (legado)',
   receitaCategoria: 'Receita por categoria/subcategoria/marca',
+  receitaCanalLojaPdv: 'Receita por canal — performance por PDV (Loja x Clique e Retire)',
+  receitaCanalLojaUn: 'Receita por canal — meta por UN (Loja x Clique e Retire)',
+  receitaCanalLojaPeriodo: 'Receita por canal — série por período',
   servicos: 'Serviços em loja',
   fidelidade: 'Programa Fidelidade — penetração de boleto',
   lojaDigital: 'Loja Digital — performance por PDV/consultor',
   cuidadosFaciais: 'Cuidados Faciais + Botik — receita por PDV/consultor',
+  logisticaAdesaoResumo: 'Logística — adesão à plataforma (resumo)',
+  logisticaAdesaoDetalhe: 'Logística — adesão à plataforma (detalhe por pedido)',
 };
 
 /** Curva ABC (relatorioABCVenda*.csv) — uma linha por SKU x data (agregar por SKU para o ranking). */
@@ -126,6 +147,31 @@ export interface PedidoHistoricoRow {
   volumeFaturado: number;
 }
 
+/**
+ * GestaoPedidos_Detalhamento_por_Sku_meta_Sell_In_por_Ciclo — grão Ciclo x PDV x SKU. Traz a
+ * sugestão comercial de sell-in e o quanto foi de fato pedido, por SKU e por PDV — mais granular
+ * que pedidosHistorico (que não separa por ciclo) e mais granular que pedidosMetaSellIn (que só
+ * soma a rede toda).
+ */
+export interface PedidoDetalhamentoSkuRow {
+  ciclo: string;
+  pdvCodigo: string;
+  skuCodigo: string;
+  skuDescricao: string;
+  marca: string;
+  dataLimiteCaptacao: string;
+  sugestaoComercial: number;
+  pedidoRealizado: number;
+  atingimentoMetaPct: number;
+}
+
+/** GestaoPedidos_Meta_Sell_In_Por_Ciclo — 1 linha por ciclo, total da rede (sugestão vs. realizado). */
+export interface PedidoMetaSellInRow {
+  ciclo: string;
+  sugestaoComercial: number;
+  pedidoRealizado: number;
+}
+
 /** Receita_por_Canal_UN.xlsx — receita GMV+Omni por canal/UN, ciclo atual vs. anterior. */
 export interface ReceitaCanalRow {
   canal: string;
@@ -153,6 +199,82 @@ export interface ReceitaCategoriaDataset {
   marca: ReceitaCategoriaRow[];
 }
 
+/**
+ * ReceitaCanalLoja_* — substituiu, nos lotes recebidos a partir de set/2026, a família
+ * Receita_por_Canal_UN/Receita_por_Cat_Sub_Mar (mantida acima como `receitaCanal`/
+ * `receitaCategoria` para compatibilidade com exports antigos). Aqui "canal" é o canal de
+ * CUMPRIMENTO do pedido (Loja física vs. Clique e Retire) — não confundir com o "canal de venda"
+ * (ativação) de `dataset.canal`, que é outra dimensão vinda de GerencialVendas-*CANAL.csv.
+ */
+export interface ReceitaCanalLojaBlock {
+  receitaAnterior: number;
+  receitaAtual: number;
+  metaPef: number;
+  gapAcordadoValor: number;
+  gapAcordadoPct: number | null;
+  realizadoPct: number | null;
+}
+
+/** ReceitaCanalLoja_Performance_por_PDV.xlsx — uma linha por PDV, com blocos Loja/Clique e Retire/Total. */
+export interface ReceitaCanalLojaPdvRow {
+  un: string;
+  pdvCodigo: string | null;
+  cidade: string;
+  localPdv: string;
+  loja: ReceitaCanalLojaBlock;
+  cliqueRetire: ReceitaCanalLojaBlock;
+  total: ReceitaCanalLojaBlock;
+}
+
+export interface ReceitaCanalLojaUnRow {
+  un: string;
+  meta: number;
+  realizado: number;
+  anterior: number;
+  variacaoPct: number;
+}
+
+/** ReceitaCanalLoja_por_UN.xlsx — meta/realizado do CP inteiro, quebra por UN e composição Loja x Clique e Retire. */
+export interface ReceitaCanalLojaUnDataset {
+  totalMeta: number;
+  totalRealizado: number;
+  totalAnterior: number;
+  totalVariacaoPct: number;
+  porUn: ReceitaCanalLojaUnRow[];
+  composicao: { nome: string; realizado: number; anterior: number }[];
+}
+
+/**
+ * ReceitaCanalLoja_por_Periodo.xlsx — série temporal de receita. Em exports observados até agora
+ * chegou apenas com a aba FILTROS (sem tabela de dados) — o parser tolera isso e retorna lista
+ * vazia em vez de erro.
+ */
+export interface ReceitaCanalLojaPeriodoRow {
+  data: string;
+  receita: number;
+}
+
+/**
+ * Uma métrica dentro do bloco repetido (Valor / Vs. Meta PEF / Vs. Período Anterior) das abas
+ * PDV/CONSULTOR do Resumo de Performance — ex. "Penetração de Boleto Turbinado", "Resgate
+ * Fidelidade", "Loja Digital Ativo - % de Atendimento". A aba CONSULTOR não tem coluna de Meta PEF
+ * por métrica (só Vs. Período Anterior), então `vsMetaPEFPct` fica `null` nesses casos.
+ */
+export interface ResumoPerformanceMetricValue {
+  metrica: string;
+  valor: number | null;
+  vsMetaPEFPct: number | null;
+  vsAnoAnteriorPct: number | null;
+  /**
+   * Base de receita sobre a qual esse indicador é calculado, declarada pelo próprio arquivo
+   * (linha de subheader "Tipo de Receita" logo abaixo do cabeçalho): "Receita GMV", "Receita
+   * Líquida", "Receita Bruta Varejo" ou "N/A". Indicadores diferentes na MESMA linha usam bases
+   * diferentes — nunca comparar dois indicadores como se fossem a mesma unidade sem checar isso.
+   * `null` quando a planilha não declarou (raro).
+   */
+  tipoReceita: string | null;
+}
+
 /** Resumo_de_Performance_Indicadores_Loja.xlsx — aba CP (consolidado) e PDV/CONSULTOR (por loja/consultor). */
 export interface ResumoPerformanceRow {
   nome: string;
@@ -161,6 +283,8 @@ export interface ResumoPerformanceRow {
   vsAnoAnteriorPct: number | null;
   boletos: number | null;
   ticketMedio: number | null;
+  /** Todos os ~17-21 indicadores do bloco repetido da linha (inclui Receita de novo, redundante com os campos acima). */
+  metricas: ResumoPerformanceMetricValue[];
 }
 
 /**
@@ -170,6 +294,8 @@ export interface ResumoPerformanceRow {
  */
 export interface ResumoPerformanceIndicador {
   indicador: string;
+  /** Base de receita declarada pela própria coluna "Tipo de Receita" da aba CP — ver o aviso em `ResumoPerformanceMetricValue.tipoReceita`. */
+  tipoReceita: string | null;
   metaPEF: number | null;
   realizado: number | null;
   vsMetaPEFPct: number | null;
@@ -262,6 +388,33 @@ export interface CuidadosFaciaisDataset {
   consultor: CuidadosFaciaisRow[];
 }
 
+/** GestaoPedidos_usage-by-usage-category-adherence — resumo da adesão à plataforma logística por categoria, CP inteiro. */
+export interface LogisticaAdesaoResumoRow {
+  categoria: string;
+  qtdPedidos: number;
+  percentualPedidosPct: number;
+}
+
+/** GestaoPedidos_Visão_detalhada_da_utilização_por_pedido — 1 linha por pedido de transferência entre lojas. */
+export interface LogisticaAdesaoDetalheRow {
+  codigoPedido: string;
+  pdvCodigo: string;
+  categoriaAdesao: string;
+  statusPrazo: string;
+  cidadeOrigem: string;
+  ufOrigem: string;
+  cidadeDestino: string;
+  ufDestino: string;
+  statusPedido: string;
+  dataAprovacao: string;
+  dataFinalizacao: string;
+  qtdDiasCorridosFinalizacao: number | null;
+  qtdDiasUteisEntrega: number | null;
+  qtdDiasUteisEmAberto: number | null;
+  qtdDiasUteisLimiteEntrega: number | null;
+  dataLimiteEntrega: string;
+}
+
 export interface LojaDataset {
   lojas: LojaMetricRow[];
   forma: LojaMetricRow[];
@@ -279,14 +432,27 @@ export interface LojaDataset {
   pedidosVisaoGeral?: PedidoVisaoGeralRow[];
   pedidosGiroCanais?: PedidoGiroCanalRow[];
   pedidosHistorico?: PedidoHistoricoRow[];
+  pedidosDetalhamentoSku?: PedidoDetalhamentoSkuRow[];
+  pedidosMetaSellIn?: PedidoMetaSellInRow[];
   resumoPerformance?: ResumoPerformanceDataset;
   receitaCanal?: ReceitaCanalRow[];
   receitaCategoria?: ReceitaCategoriaDataset;
+  receitaCanalLojaPdv?: ReceitaCanalLojaPdvRow[];
+  receitaCanalLojaUn?: ReceitaCanalLojaUnDataset;
+  receitaCanalLojaPeriodo?: ReceitaCanalLojaPeriodoRow[];
   servicos?: ServicosDataset;
   fidelidade?: FidelidadeDataset;
   lojaDigital?: LojaDigitalDataset;
   cuidadosFaciais?: CuidadosFaciaisDataset;
+  logisticaAdesaoResumo?: LogisticaAdesaoResumoRow[];
+  logisticaAdesaoDetalhe?: LogisticaAdesaoDetalheRow[];
   optionalFileNames?: Partial<Record<LojaOptionalFile, string>>;
+  /**
+   * "Tipo de Receita" declarado na aba FILTROS de cada arquivo xlsx opcional importado (GMV,
+   * Receita Líquida, Receita Bruta...) — só preenchido pros arquivos que de fato são sobre receita;
+   * arquivos de Gestão de Pedidos ficam de fora do mapa (não têm esse filtro).
+   */
+  receitaBasesPorArquivo?: Partial<Record<LojaOptionalFile, string | null>>;
 }
 
 export const LOJA_DIMENSIONS: LojaDimension[] = ['lojas', 'forma', 'consultor', 'operador', 'data', 'canal', 'gestao'];

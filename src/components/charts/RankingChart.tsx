@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import RankingList, { RankingItem, BreakdownRow, resolveItemColor } from './RankingList';
 import { TIER_STYLES } from '../../design-system/tierStyles';
-import { fmtNumber } from '../../utils/formatters';
+import { fmtNumber, fmtBRL } from '../../utils/formatters';
 import { useLojaThemeStore } from '../../store/useLojaThemeStore';
 import { useVDThemeStore } from '../../store/useVDThemeStore';
 
@@ -149,7 +149,7 @@ function StackedTooltip({ active, payload }: any) {
       <div>Realizado: {item.valueLabel}</div>
       {item.metaTarget != null && (
         <div style={{ color: item.value >= item.metaTarget ? 'var(--chart-success-bg-strong, #9FD4B8)' : 'var(--chart-danger-border, #F0A8B3)' }}>
-          Meta PEF: {fmtNumber(item.metaTarget)} ({item.value >= item.metaTarget ? 'superada' : 'não superada'})
+          Meta PEF: {fmtBRL(item.metaTarget)} ({item.value >= item.metaTarget ? 'superada' : 'não superada'})
         </div>
       )}
     </div>
@@ -555,7 +555,7 @@ const DetailPanel: React.FC<{
             background: item.value >= item.metaTarget ? 'var(--chart-success-bg, #E0F2E8)' : 'var(--chart-danger-bg, #FBE5E9)',
           }}>
             <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--chart-text-secondary, #6B6258)' }}>Meta PEF</div>
-            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>{fmtNumber(item.metaTarget)}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>{fmtBRL(item.metaTarget)}</div>
             <div style={{ fontSize: 12, marginTop: 4, fontWeight: 600, color: item.value >= item.metaTarget ? 'var(--chart-success, #2E7D5B)' : 'var(--chart-danger, #B83A3A)' }}>
               {item.value >= item.metaTarget ? 'Superou a meta' : 'Abaixo da meta'}
               {item.metaTarget > 0 && ` (${(((item.value - item.metaTarget) / item.metaTarget) * 100).toFixed(1).replace('.', ',')}%)`}

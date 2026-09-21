@@ -29,6 +29,7 @@ function makeExtraStats(list: AggregatedRow[]) {
 const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
   const [lojaFiltro, setLojaFiltro] = useState<string>('');
+  const [gapView, setGapView] = useState<'pct' | 'valor'>('pct');
 
   if (!dataset) {
     return (
@@ -76,9 +77,9 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <ChartCard glow
-          title="Mix de canais de venda"
-          hint="GMV — Gross Merchandise Value: cada canal por onde a venda pode entrar (loja física, WhatsApp, experimentação, calçada...), com o % que representa do total. Em tela cheia, clique num canal para ver ticket médio, boletos, receita líquida, desconto, trocas e penetração de Fidelidade daquele canal."
-          subtitle="Participação no GMV do grupo"
+          title="Mix de canais de venda (ativação)"
+          hint="GMV — Gross Merchandise Value: cada canal de ATIVAÇÃO por onde a venda pode entrar (loja física, WhatsApp, Live Commerce, experimentação, calçada...), com o % que representa do total. Não confundir com o canal de CUMPRIMENTO do pedido (Loja x Clique e Retire), mostrado mais abaixo. Em tela cheia, clique num canal para ver ticket médio, boletos, receita líquida, desconto, trocas e penetração de Fidelidade daquele canal."
+          subtitle="Participação no GMV do grupo — canal de venda/ativação"
         >
           <RankingChart items={toItems(canais)} getExtraStats={makeExtraStats(canais)} />
         </ChartCard>
@@ -108,6 +109,68 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
                 </div>
               ))}
             </div>
+          </ChartCard>
+        </div>
+      )}
+
+      {(dataset.receitaCanalLojaUn || (dataset.receitaCanalLojaPdv && dataset.receitaCanalLojaPdv.length > 0)) && (
+        <div style={{ marginTop: 20 }}>
+          <ChartCard glow
+            title="Canal de cumprimento do pedido — Loja x Clique e Retire"
+            hint="Diferente do mix de canais de venda acima: aqui 'canal' é como o pedido foi CUMPRIDO — comprado e retirado na loja física, ou comprado online com retirada na loja (Clique e Retire). Vem de ReceitaCanalLoja_por_UN.xlsx / ReceitaCanalLoja_Performance_por_PDV.xlsx, que declaram base 'Receita GMV + Omni' — o ranking abaixo soma Loja + Clique e Retire, então o valor de cada loja fica um pouco acima do GMV puro mostrado nos outros cards desta tela (a diferença é exatamente a parte Clique e Retire)."
+            subtitle={dataset.receitaCanalLojaUn ? `Meta ${fmtBRLshort(dataset.receitaCanalLojaUn.totalMeta)} · Realizado ${fmtBRLshort(dataset.receitaCanalLojaUn.totalRealizado)} (${fmtPct(dataset.receitaCanalLojaUn.totalVariacaoPct)} vs. ciclo anterior)` : undefined}
+          >
+            {dataset.receitaCanalLojaUn && dataset.receitaCanalLojaUn.composicao.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: dataset.receitaCanalLojaPdv?.length ? 16 : 0 }}>
+                {dataset.receitaCanalLojaUn.composicao.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--loja-bg-subtle, #F2EEE2)', paddingBottom: 8 }}>
+                    <span style={{ fontWeight: 600 }}>{c.nome}</span>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--loja-text-secondary, #6B6258)' }}>
+                      {fmtBRLshort(c.realizado)} <span style={{ color: 'var(--loja-text-muted, #9B9287)' }}>(ant. {fmtBRLshort(c.anterior)})</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {dataset.receitaCanalLojaPdv && dataset.receitaCanalLojaPdv.length > 0 && (
+              <>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                  <Button variant={gapView === 'pct' ? 'primary' : 'ghost'} size="sm" onClick={() => setGapView('pct')}>% da meta</Button>
+                  <Button variant={gapView === 'valor' ? 'primary' : 'ghost'} size="sm" onClick={() => setGapView('valor')}>Gap em R$ até a meta</Button>
+                </div>
+                {gapView === 'pct' ? (
+                  <RankingChart
+                    medals={false}
+                    items={[...dataset.receitaCanalLojaPdv]
+                      .sort((a, b) => (b.total.realizadoPct ?? 0) - (a.total.realizadoPct ?? 0))
+                      .map(r => ({
+                        label: resolveLojaNome(r.pdvCodigo ?? r.localPdv, `${r.localPdv} (${r.cidade})`),
+                        value: r.total.receitaAtual,
+                        valueLabel: fmtBRLshort(r.total.receitaAtual),
+                        meta: r.total.realizadoPct != null ? `${r.total.realizadoPct.toFixed(0)}% da meta PEF` : undefined,
+                      }))}
+                  />
+                ) : (
+                  <RankingChart
+                    medals={false}
+                    items={[...dataset.receitaCanalLojaPdv]
+                      .filter(r => r.total.gapAcordadoValor < 0)
+                      .sort((a, b) => a.total.gapAcordadoValor - b.total.gapAcordadoValor)
+                      .map(r => ({
+                        label: resolveLojaNome(r.pdvCodigo ?? r.localPdv, `${r.localPdv} (${r.cidade})`),
+                        value: Math.abs(r.total.gapAcordadoValor),
+                        valueLabel: fmtBRLshort(Math.abs(r.total.gapAcordadoValor)),
+                        meta: `Meta ${fmtBRLshort(r.total.metaPef)} · realizado ${r.total.realizadoPct != null ? r.total.realizadoPct.toFixed(0) : '—'}%`,
+                      }))}
+                  />
+                )}
+                {gapView === 'valor' && dataset.receitaCanalLojaPdv.every(r => r.total.gapAcordadoValor >= 0) && (
+                  <div style={{ color: 'var(--loja-success, #2E7D5B)', fontSize: 13, marginTop: 8 }}>
+                    Todas as lojas estão acima da Meta PEF nesse recorte — sem gap negativo a priorizar.
+                  </div>
+                )}
+              </>
+            )}
           </ChartCard>
         </div>
       )}

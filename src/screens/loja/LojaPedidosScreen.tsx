@@ -3,7 +3,7 @@ import ChartCard from '../../components/charts/ChartCard';
 import RankingChart from '../../components/charts/RankingChart';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
-import { pedidosRates, classifyAbc, buildLojaNomeLookup } from '../../analytics/lojaMetrics';
+import { pedidosRates, classifyAbc, buildLojaNomeLookup, sellInSkuRanking } from '../../analytics/lojaMetrics';
 import PageTitle from '../../components/ui/PageTitle';
 import InfoHint from '../../components/ui/InfoHint';
 import { fmtNumber, fmtPct } from '../../utils/formatters';
@@ -61,6 +61,9 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
     valueLabel: fmtNumber(r.volumeColocado),
     meta: `Coloc. ${r.taxaColocacaoPct.toFixed(0)}% · Atend. ${r.taxaAtendimentoPct.toFixed(0)}%`,
   }));
+
+  const skuRanking = dataset.pedidosDetalhamentoSku ? sellInSkuRanking(dataset.pedidosDetalhamentoSku) : [];
+  const skuAbaixoMeta = skuRanking.filter(s => s.atingimentoMetaPct < 100).slice(0, 15);
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -158,6 +161,34 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
               ))}
             </div>
           </ChartCard>
+        </div>
+      )}
+
+      {skuAbaixoMeta.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <ChartCard glow
+            title="SKUs abaixo da meta de sell-in"
+            hint="Sell-in: quanto do sugerido pela meta comercial (GestaoPedidos_Detalhamento_por_Sku_meta_Sell_In_por_Ciclo) foi de fato pedido, somado em toda a rede. Ordenado do pior para o melhor atingimento."
+            subtitle="Pedido Realizado / Sugestão Comercial, somado por SKU em toda a rede"
+          >
+            <RankingChart
+              medals={false}
+              items={skuAbaixoMeta.map(s => ({
+                label: s.skuDescricao || s.skuCodigo,
+                value: s.pedidoRealizado,
+                valueLabel: fmtNumber(s.pedidoRealizado),
+                meta: `${s.atingimentoMetaPct.toFixed(0)}% da meta · ${s.pdvCount} PDV(s)`,
+              }))}
+            />
+          </ChartCard>
+        </div>
+      )}
+
+      {(dataset.logisticaAdesaoDetalhe || dataset.logisticaAdesaoResumo) && (
+        <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button variant="ghost" size="md" onClick={() => onNavigate('loja-logistica')}>
+            Ver logística de transferência entre lojas →
+          </Button>
         </div>
       )}
     </div>

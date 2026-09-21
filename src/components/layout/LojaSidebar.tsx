@@ -9,11 +9,14 @@ interface LojaSidebarProps {
 
 const navItems = [
   { id: 'loja-overview',    label: 'Ranking geral',      icon: 'ph-trophy', hint: 'Visão consolidada de todas as lojas por GMV (Gross Merchandise Value).' },
+  { id: 'loja-perfil',      label: 'Perfil da loja',     icon: 'ph-storefront', hint: 'Tudo sobre uma loja em um só lugar — GMV, canais, produtos, pedidos, Fidelidade e logística.' },
+  { id: 'loja-scorecard',   label: 'Indicadores PEF',    icon: 'ph-gauge', hint: 'Scorecard com os ~20 indicadores do Resumo de Performance — Meta PEF, realizado e comparativo com o ano anterior.' },
   { id: 'loja-consultores', label: 'Consultores',        icon: 'ph-users', hint: 'Desempenho individual de consultores e operadores.' },
   { id: 'loja-canais',      label: 'Canais & Formas',    icon: 'ph-share-network', hint: 'Mix de canais de venda e formas de pagamento.' },
   { id: 'loja-categorias',  label: 'Categorias',         icon: 'ph-tag', hint: 'Mix de categoria, subcategoria, linha e marca de produto.' },
   { id: 'loja-abc',         label: 'Curva ABC',          icon: 'ph-chart-bar', hint: 'Classificação de produtos por importância no faturamento (A, B, C).' },
   { id: 'loja-pedidos',     label: 'Gestão de pedidos',  icon: 'ph-package', hint: 'Ciclo de reposição de estoque: sugestão, colocação e atendimento.' },
+  { id: 'loja-logistica',   label: 'Logística',          icon: 'ph-truck', hint: 'Adesão à plataforma de transferência entre lojas, rotas e pedidos em aberto.' },
   { id: 'loja-periodo',     label: 'Período',            icon: 'ph-calendar-dots', hint: 'GMV dia a dia e sazonalidade por dia da semana.' },
   { id: 'loja-horario',     label: 'Venda por hora',     icon: 'ph-clock', hint: 'Distribuição de vendas por faixa de horário do dia.' },
   { id: 'loja-fidelidade-servicos', label: 'Fidelidade & serviços', icon: 'ph-heart', hint: 'Programa Fidelidade, Serviços em loja, Loja Digital e Cuidados Faciais + Botik.' },

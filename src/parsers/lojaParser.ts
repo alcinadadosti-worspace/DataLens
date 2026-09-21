@@ -3,10 +3,14 @@ import * as XLSX from 'xlsx';
 import {
   LojaDimension, LojaDataset, LojaMetricRow, LojaParseResult, LOJA_DIMENSIONS, LOJA_DIMENSION_LABELS,
   LojaOptionalFile, AbcRow, VendaHoraRow, PedidoVisaoGeralRow, PedidoGiroCanalRow, PedidoHistoricoRow,
+  PedidoDetalhamentoSkuRow, PedidoMetaSellInRow,
 } from '../types/loja';
 import {
   parseResumoPerformanceXlsx, parseReceitaCanalXlsx, parseReceitaCategoriaXlsx,
   parseServicosXlsx, parseFidelidadeXlsx, parseLojaDigitalXlsx, parseCuidadosFaciaisXlsx,
+  parseLogisticaAdesaoResumoXlsx, parseLogisticaAdesaoDetalheXlsx,
+  parseReceitaCanalLojaPdvXlsx, parseReceitaCanalLojaUnXlsx, parseReceitaCanalLojaPeriodoXlsx,
+  readTipoReceitaFromFiltros,
 } from './lojaXlsxParser';
 import { toNum, toPct } from './lojaNumberUtils';
 
@@ -38,9 +42,17 @@ const OPTIONAL_CSV_FILENAME_HINTS: Partial<Record<LojaOptionalFile, string>> = {
   pedidosVisaoGeral: 'GESTAOPEDIDOS_VISAO_GERAL',
   pedidosGiroCanais: 'GESTAOPEDIDOS_GIRO_PEDIDOS_CANAIS',
   pedidosHistorico: 'GESTAOPEDIDOS_HISTORICO_COLOCACAO',
+  // Precisa vir antes de pedidosMetaSellIn: o nome de arquivo de sell-in por SKU também contém
+  // "META_SELL_IN" (ex. "..._Detalhamento_por_Sku_meta_Sell_In_por_Ciclo_...") — a ordem de
+  // inserção decide qual hint é testado primeiro em detectOptionalCsv.
+  pedidosDetalhamentoSku: 'GESTAOPEDIDOS_DETALHAMENTO_POR_SKU',
+  pedidosMetaSellIn: 'GESTAOPEDIDOS_META_SELL_IN',
 };
 
-type LojaXlsxKind = 'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' | 'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais';
+type LojaXlsxKind =
+  | 'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' | 'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais'
+  | 'logisticaAdesaoResumo' | 'logisticaAdesaoDetalhe'
+  | 'receitaCanalLojaPdv' | 'receitaCanalLojaUn' | 'receitaCanalLojaPeriodo';
 
 const XLSX_FILENAME_HINTS: Record<LojaXlsxKind, string> = {
   resumoPerformance: 'RESUMO_DE_PERFORMANCE',
@@ -50,6 +62,11 @@ const XLSX_FILENAME_HINTS: Record<LojaXlsxKind, string> = {
   fidelidade: 'PROGRAMA_FIDELIDADE',
   lojaDigital: 'LOJA_DIGITAL',
   cuidadosFaciais: 'CUIDADOS_FACIAIS',
+  logisticaAdesaoResumo: 'USAGE_BY_USAGE_CATEGORY_ADHERENCE',
+  logisticaAdesaoDetalhe: 'VISAO_DETALHADA_DA_UTILIZACAO',
+  receitaCanalLojaPdv: 'RECEITACANALLOJA_PERFORMANCE_POR_PDV',
+  receitaCanalLojaPeriodo: 'RECEITACANALLOJA_POR_PERIODO',
+  receitaCanalLojaUn: 'RECEITACANALLOJA_POR_UN',
 };
 
 function stripBOM(s: string): string {
@@ -319,6 +336,57 @@ function rowsToPedidosHistorico(rows: string[][]): PedidoHistoricoRow[] {
     });
 }
 
+// --- GestaoPedidos_Detalhamento_por_Sku_meta_Sell_In_por_Ciclo (grão Ciclo x PDV x SKU) ---
+function rowsToPedidosDetalhamentoSku(rows: string[][]): PedidoDetalhamentoSkuRow[] {
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iCiclo = findCol(header, 'Ciclo');
+  const iPdv = findCol(header, 'PDV');
+  const iSku = findCol(header, 'SKU');
+  const iMarca = findCol(header, 'Marca');
+  const iDataLimite = findCol(header, 'Data Limite de Captação', 'Data Limite de Captacao');
+  const iSugestao = findCol(header, 'Sugestão Comercial', 'Sugestao Comercial');
+  const iColocado = findCol(header, 'Pedido Realizado');
+  // "% ATINGIMNETO DA META" é o typo real do export de origem — mantido como candidato explícito
+  // porque findCol não faz correção difusa de ortografia, só substring.
+  const iAtingimento = findCol(header, '% Atingimento da Meta', '% Atingimneto da Meta', 'Atingimento da Meta', 'Atingimneto da Meta');
+
+  return rows.slice(1)
+    .filter(r => (r[iPdv] ?? '').trim() !== '')
+    .map(r => {
+      const skuRaw = (r[iSku] ?? '').trim();
+      const skuSplit = splitCodeName(skuRaw);
+      return {
+        ciclo: iCiclo >= 0 ? (r[iCiclo] ?? '').trim() : '',
+        pdvCodigo: (r[iPdv] ?? '').trim(),
+        skuCodigo: skuSplit.codigo ?? skuRaw,
+        skuDescricao: skuSplit.nome,
+        marca: iMarca >= 0 ? (r[iMarca] ?? '').trim() : '',
+        dataLimiteCaptacao: iDataLimite >= 0 ? (r[iDataLimite] ?? '').trim() : '',
+        sugestaoComercial: toNum(r[iSugestao]),
+        pedidoRealizado: toNum(r[iColocado]),
+        atingimentoMetaPct: toPct(r[iAtingimento]),
+      } as PedidoDetalhamentoSkuRow;
+    });
+}
+
+// --- GestaoPedidos_Meta_Sell_In_Por_Ciclo (1 linha por ciclo, total da rede) ---
+function rowsToPedidosMetaSellIn(rows: string[][]): PedidoMetaSellInRow[] {
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iCiclo = findCol(header, 'Ciclo');
+  const iSugestao = findCol(header, 'Sugestão Comercial', 'Sugestao Comercial');
+  const iRealizado = findCol(header, 'Pedido Realizado');
+
+  return rows.slice(1)
+    .filter(r => (r[iCiclo] ?? '').trim() !== '')
+    .map(r => ({
+      ciclo: (r[iCiclo] ?? '').trim(),
+      sugestaoComercial: toNum(r[iSugestao]),
+      pedidoRealizado: toNum(r[iRealizado]),
+    } as PedidoMetaSellInRow));
+}
+
 export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
   const errors: string[] = [];
   const detected: LojaParseResult['detected'] = {};
@@ -326,11 +394,15 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
   const byDimension: Partial<Record<LojaDimension, LojaMetricRow[]>> = {};
   const fileNames: Partial<Record<LojaDimension, string>> = {};
   const optionalFileNames: LojaDataset['optionalFileNames'] = {};
+  const receitaBasesPorArquivo: LojaDataset['receitaBasesPorArquivo'] = {};
 
   const optional: Partial<Pick<LojaDataset,
     'abc' | 'vendaPorHora' | 'pedidosVisaoGeral' | 'pedidosGiroCanais' | 'pedidosHistorico' |
+    'pedidosDetalhamentoSku' | 'pedidosMetaSellIn' |
     'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' |
-    'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais'>> = {};
+    'receitaCanalLojaPdv' | 'receitaCanalLojaUn' | 'receitaCanalLojaPeriodo' |
+    'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais' |
+    'logisticaAdesaoResumo' | 'logisticaAdesaoDetalhe'>> = {};
 
   for (const file of files) {
     const isXlsx = /\.xlsx?$/i.test(file.name);
@@ -339,7 +411,7 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
       if (isXlsx) {
         const xlsxKind = detectOptionalXlsx(file.name);
         if (!xlsxKind) {
-          errors.push(`${file.name}: arquivo xlsx não reconhecido (esperado Resumo de Performance, Receita por Canal, Receita por Categoria, Serviços em Loja, Programa Fidelidade, Loja Digital ou Cuidados Faciais)`);
+          errors.push(`${file.name}: arquivo xlsx não reconhecido (esperado Resumo de Performance, Receita por Canal, Receita por Categoria, Receita por Canal (PDV/UN/Período), Serviços em Loja, Programa Fidelidade, Loja Digital, Cuidados Faciais ou Logística de Adesão)`);
           continue;
         }
         const buffer = await file.arrayBuffer();
@@ -363,11 +435,28 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
         } else if (xlsxKind === 'lojaDigital') {
           optional.lojaDigital = parseLojaDigitalXlsx(workbook);
           detectedOptional.lojaDigital = { fileName: file.name, rowCount: optional.lojaDigital.pdv.length + optional.lojaDigital.consultor.length };
-        } else {
+        } else if (xlsxKind === 'cuidadosFaciais') {
           optional.cuidadosFaciais = parseCuidadosFaciaisXlsx(workbook);
           detectedOptional.cuidadosFaciais = { fileName: file.name, rowCount: optional.cuidadosFaciais.pdv.length + optional.cuidadosFaciais.consultor.length };
+        } else if (xlsxKind === 'logisticaAdesaoResumo') {
+          optional.logisticaAdesaoResumo = parseLogisticaAdesaoResumoXlsx(workbook);
+          detectedOptional.logisticaAdesaoResumo = { fileName: file.name, rowCount: optional.logisticaAdesaoResumo.length };
+        } else if (xlsxKind === 'logisticaAdesaoDetalhe') {
+          optional.logisticaAdesaoDetalhe = parseLogisticaAdesaoDetalheXlsx(workbook);
+          detectedOptional.logisticaAdesaoDetalhe = { fileName: file.name, rowCount: optional.logisticaAdesaoDetalhe.length };
+        } else if (xlsxKind === 'receitaCanalLojaPdv') {
+          optional.receitaCanalLojaPdv = parseReceitaCanalLojaPdvXlsx(workbook);
+          detectedOptional.receitaCanalLojaPdv = { fileName: file.name, rowCount: optional.receitaCanalLojaPdv.length };
+        } else if (xlsxKind === 'receitaCanalLojaUn') {
+          const parsed = parseReceitaCanalLojaUnXlsx(workbook);
+          optional.receitaCanalLojaUn = parsed ?? undefined;
+          detectedOptional.receitaCanalLojaUn = { fileName: file.name, rowCount: parsed?.porUn.length ?? 0 };
+        } else {
+          optional.receitaCanalLojaPeriodo = parseReceitaCanalLojaPeriodoXlsx(workbook);
+          detectedOptional.receitaCanalLojaPeriodo = { fileName: file.name, rowCount: optional.receitaCanalLojaPeriodo.length };
         }
         optionalFileNames![xlsxKind] = file.name;
+        receitaBasesPorArquivo![xlsxKind] = readTipoReceitaFromFiltros(workbook);
         continue;
       }
 
@@ -407,6 +496,16 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
           case 'pedidosHistorico': {
             optional.pedidosHistorico = rowsToPedidosHistorico(rows);
             detectedOptional.pedidosHistorico = { fileName: file.name, rowCount: optional.pedidosHistorico.length };
+            break;
+          }
+          case 'pedidosDetalhamentoSku': {
+            optional.pedidosDetalhamentoSku = rowsToPedidosDetalhamentoSku(rows);
+            detectedOptional.pedidosDetalhamentoSku = { fileName: file.name, rowCount: optional.pedidosDetalhamentoSku.length };
+            break;
+          }
+          case 'pedidosMetaSellIn': {
+            optional.pedidosMetaSellIn = rowsToPedidosMetaSellIn(rows);
+            detectedOptional.pedidosMetaSellIn = { fileName: file.name, rowCount: optional.pedidosMetaSellIn.length };
             break;
           }
         }
@@ -450,6 +549,7 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
     importedAt: new Date(),
     ...optional,
     optionalFileNames,
+    receitaBasesPorArquivo,
   };
 
   return { dataset, detected, detectedOptional, errors };
