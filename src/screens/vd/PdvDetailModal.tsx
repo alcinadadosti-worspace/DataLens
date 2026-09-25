@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useVDCorporateStore } from '../../store/useVDCorporateStore';
 import { useOrderStore } from '../../store/useOrderStore';
-import { buildCidadeToPdv, pdvForCidade } from '../../analytics/pdvMapping';
+import { pdvForOrder } from '../../analytics/pdvMapping';
 import { isRevenueEligible } from '../../analytics/financialMetrics';
 import { fmtBRL, fmtNumber } from '../../utils/formatters';
 
@@ -22,7 +22,6 @@ const statValue: React.CSSProperties = { fontSize: 18, fontWeight: 600, fontFami
 const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
   const dataset = useVDCorporateStore(s => s.dataset);
   const orders = useOrderStore(s => s.orders);
-  const cidadeToPdv = useMemo(() => buildCidadeToPdv(dataset), [dataset]);
 
   const info = useMemo(() => {
     if (!pdvCodigo) return null;
@@ -41,10 +40,7 @@ const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
     const sellInSugestao = sellInRows.reduce((s, r) => s + r.sugestaoComercial, 0);
     const sellInRealizado = sellInRows.reduce((s, r) => s + r.pedidoRealizado, 0);
 
-    const pdvOrders = orders.filter(o => {
-      const p = pdvForCidade(cidadeToPdv, o.CidadeEntregaRetirada) ?? pdvForCidade(cidadeToPdv, o.Cidade);
-      return p === pdvCodigo;
-    });
+    const pdvOrders = orders.filter(o => pdvForOrder(o) === pdvCodigo);
     const pedidosElegiveis = pdvOrders.filter(isRevenueEligible);
     const receitaPedidos = pedidosElegiveis.reduce((s, o) => s + o.ValorPraticado, 0);
 
@@ -54,7 +50,7 @@ const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
       sellInSugestao, sellInRealizado,
       pedidosCount: pdvOrders.length, receitaPedidos,
     };
-  }, [pdvCodigo, dataset, orders, cidadeToPdv]);
+  }, [pdvCodigo, dataset, orders]);
 
   if (!pdvCodigo || !info) return null;
 
@@ -93,7 +89,7 @@ const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
           <div style={stat}><span style={statLabel}>Meta PEF</span><span style={statValue}>{fmtBRL(info.metaPef)}</span></div>
         </div>
 
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--vd-accent, #C9A227)', marginBottom: 10 }}>Pedidos (Order[], cruzado por cidade)</div>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--vd-accent, #C9A227)', marginBottom: 10 }}>Pedidos (ConsultaPedidos, PDV pela EstruturaPai)</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginBottom: 20 }}>
           <div style={stat}><span style={statLabel}>Pedidos</span><span style={statValue}>{fmtNumber(info.pedidosCount)}</span></div>
           <div style={stat}><span style={statLabel}>Receita elegível</span><span style={statValue}>{fmtBRL(info.receitaPedidos)}</span></div>

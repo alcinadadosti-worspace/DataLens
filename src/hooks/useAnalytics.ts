@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useOrderStore } from '../store/useOrderStore';
 import { useFilterStore } from '../store/useFilterStore';
-import { useVDCorporateStore } from '../store/useVDCorporateStore';
 import { Order } from '../types/order';
 import { calcFinancialMetrics } from '../analytics/financialMetrics';
 import { calcOperationalMetrics } from '../analytics/operationalMetrics';
@@ -9,7 +8,10 @@ import { calcCommercialMetrics } from '../analytics/commercialMetrics';
 import { generateInsights } from '../analytics/insightsEngine';
 import { TIER_DEFINITIONS } from '../design-system/tierStyles';
 import { parseBRDate } from '../utils/dateUtils';
-import { buildCidadeToPdv, pdvForCidade } from '../analytics/pdvMapping';
+import { pdvForOrder } from '../analytics/pdvMapping';
+import { isFVCOrder } from '../analytics/fvc';
+import { dominantCiclo } from '../analytics/vdSnapshot';
+import { useVDCorporateStore } from '../store/useVDCorporateStore';
 import {
   FinancialMetrics,
   OperationalMetrics,
@@ -23,17 +25,24 @@ import {
  * que precisa enxergar vários ciclos/semanas ao mesmo tempo pra comparar entre eles; aplicar o
  * filtro global de ciclo ali apagaria a própria comparação que a tela existe pra fazer. Os demais
  * filtros (supervisor, estrutura, cidade, tier etc.) continuam valendo normalmente.
+ *
+ * `excludeFVC` tira os pedidos de estrutura FVC — usado pela Visão geral, que mostra o faturamento sem
+ * FVC (a participação das FVCs e o total geral ficam na tela FVC).
  */
-export function useFilteredOrders(opts?: { ignoreDateAndCycle?: boolean }): Order[] {
+export interface OrderScopeOptions {
+  ignoreDateAndCycle?: boolean;
+  excludeFVC?: boolean;
+}
+
+export function useFilteredOrders(opts?: OrderScopeOptions): Order[] {
   const orders = useOrderStore(s => s.orders);
   const filters = useFilterStore();
-  const corporateDataset = useVDCorporateStore(s => s.dataset);
   const ignoreDateAndCycle = opts?.ignoreDateAndCycle ?? false;
-
-  const cidadeToPdv = useMemo(() => buildCidadeToPdv(corporateDataset), [corporateDataset]);
+  const excludeFVC = opts?.excludeFVC ?? false;
 
   return useMemo(() => {
     return orders.filter(order => {
+      if (excludeFVC && isFVCOrder(order)) return false;
       if (!ignoreDateAndCycle && filters.cycle?.length && !filters.cycle.includes(order.CicloMarketing)) return false;
       if (filters.supervisor?.length && !filters.supervisor.includes(order.ResponsavelEstrutura)) return false;
       if (filters.structure?.length && !filters.structure.includes(order.Estrutura)) return false;
@@ -44,7 +53,7 @@ export function useFilteredOrders(opts?: { ignoreDateAndCycle?: boolean }): Orde
       if (filters.situacaoComercial?.length && !filters.situacaoComercial.includes(order.SituacaoComercial)) return false;
       if (filters.tier?.length && !filters.tier.includes(order.tierId)) return false;
       if (filters.pdv?.length) {
-        const pdv = pdvForCidade(cidadeToPdv, order.CidadeEntregaRetirada) ?? pdvForCidade(cidadeToPdv, order.Cidade);
+        const pdv = pdvForOrder(order);
         if (!pdv || !filters.pdv.includes(pdv)) return false;
       }
 
@@ -76,11 +85,49 @@ export function useFilteredOrders(opts?: { ignoreDateAndCycle?: boolean }): Orde
 
       return true;
     });
-  }, [orders, filters, ignoreDateAndCycle, cidadeToPdv]);
+  }, [orders, filters, ignoreDateAndCycle, excludeFVC]);
 }
 
-export function useFinancialMetrics(): FinancialMetrics | null {
-  const orders = useFilteredOrders();
+/**
+ * `true` quando a tela mostra o ciclo inteiro do BI, sem recortes (só o filtro de ciclo, no ciclo do
+ * lote). É a única situação em que os números oficiais do BI valem: com qualquer outro filtro, o BI
+ * não tem o número equivalente.
+ */
+function useIsFullCycleView(): boolean {
+  const orders = useOrderStore(s => s.orders);
+  const filters = useFilterStore();
+  return useMemo(() => {
+    const { cycle, searchQuery, dateFrom, dateTo, ...rest } = filters;
+    const hasOtherFilters = Object.values(rest).some(v => Array.isArray(v) && v.length > 0);
+    if (hasOtherFilters || searchQuery || dateFrom || dateTo) return false;
+    return !cycle || (cycle.length === 1 && cycle[0] === dominantCiclo(orders));
+  }, [filters, orders]);
+}
+
+/**
+ * Receita oficial do canal VD no BI (coluna VD, linha TOTAL de ReceitaCanalVD_Performance_por_PDV),
+ * que inclui os pedidos FVC. `null` fora do ciclo inteiro sem recortes ou sem o relatório carregado.
+ */
+export function useOfficialVDRevenue(): number | null {
+  const fullCycle = useIsFullCycleView();
+  const corporate = useVDCorporateStore(s => s.dataset);
+  if (!fullCycle) return null;
+  return corporate?.receitaCanalVDPdv?.find(r => r.un.trim().toUpperCase() === 'TOTAL')?.vd.receitaAtual ?? null;
+}
+
+/**
+ * RPA oficial do BI (linha TOTAL do Monitoramento por PDV), que inclui os revendedores FVC. `null`
+ * fora do ciclo inteiro sem recortes ou sem o relatório carregado.
+ */
+export function useOfficialRPA(): number | null {
+  const fullCycle = useIsFullCycleView();
+  const corporate = useVDCorporateStore(s => s.dataset);
+  if (!fullCycle) return null;
+  return corporate?.monitoramentoBase?.porPdv.find(r => r.chave.trim().toUpperCase() === 'TOTAL')?.rpa ?? null;
+}
+
+export function useFinancialMetrics(opts?: OrderScopeOptions): FinancialMetrics | null {
+  const orders = useFilteredOrders(opts);
   return useMemo(() => {
     if (orders.length === 0) return null;
     return calcFinancialMetrics(orders);
@@ -114,8 +161,8 @@ export function useInsights(): InsightItem[] {
   }, [financial, operational, commercial]);
 }
 
-export function useTierMetrics(): TierMetrics[] {
-  const orders = useFilteredOrders();
+export function useTierMetrics(opts?: OrderScopeOptions): TierMetrics[] {
+  const orders = useFilteredOrders(opts);
 
   return useMemo(() => {
     if (orders.length === 0) return [];

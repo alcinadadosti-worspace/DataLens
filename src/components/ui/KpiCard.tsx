@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import InfoHint from './InfoHint';
+import FloatingTooltip from './FloatingTooltip';
 import '../../design-system/borderGlow.css';
 
 interface KpiCardProps {
@@ -13,15 +14,19 @@ interface KpiCardProps {
   hint?: string;
   /** Contorno que acompanha o cursor perto da borda (BorderGlow, Modo Loja only) — default off, não afeta o app original. */
   glow?: boolean;
+  /** Linha de apoio abaixo do valor, independente de `delta` (ex.: origem ou composição do número). */
+  footnote?: string;
 }
 
-const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection, meta, tooltip, hint, glow }) => {
+const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection, meta, tooltip, hint, glow, footnote }) => {
   const [hovered, setHovered] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLDivElement | null>(null);
   const deltaColor = deltaDirection === 'down' ? 'var(--loja-danger, #B83A3A)' : 'var(--loja-success, #2E7D5B)';
   const arrow = deltaDirection === 'down' ? '↓' : '↑';
 
   return (
     <div
+      ref={setAnchor}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={glow ? 'loja-glow-card' : undefined}
@@ -73,37 +78,29 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
           {meta && <span style={{ color: 'var(--loja-text-secondary, #6B6258)', fontWeight: 400 }}>{meta}</span>}
         </div>
       )}
-      {tooltip && (
-        <div style={{
-          position: 'absolute',
-          bottom: 'calc(100% + 8px)',
-          left: 0,
-          background: 'var(--loja-ink, #1C1814)',
-          color: 'var(--loja-bg, #FAF7F2)',
-          borderRadius: 10,
-          padding: '11px 15px',
-          fontSize: 13,
-          lineHeight: 1.75,
-          boxShadow: '0 4px 20px rgba(28,24,20,0.3)',
-          whiteSpace: 'nowrap',
-          pointerEvents: 'none',
-          zIndex: 100,
-          opacity: hovered ? 1 : 0,
-          transform: hovered ? 'translateY(0)' : 'translateY(6px)',
-          transition: 'opacity 180ms, transform 180ms',
-        }}>
-          {tooltip}
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: 16,
-            width: 0,
-            height: 0,
-            borderLeft: '5px solid transparent',
-            borderRight: '5px solid transparent',
-            borderTop: '5px solid var(--loja-ink, #1C1814)',
-          }} />
+      {footnote && (
+        <div style={{ fontSize: 12, color: 'var(--loja-text-secondary, #6B6258)', fontVariantNumeric: 'tabular-nums' }}>
+          {footnote}
         </div>
+      )}
+      {tooltip && (
+        <FloatingTooltip
+          anchor={anchor}
+          open={hovered}
+          align="start"
+          style={{
+            background: 'var(--loja-ink, #1C1814)',
+            color: 'var(--loja-bg, #FAF7F2)',
+            borderRadius: 10,
+            padding: '11px 15px',
+            fontSize: 13,
+            lineHeight: 1.75,
+            boxShadow: '0 4px 20px rgba(28,24,20,0.3)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {tooltip}
+        </FloatingTooltip>
       )}
     </div>
   );

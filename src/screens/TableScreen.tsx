@@ -12,6 +12,7 @@ import {
 import Button from '../components/ui/Button';
 import GlossyContent from '../components/ui/GlossyContent';
 import TierBadge from '../components/ui/TierBadge';
+import FloatingTooltip from '../components/ui/FloatingTooltip';
 import FilterBuilder from '../components/filters/FilterBuilder';
 import { useFilteredOrders } from '../hooks/useAnalytics';
 import { useExport } from '../hooks/useExport';
@@ -39,6 +40,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear, rankingVendas }:
   rankingVendas: RankingVendaRow[];
 }) {
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
+  const [dayAnchor, setDayAnchor] = useState<HTMLElement | null>(null);
 
   // Revendedor 360: cruza Pessoa (Order) ↔ CodigoRevendedora (ConsultaRankingVendas) pra mostrar o
   // que esse revendedor mais compra, não só quanto ele gerou de receita em pedidos.
@@ -155,42 +157,33 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear, rankingVendas }:
                 <div
                   key={d}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative', cursor: 'default' }}
-                  onMouseEnter={() => setHoveredDay(d)}
+                  onMouseEnter={e => { setHoveredDay(d); setDayAnchor(e.currentTarget); }}
                   onMouseLeave={() => setHoveredDay(null)}
                 >
                   {/* Tooltip */}
                   {isHov && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: 'calc(100% + 6px)',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: 'var(--vd-ink, #1C1814)',
-                      color: 'var(--vd-bg, #FAF7F2)',
-                      borderRadius: 8,
-                      padding: '6px 10px',
-                      whiteSpace: 'nowrap',
-                      pointerEvents: 'none',
-                      zIndex: 20,
-                      fontSize: 11,
-                      boxShadow: '0 4px 16px rgba(28,24,20,0.3)',
-                    }}>
+                    <FloatingTooltip
+                      anchor={dayAnchor}
+                      open
+                      gap={6}
+                      arrowColor="var(--vd-ink, #1C1814)"
+                      style={{
+                        background: 'var(--vd-ink, #1C1814)',
+                        color: 'var(--vd-bg, #FAF7F2)',
+                        borderRadius: 8,
+                        padding: '6px 10px',
+                        whiteSpace: 'nowrap',
+                        fontSize: 11,
+                        boxShadow: '0 4px 16px rgba(28,24,20,0.3)',
+                      }}
+                    >
                       <div style={{ fontSize: 9, color: 'var(--vd-text-muted, #9B9287)', marginBottom: 2, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                         Dia {d}
                       </div>
                       <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: tierAccent }}>
                         {fmtBRL(v)}
                       </div>
-                      {/* Arrow */}
-                      <div style={{
-                        position: 'absolute', top: '100%', left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 0, height: 0,
-                        borderLeft: '5px solid transparent',
-                        borderRight: '5px solid transparent',
-                        borderTop: '5px solid var(--vd-ink, #1C1814)',
-                      }} />
-                    </div>
+                    </FloatingTooltip>
                   )}
                   <div style={{
                     width: '100%', height: h,
@@ -244,6 +237,7 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear, rankingVendas }:
 function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
   const [collapsed, setCollapsed] = useState(false);
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
+  const [dayAnchor, setDayAnchor] = useState<HTMLElement | null>(null);
 
   const metrics = useMemo(() => {
     const eligible = orders.filter(isRevenueEligible);
@@ -510,22 +504,24 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
                     <div
                       key={d}
                       style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative', cursor: 'default' }}
-                      onMouseEnter={() => setHoveredDay(d)}
+                      onMouseEnter={e => { setHoveredDay(d); setDayAnchor(e.currentTarget); }}
                       onMouseLeave={() => setHoveredDay(null)}
                     >
                       {isHov && (
-                        <div style={{
-                          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
-                          transform: 'translateX(-50%)',
-                          background: 'var(--vd-ink, #1C1814)', color: 'var(--vd-bg, #FAF7F2)',
-                          borderRadius: 8, padding: '6px 10px', whiteSpace: 'nowrap',
-                          pointerEvents: 'none', zIndex: 20, fontSize: 11,
-                          boxShadow: '0 4px 16px rgba(28,24,20,0.3)',
-                        }}>
+                        <FloatingTooltip
+                          anchor={dayAnchor}
+                          open
+                          gap={6}
+                          arrowColor="var(--vd-ink, #1C1814)"
+                          style={{
+                            background: 'var(--vd-ink, #1C1814)', color: 'var(--vd-bg, #FAF7F2)',
+                            borderRadius: 8, padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11,
+                            boxShadow: '0 4px 16px rgba(28,24,20,0.3)',
+                          }}
+                        >
                           <div style={{ fontSize: 9, color: 'var(--vd-text-muted, #9B9287)', marginBottom: 2, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Dia {d}</div>
                           <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: '#C9A227' }}>{fmtBRL(v)}</div>
-                          <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid var(--vd-ink, #1C1814)' }} />
-                        </div>
+                        </FloatingTooltip>
                       )}
                       <div style={{
                         width: '100%', height: h, minHeight: 3,

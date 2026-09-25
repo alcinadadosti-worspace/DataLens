@@ -78,7 +78,7 @@ export interface FilterState {
   meioCaptacao: string[] | null;
   situacaoComercial: string[] | null;
   tier: string[] | null;
-  /** Inferido de Cidade/CidadeEntregaRetirada via dados corporativos (ver src/analytics/pdvMapping.ts) — não é uma coluna de `Order`. */
+  /** Código do PDV tirado de `EstruturaPai` (ver src/analytics/pdvMapping.ts) — não é uma coluna própria de `Order`. */
   pdv: string[] | null;
   searchQuery: string;
   dateFrom: string | null;

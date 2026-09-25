@@ -20,6 +20,7 @@ import VDSellInScreen from '../screens/vd/VDSellInScreen';
 import VDRupturaScreen from '../screens/vd/VDRupturaScreen';
 import VDBaseScreen from '../screens/vd/VDBaseScreen';
 import VDProdutosScreen from '../screens/vd/VDProdutosScreen';
+import FVCScreen from '../screens/FVCScreen';
 import { useOrderStore } from '../store/useOrderStore';
 
 function VDApp() {
@@ -51,6 +52,8 @@ function VDApp() {
     screen = <ComparacaoSemanalScreen onNavigate={navigate} />;
   } else if (route === 'supervisors') {
     screen = <SupervisorScreen onNavigate={navigate} />;
+  } else if (route === 'fvc') {
+    screen = <FVCScreen onNavigate={navigate} />;
   } else if (route === 'vd-receita') {
     screen = <VDReceitaScreen onNavigate={navigate} />;
   } else if (route === 'vd-sellin') {

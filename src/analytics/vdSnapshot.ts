@@ -1,6 +1,7 @@
 import { Order } from '../types/order';
 import { VDCorporateDataset } from '../types/vdCorporate';
 import { isRevenueEligible } from './financialMetrics';
+import { isFVCOrder } from './fvc';
 
 export interface VDCycleSnapshot {
   ciclo: string;
@@ -14,7 +15,7 @@ export interface VDCycleSnapshot {
 }
 
 /** Valor mais frequente de `CicloMarketing` no lote — usado como "o ciclo desse snapshot". */
-function dominantCiclo(orders: Order[]): string | null {
+export function dominantCiclo(orders: Order[]): string | null {
   const counts: Record<string, number> = {};
   for (const o of orders) {
     if (!o.CicloMarketing) continue;
@@ -35,7 +36,7 @@ export function buildVDSnapshot(orders: Order[], corporate: VDCorporateDataset |
   if (!ciclo) return null;
 
   const grossRevenue = orders.filter(isRevenueEligible).reduce((s, o) => s + o.ValorPraticado, 0);
-  const fvcCount = orders.filter(o => o.Estrutura.trimStart().toUpperCase().startsWith('FVC')).length;
+  const fvcCount = orders.filter(isFVCOrder).length;
 
   const baseAtiva = corporate?.evolucaoBase?.[0]?.baseAtiva
     ?? corporate?.monitoramentoBase?.porPdv.find(r => r.chave.trim().toUpperCase() === 'TOTAL')?.baseAtiva

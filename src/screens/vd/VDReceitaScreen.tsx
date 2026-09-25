@@ -98,12 +98,13 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
             value={fmtBRL(totalRow.total.metaPef)}
             delta={totalRow.total.realizadoPct !== null ? fmtPct(totalRow.total.realizadoPct - 100) : undefined}
             deltaDirection={(totalRow.total.realizadoPct ?? 0) >= 100 ? 'up' : 'down'}
-            meta="% realizado da meta"
-            hint="Coluna 'META PEF (R$)' do bloco TOTAL, linha TOTAL. O % vem direto da coluna 'REALIZADO (%)' do arquivo (já é fração do Excel, não recalculamos)."
+            meta={totalRow.total.realizadoPct !== null ? `da meta · ${totalRow.total.realizadoPct.toFixed(2).replace('.', ',')}% realizado` : undefined}
+            hint="Coluna 'META PEF (R$)' do bloco TOTAL, linha TOTAL. A variação é quanto falta (ou sobra) para a meta, e o % realizado vem direto da coluna 'REALIZADO (%)' do arquivo (já é fração do Excel, não recalculamos)."
           />
           <KpiCard
             eyebrow="Gap acordado"
-            value={fmtBRL(totalRow.total.gapAcordadoValor)}
+            // Sinal de menos tipográfico (U+2212): com o hífen comum o navegador quebrava a linha logo após o "-".
+            value={fmtBRL(totalRow.total.gapAcordadoValor).replace(/^-/, '\u2212')}
             hint="Coluna 'GAP ACORDADO (R$)' do bloco TOTAL, linha TOTAL — diferença já calculada pelo próprio relatório entre receita atual e meta PEF acordada, não recalculada por nós."
           />
           <KpiCard

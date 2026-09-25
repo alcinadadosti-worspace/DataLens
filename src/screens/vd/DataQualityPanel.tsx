@@ -4,6 +4,7 @@ import { useOrderStore } from '../../store/useOrderStore';
 import { useVDCorporateStore } from '../../store/useVDCorporateStore';
 import { useFinancialMetrics } from '../../hooks/useAnalytics';
 import { fmtPct } from '../../utils/formatters';
+import { isFVCOrder } from '../../analytics/fvc';
 
 type CheckStatus = 'ok' | 'warn' | 'info';
 
@@ -51,13 +52,13 @@ const DataQualityPanel: React.FC = () => {
 
     // 2) FVC informativo
     if (orders.length > 0) {
-      const fvcCount = orders.filter(o => o.Estrutura.trimStart().toUpperCase().startsWith('FVC')).length;
+      const fvcCount = orders.filter(isFVCOrder).length;
       const pct = (fvcCount / orders.length) * 100;
       list.push({
         id: 'fvc',
-        label: 'Pedidos FVC incluídos no total',
+        label: 'Pedidos FVC: no total do BI, fora da Visão geral',
         status: 'info',
-        detail: `${fvcCount} de ${orders.length} pedidos (${pct.toFixed(1).replace('.', ',')}%) são de estrutura FVC — incluídos por decisão de produto, não excluídos.`,
+        detail: `${fvcCount} de ${orders.length} pedidos (${pct.toFixed(1).replace('.', ',')}%) são de estrutura FVC. Eles entram nesta reconciliação, porque a receita do BI os inclui, mas a Visão geral os deixa de fora: a participação deles fica na tela FVC.`,
       });
     }
 
@@ -85,15 +86,17 @@ const DataQualityPanel: React.FC = () => {
       }
     }
 
-    // 4) Dias com receita zerada nos dois períodos (suspeito)
+    // 4) Dias com receita zerada nos dois períodos. Receita_por_Periodo é por data de FATURAMENTO
+    // (confere dia a dia com a DataFaturamento dos pedidos a partir de 03/09) — dia zerado é dia sem
+    // faturamento, não falha do relatório.
     const diaRows = dataset?.receitaPeriodo?.dia ?? [];
     const zeroDays = diaRows.filter(r => r.label.toUpperCase() !== 'TOTAL' && r.receitaAnterior === 0 && r.receitaAtual === 0);
     if (zeroDays.length > 0) {
       list.push({
         id: 'dias-zerados',
         label: `${zeroDays.length} dia(s) com receita zerada em ambos os períodos`,
-        status: 'warn',
-        detail: `${zeroDays.map(d => d.label).join(', ')} — pode ser dia sem operação (loja fechada) ou falha de captura do relatório. Vale confirmar antes de tratar como outlier de negócio.`,
+        status: 'info',
+        detail: `${zeroDays.map(d => d.label).join(', ')} — o relatório é por data de faturamento, e nesses dias não houve faturamento (os pedidos do ConsultaPedidos também não têm DataFaturamento neles). Não é falha de captura.`,
       });
     }
 

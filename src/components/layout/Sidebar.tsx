@@ -16,6 +16,7 @@ const navItems = [
   { id: 'comparacao-semanal', label: 'Comp. Semanal',     icon: 'ph-calendar-dots' },
   { id: 'table',              label: 'Pedidos',           icon: 'ph-table' },
   { id: 'supervisors',        label: 'Supervisores',      icon: 'ph-users' },
+  { id: 'fvc',                label: 'FVC',               icon: 'ph-chart-pie-slice' },
   { id: 'import',             label: 'Importar',          icon: 'ph-upload-simple' },
 ];
 

@@ -122,8 +122,11 @@ Somando `ValorPraticado` dos pedidos **elegíveis** (não cancelados) em `Consul
 **R$ 3.535.358,18**. O relatório `ReceitaCanalVD_Performance_por_PDV.xlsx` reporta receita atual
 "VD" + "OMNI" = **R$ 3.536.654,87**. Diferença de **0,04%** — praticamente idêntico. Em
 `ConsultaRankingVendas`, somando `ValorPraticado` só das linhas `Tipo = Venda`, o total é
-**R$ 3.513.278,83** — na mesma ordem de grandeza (diferença explicada pela janela de datas mais
-ampla do extrato de pedidos, que vai até 23/09 contra o corte de 20/09 do BI).
+**R$ 3.527.186,61** — praticamente a receita **VD** do BI (R$ 3.526.795,43, diferença de R$ 391). O
+valor que constava antes neste documento (R$ 3.513.278,83) não se reproduz: duas leituras
+independentes (a do app e a da §9) chegam aos mesmos R$ 3.527.186,61. A origem da diferença não foi
+identificada; as 18 linhas com `|` dentro de um nome entre aspas somam só R$ 1.650,99 e não a explicam.
+Ver §9.
 
 **Conclusão importante:** a receita "oficial" do BI corporativo é calculada **incluindo** os
 pedidos de estrutura `FVC` — ver próximo ponto — porque excluir FVC do total de `ConsultaPedidos`
@@ -291,6 +294,11 @@ resolver só olhando os dados:
    relatórios corporativos que o franqueado já usa. Precisa de decisão: manter exclusão (e assumir
    a divergência), reclassificar FVC como uma dimensão/filtro em vez de exclusão, ou remover a
    exclusão.
+   **Decisão (25/09/2026):** os pedidos FVC ficam no dataset (Receita & Metas, reconciliação e demais
+   telas continuam com eles, como o BI). A **Visão geral** mostra o faturamento **sem FVC**, e a
+   participação das FVCs, junto com o faturamento total, fica numa tela própria (**FVC**). No Ciclo 13:
+   total VD R$ 3.524.711,78 = sem FVC R$ 3.104.025,29 + FVC R$ 420.686,49 (11,9%), em 7 estruturas
+   "FVC - …" de 3 supervisoras, todas 100% FVC.
 4. **Duas taxonomias de tier coexistindo.** `ConsultaPedidos.Papel` usa os 10 valores já conhecidos
    pelo `papelToTierId` (`Revendedor, Cobre, Bronze, Prata, Ouro, Platina, Rubi, Esmeralda GB,
    Diamante GB, Consumidor Final`). `VendaDireta_Segmentacao_da_Base` usa 11 categorias diferentes
@@ -372,3 +380,72 @@ Pontos de atenção de implementação:
 - Ainda não há um dicionário de negócio confirmado para `IAF`, `CGB`, `CaptacaoRestrita`, `BLUE` e
   `SEM CLASSIFICAÇÃO` — qualquer métrica nova que dependa desses conceitos deve aguardar
   confirmação antes de ir para produção.
+
+---
+
+## 9. Dupla verificação (25/09/2026)
+
+Tudo refeito com uma **segunda leitura independente**: os xlsx foram abertos direto do XML, sem a
+biblioteca `xlsx` usada pelo app, e o CSV do ranking foi lido com um reparo de linhas próprio. Os
+resultados foram comparados com a saída dos parsers do app e **cruzados entre relatórios**.
+
+### 9.1 Leitura do app × leitura bruta
+
+- 14 de 15 relatórios de BI: **100% dos números** da planilha aparecem idênticos no dataset do app.
+- `Receita_por_Cat_Sub_Mar`: o app não guarda a linha TOTAL nem a coluna "VARIAÇÃO RECEITA (R$)" (168
+  números), mas as quatro abas somam exatamente o TOTAL (R$ 3.536.654,87) e a variação é reconstruída
+  sem diferença.
+- **Comparação campo a campo** (valor lido na posição certa, não só "o número existe"): 2.299 células
+  dos relatórios de BI, 109 campos das abas `FILTROS`, 55.146 campos dos 3.939 pedidos (casados por
+  `CodigoPedido`) e 315.024 campos dos 26.252 registros do ranking. Divergências: só 5 nomes de marca,
+  padronizados de propósito pelo app ("QDB"/"Quem Disse Berenice" → "Quem Disse, Berenice?",
+  "O BOTICÁRIO" → "O Boticário", "EUDORA" → "Eudora").
+- Pedidos: 3.921 elegíveis, R$ 3.535.358,18 nas duas leituras. Ranking: 21.034 linhas `Venda`,
+  R$ 3.527.186,61 nas duas leituras. Os 10 valores de `Papel` caem cada um no seu tier.
+
+### 9.2 Cruzamentos entre relatórios que fecham (diferença ≤ R$ 0,01 ou arredondamento do %)
+
+171 conferências fecham e 6 divergem (explicadas em §9.3).
+
+| Verificação | Resultado |
+|---|---|
+| Performance por PDV: linhas somam a linha TOTAL; VD + OMNI = TOTAL em cada linha; gap = atual − meta; realizado = atual ÷ meta | 57/57 |
+| Receita total atual (R$ 3.536.654,87) e anterior (R$ 3.408.352,86) iguais em Performance por PDV, por_UN, Canal_UN e nas 4 abas de Cat/Sub/Linha/Marca | 8/8 |
+| Receita por marca (BOT, EUD, OUI, QDB): atual, anterior e meta iguais em Performance por PDV, por_UN, Canal_UN e aba MARCA | 20/20 |
+| por_UN: "Venda Direta" + "Omni Envio ER" = realizado; Σ "Venda Direta" das UNs = VD do Performance por PDV (R$ 3.526.795,43) | 13/13 |
+| Base ativa (5.228), base total (5.532), ativos (2.321), inícios (168), reinícios (136), multimarca (4.549) iguais em Evolução, Monitoramento, Penetração de base e Penetração detalhada | 13/13 |
+| Monitoramento: PDVs e supervisores (27 linhas) somam o TOTAL em todas as colunas de contagem | 20/20 |
+| Recência: Ativas por tier I1–I6 = Segmentação (soma dos tiers por linha) = Monitoramento "Inativos I1 a I3 / I4 a I6"; Segmentação **A0 = ativos** (2.321); ativos + inativos I1–I6 = base total | 10/10 |
+| Penetração por UN/categoria: Detalhamento de Categorias e UN = Penetração detalhada; % = ativos da UN ÷ 2.321 | 10/10 |
+| Ruptura: CF (0,07%) + indústria (7,76%) = total (7,83%); CF igual nos dois relatórios | 2/2 |
+| Sell-In: Σ por SKU = meta do ciclo (4.770 sugeridos, 4.770 realizados) | 2/2 |
+
+### 9.3 Diferenças encontradas e explicação
+
+- **"Venda Direta" no `Receita_por_Canal_UN` já inclui o Omni** (= TOTAL). A linha "Omnichannel VD" é
+  um subconjunto dela: somar as duas conta o Omni duas vezes.
+- **`Receita_por_Periodo` é por data de faturamento**, não por captação: de 03/09 a 19/09 bate dia a
+  dia com a `DataFaturamento` dos pedidos (diferenças de até ~R$ 70/dia). Por isso o TOTAL dele
+  (R$ 3.482.159,06) difere dos outros relatórios em R$ 54.495,81. Os dias zerados no ciclo atual
+  (06, 13 e 20/09 são domingos, 07/09 é feriado e 16/09 é uma quarta-feira) também não têm nenhum
+  pedido com `DataFaturamento` no extrato: são dias sem faturamento, não falha do relatório. A quarta
+  16/09 sem faturamento é a única que foge do padrão e vale confirmar com a operação. Entre 31/08 e 02/09 o BI traz ~R$ 358 mil a mais, provavelmente
+  pedidos captados no ciclo anterior e faturados nesses dias, que não estão no extrato do Ciclo 13.
+- **O total do BI já cobre o extrato inteiro de pedidos.** Apesar de a aba `FILTROS` dizer "31/08/2026 -
+  20/09/2026", a receita do BI (R$ 3.536.654,87) bate com todos os pedidos elegíveis até 23/09
+  (R$ 3.535.358,18). Cortar os pedidos em 20/09 (por captação) derruba a soma para R$ 3.230.655,87.
+  Isso contradiz o ponto 2 da §6: não é preciso filtrar os pedidos por data para comparar com o BI.
+- **Tier "Revendedor" dos pedidos = "SEM CLASSIFICAÇÃO" da Segmentação** (107 × 107, e a coluna
+  REVENDEDOR da Segmentação é 0). Resolve em parte o ponto 4 da §6. Platina, Rubi, Esmeralda GB e
+  Diamante GB batem exatos; Cobre (269 × 274), Bronze (886 × 880), Prata (576 × 575) e Ouro (305 × 306)
+  diferem em até 6 revendedores. Ninguém muda de tier dentro do extrato, então a diferença vem de o BI
+  classificar o tier em outro momento.
+- **PDV nos pedidos**: o código do PDV está no prefixo de `EstruturaPai` ("13707 - ACQUA..."). Por
+  ele, a receita VD por PDV fica a 0,5% (13706) e 0,15% (13707) do BI. Os 67 pedidos OMNI vêm sem
+  `EstruturaPai`.
+- **Ativos**: pedidos VD têm 2.322 revendedores distintos, o ranking 2.320 e o BI 2.321.
+- **Multimarca + monomarca dos ativos** soma 2.320 (1 a menos que 2.321) no ciclo atual e 2.131 (16 a
+  menos que 2.147) no anterior: inconsistência do próprio BI.
+- **"% Base multimarcas" da Evolução (87,01%)** é 4.549 ÷ base **ativa**, mas 4.549 é a multimarca da
+  base **total** (a Penetração dá 82,23% de 5.532). Da base ativa, a multimarca é 4.462 (85,35%).
+- **RPA do Monitoramento** ≈ receita VD ÷ ativos: exato no 13706, R$ 0,37 acima no 13707.

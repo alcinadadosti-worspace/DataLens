@@ -2,6 +2,8 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Order, ParseResult } from '../types/order';
 import { papelToTierId } from '../design-system/tierStyles';
+// Informativo apenas: FVC continua no dataset (os totais oficiais do BI só batem incluindo FVC).
+import { isFVCOrder } from '../analytics/fvc';
 
 // Column name mapping from spreadsheet to Order interface
 const COLUMN_MAP: Record<string, keyof Order> = {
@@ -205,10 +207,6 @@ function mapRow(raw: Record<string, unknown>): Order {
   };
 }
 
-/** Informativo apenas — FVC não é mais excluído do dataset (os totais oficiais do BI corporativo só batem incluindo FVC). */
-function isFVC(order: Order): boolean {
-  return order.Estrutura.trimStart().toUpperCase().startsWith('FVC');
-}
 
 export async function parseXLSX(file: File): Promise<ParseResult> {
   const errors: string[] = [];
@@ -236,7 +234,7 @@ export async function parseXLSX(file: File): Promise<ParseResult> {
         return null;
       }
     }).filter((o): o is Order => o !== null);
-    const fvcCount = orders.filter(isFVC).length;
+    const fvcCount = orders.filter(isFVCOrder).length;
 
     return { orders, errors, rowCount: rawRows.length, fvcCount, detectedColumns };
   } catch (e) {
@@ -269,7 +267,7 @@ export async function parseCSV(file: File): Promise<ParseResult> {
             return null;
           }
         }).filter((o): o is Order => o !== null);
-        const fvcCount = orders.filter(isFVC).length;
+        const fvcCount = orders.filter(isFVCOrder).length;
 
         resolve({
           orders,

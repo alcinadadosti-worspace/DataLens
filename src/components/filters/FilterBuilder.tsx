@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import FilterChip from '../ui/FilterChip';
 import { useFilterStore } from '../../store/useFilterStore';
 import { useOrderStore } from '../../store/useOrderStore';
-import { useVDCorporateStore } from '../../store/useVDCorporateStore';
 import { TIER_DEFINITIONS } from '../../design-system/tierStyles';
-import { buildCidadeToPdv } from '../../analytics/pdvMapping';
+import { pdvForOrder } from '../../analytics/pdvMapping';
 import GlossyContent from '../ui/GlossyContent';
 
 type MultiKey = 'cycle' | 'supervisor' | 'structure' | 'city' | 'state' | 'modeloComercial' | 'meioCaptacao' | 'situacaoComercial' | 'tier' | 'pdv';
@@ -55,9 +54,7 @@ const FilterBuilder: React.FC = () => {
 
   const filters = useFilterStore();
   const orders = useOrderStore(s => s.orders);
-  const corporateDataset = useVDCorporateStore(s => s.dataset);
-  const cidadeToPdv = useMemo(() => buildCidadeToPdv(corporateDataset), [corporateDataset]);
-  const pdvCodes = useMemo(() => [...new Set(Object.values(cidadeToPdv))].sort(), [cidadeToPdv]);
+  const pdvCodes = useMemo(() => [...new Set(orders.map(pdvForOrder).filter((p): p is string => p !== null))].sort(), [orders]);
 
   const cycles      = [...new Set(orders.map(o => o.CicloMarketing).filter(Boolean))].sort();
   const supervisors = [...new Set(orders.map(o => o.ResponsavelEstrutura).filter(Boolean))].sort();
@@ -89,7 +86,7 @@ const FilterBuilder: React.FC = () => {
       { value: 'Separação',  label: 'Separação' },
       { value: 'Transporte', label: 'Transporte' },
     ]},
-    // Só aparece quando há dados corporativos carregados (é de lá que vem o mapa cidade→PDV).
+    // Só aparece quando os pedidos trazem PDV (prefixo numérico de EstruturaPai — ver pdvMapping.ts).
     ...(pdvCodes.length > 0 ? [{ id: 'pdv' as const, label: 'PDV', options: pdvCodes.map(v => ({ value: v, label: `PDV ${v}` })) }] : []),
   ];
 
