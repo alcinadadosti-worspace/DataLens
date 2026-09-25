@@ -21,6 +21,7 @@ const defaultState: FilterState = {
   meioCaptacao: null,
   situacaoComercial: null,
   tier: null,
+  pdv: null,
   searchQuery: '',
   dateFrom: null,
   dateTo: null,

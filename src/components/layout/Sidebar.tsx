@@ -19,6 +19,14 @@ const navItems = [
   { id: 'import',             label: 'Importar',          icon: 'ph-upload-simple' },
 ];
 
+const corporateNavItems = [
+  { id: 'vd-receita',  label: 'Receita & Metas', icon: 'ph-chart-bar' },
+  { id: 'vd-sellin',   label: 'Sell-In',         icon: 'ph-package' },
+  { id: 'vd-ruptura',  label: 'Ruptura',         icon: 'ph-warning-octagon' },
+  { id: 'vd-base',     label: 'Base & Segmentação', icon: 'ph-users-three' },
+  { id: 'vd-produtos', label: 'Produtos',        icon: 'ph-shopping-bag' },
+];
+
 const Sidebar: React.FC<SidebarProps> = ({ active, onNavigate, activeTier }) => {
   const tierMetrics = useTierMetrics();
   const themed = !!activeTier;
@@ -39,6 +47,33 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onNavigate, activeTier }) => 
       transition: 'background 400ms ease',
     }}>
       {navItems.map(item => {
+        const isActive = active === item.id;
+        return (
+          <div
+            key={item.id}
+            className={`glossy-btn${isActive ? ' glossy-active' : ''}`}
+            onClick={() => onNavigate(item.id)}
+            style={{ borderRadius: 10, fontSize: 14 }}
+          >
+            <GlossyContent
+              justify="flex-start"
+              icon={<i className={`ph ${isActive ? 'ph-bold' : ''} ${item.icon}`} style={{ fontSize: 18 }} />}
+            >
+              {item.label}
+            </GlossyContent>
+          </div>
+        );
+      })}
+
+      <div style={{
+        fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
+        textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)',
+        padding: '20px 14px 8px',
+      }}>
+        Dados corporativos
+      </div>
+
+      {corporateNavItems.map(item => {
         const isActive = active === item.id;
         return (
           <div

@@ -19,6 +19,8 @@ import { fmtBRL, fmtBRLshort, fmtNumber } from '../utils/formatters';
 import { isRevenueEligible } from '../analytics/financialMetrics';
 import { TIER_STYLES, TIER_DEFINITIONS } from '../design-system/tierStyles';
 import { Order } from '../types/order';
+import { useVDCorporateStore } from '../store/useVDCorporateStore';
+import { RankingVendaRow } from '../types/vdRanking';
 
 const columnHelper = createColumnHelper<Order>();
 
@@ -29,13 +31,27 @@ interface TableScreenProps {
 
 // ─── Reseller performance panel ──────────────────────────────────────────────
 
-function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
+function ResellerPanel({ orders, reseller, tierAccent, onClear, rankingVendas }: {
   orders: Order[];
   reseller: { id: string; name: string };
   tierAccent: string;
   onClear: () => void;
+  rankingVendas: RankingVendaRow[];
 }) {
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
+
+  // Revendedor 360: cruza Pessoa (Order) ↔ CodigoRevendedora (ConsultaRankingVendas) pra mostrar o
+  // que esse revendedor mais compra, não só quanto ele gerou de receita em pedidos.
+  const topProdutos = useMemo(() => {
+    const map: Record<string, { nome: string; faturamento: number; qtd: number }> = {};
+    for (const r of rankingVendas) {
+      if (r.codigoRevendedora !== reseller.id || r.tipo !== 'Venda') continue;
+      if (!map[r.codigoProduto]) map[r.codigoProduto] = { nome: r.nomeProduto, faturamento: 0, qtd: 0 };
+      map[r.codigoProduto].faturamento += r.valorPraticado;
+      map[r.codigoProduto].qtd += r.quantidadeItens;
+    }
+    return Object.values(map).sort((a, b) => b.faturamento - a.faturamento).slice(0, 6);
+  }, [rankingVendas, reseller.id]);
   const eligible = orders.filter(isRevenueEligible);
   const cancelled = orders.filter(o => !isRevenueEligible(o));
   const totalRevenue = eligible.reduce((s, o) => s + o.ValorPraticado, 0);
@@ -193,6 +209,29 @@ function ResellerPanel({ orders, reseller, tierAccent, onClear }: {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Produtos mais comprados (Revendedor 360) — cruza Order.Pessoa com ConsultaRankingVendas.CodigoRevendedora */}
+      {topProdutos.length > 0 && (
+        <div style={{ padding: '12px 18px 16px', borderTop: '1px solid var(--vd-bg-track, #F2EEE6)' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-muted, #9B9287)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            Produtos mais comprados
+            <span title="Cruza Pessoa (pedidos) com CodigoRevendedora (ConsultaRankingVendas.csv), somando ValorPraticado só das linhas Tipo = Venda — top 6 por faturamento.">
+              <i className="ph ph-info" style={{ fontSize: 12, cursor: 'help' }} />
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {topProdutos.map((p, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--vd-ink, #1C1814)' }}>
+                  {p.nome}
+                  <span style={{ color: 'var(--vd-text-muted, #9B9287)', fontSize: 11, marginLeft: 6 }}>({fmtNumber(p.qtd)} un.)</span>
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{fmtBRL(p.faturamento)}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -515,6 +554,7 @@ function OrdersAnalyticsPanel({ orders }: { orders: Order[] }) {
 
 const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearReseller }) => {
   const globalOrders = useFilteredOrders();
+  const rankingVendas = useVDCorporateStore(s => s.dataset?.rankingVendas ?? []);
   const [sorting, setSorting] = useState<SortingState>([]);
 
   // Local reseller filter — applied on top of global filters, doesn't touch the store
@@ -651,6 +691,7 @@ const TableScreen: React.FC<TableScreenProps> = ({ selectedReseller, onClearRese
           reseller={selectedReseller}
           tierAccent={resellerTierAccent}
           onClear={onClearReseller}
+          rankingVendas={rankingVendas}
         />
       )}
 

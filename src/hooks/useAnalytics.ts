@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useOrderStore } from '../store/useOrderStore';
 import { useFilterStore } from '../store/useFilterStore';
+import { useVDCorporateStore } from '../store/useVDCorporateStore';
 import { Order } from '../types/order';
 import { calcFinancialMetrics } from '../analytics/financialMetrics';
 import { calcOperationalMetrics } from '../analytics/operationalMetrics';
@@ -8,6 +9,7 @@ import { calcCommercialMetrics } from '../analytics/commercialMetrics';
 import { generateInsights } from '../analytics/insightsEngine';
 import { TIER_DEFINITIONS } from '../design-system/tierStyles';
 import { parseBRDate } from '../utils/dateUtils';
+import { buildCidadeToPdv, pdvForCidade } from '../analytics/pdvMapping';
 import {
   FinancialMetrics,
   OperationalMetrics,
@@ -25,7 +27,10 @@ import {
 export function useFilteredOrders(opts?: { ignoreDateAndCycle?: boolean }): Order[] {
   const orders = useOrderStore(s => s.orders);
   const filters = useFilterStore();
+  const corporateDataset = useVDCorporateStore(s => s.dataset);
   const ignoreDateAndCycle = opts?.ignoreDateAndCycle ?? false;
+
+  const cidadeToPdv = useMemo(() => buildCidadeToPdv(corporateDataset), [corporateDataset]);
 
   return useMemo(() => {
     return orders.filter(order => {
@@ -38,6 +43,10 @@ export function useFilteredOrders(opts?: { ignoreDateAndCycle?: boolean }): Orde
       if (filters.meioCaptacao?.length && !filters.meioCaptacao.includes(order.MeioCaptacao)) return false;
       if (filters.situacaoComercial?.length && !filters.situacaoComercial.includes(order.SituacaoComercial)) return false;
       if (filters.tier?.length && !filters.tier.includes(order.tierId)) return false;
+      if (filters.pdv?.length) {
+        const pdv = pdvForCidade(cidadeToPdv, order.CidadeEntregaRetirada) ?? pdvForCidade(cidadeToPdv, order.Cidade);
+        if (!pdv || !filters.pdv.includes(pdv)) return false;
+      }
 
       if (filters.searchQuery) {
         const q = filters.searchQuery.toLowerCase();
@@ -67,7 +76,7 @@ export function useFilteredOrders(opts?: { ignoreDateAndCycle?: boolean }): Orde
 
       return true;
     });
-  }, [orders, filters, ignoreDateAndCycle]);
+  }, [orders, filters, ignoreDateAndCycle, cidadeToPdv]);
 }
 
 export function useFinancialMetrics(): FinancialMetrics | null {

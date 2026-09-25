@@ -37,12 +37,29 @@ export interface Order {
   CEPEntregaRetirada: string;
   PesoReal: number;
   CodModeloComercial: string;
+
+  // Campos adicionados no lote Ciclo 13 (ConsultaPedidos com 89 colunas) — ver LEITURA_PLANILHAS_VD.md §2.1
+  CaptacaoRestrita: string;
+  CicloIndicador: string;
+  CicloCancelamento: string;
+  DetalheMeioCaptacao: string;
+  CodUsuarioCriacao: string;
+  CodUsuarioFinalizacao: string;
+  PlanoPagamento: string;
+  TipoEntrega: string;
+  EstruturaPai: string;
+  CodTransportadora: string;
+  Transportadora: string;
+  CategoriaDispositivo: string;
+  PedidoRelacionado: string;
+  TipoRelacionamento: string;
 }
 
 export interface ParseResult {
   orders: Order[];
   errors: string[];
   rowCount: number;
-  fvcExcludedCount: number;
+  /** Pedidos de estrutura FVC no lote — informativo. FVC não é mais excluído do dataset (decisão: os totais oficiais do BI corporativo só batem incluindo FVC). */
+  fvcCount: number;
   detectedColumns: string[];
 }

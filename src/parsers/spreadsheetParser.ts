@@ -79,6 +79,25 @@ const COLUMN_MAP: Record<string, keyof Order> = {
   'PesoReal': 'PesoReal',
   'CodModeloComercial': 'CodModeloComercial',
   'Cod Modelo Comercial': 'CodModeloComercial',
+  'CódModeloComercial': 'CodModeloComercial',
+
+  // Colunas novas do lote Ciclo 13 (ConsultaPedidos com 89 colunas)
+  'CaptacaoRestrita': 'CaptacaoRestrita',
+  'CicloIndicador': 'CicloIndicador',
+  'CicloCancelamento': 'CicloCancelamento',
+  'DetalheMeioCaptacao': 'DetalheMeioCaptacao',
+  'Cód Usuário Criação': 'CodUsuarioCriacao',
+  'Cod Usuario Criacao': 'CodUsuarioCriacao',
+  'Cód Usuário Finalização': 'CodUsuarioFinalizacao',
+  'Cod Usuario Finalizacao': 'CodUsuarioFinalizacao',
+  'PlanoPagamento': 'PlanoPagamento',
+  'Tipo de Entrega': 'TipoEntrega',
+  'EstruturaPai': 'EstruturaPai',
+  'Cod Transportadora': 'CodTransportadora',
+  'Transportadora': 'Transportadora',
+  'CategoriaDispositivo': 'CategoriaDispositivo',
+  'Pedido Relacionado': 'PedidoRelacionado',
+  'Tipo de Relacionamento': 'TipoRelacionamento',
 };
 
 function parseNum(v: unknown): number {
@@ -168,9 +187,25 @@ function mapRow(raw: Record<string, unknown>): Order {
     CEPEntregaRetirada: parseStr(mapped.CEPEntregaRetirada),
     PesoReal: parseNum(mapped.PesoReal),
     CodModeloComercial: parseStr(mapped.CodModeloComercial),
+
+    CaptacaoRestrita: parseStr(mapped.CaptacaoRestrita),
+    CicloIndicador: parseStr(mapped.CicloIndicador),
+    CicloCancelamento: parseStr(mapped.CicloCancelamento),
+    DetalheMeioCaptacao: parseStr(mapped.DetalheMeioCaptacao),
+    CodUsuarioCriacao: parseStr(mapped.CodUsuarioCriacao),
+    CodUsuarioFinalizacao: parseStr(mapped.CodUsuarioFinalizacao),
+    PlanoPagamento: parseStr(mapped.PlanoPagamento),
+    TipoEntrega: parseStr(mapped.TipoEntrega),
+    EstruturaPai: parseStr(mapped.EstruturaPai),
+    CodTransportadora: parseStr(mapped.CodTransportadora),
+    Transportadora: parseStr(mapped.Transportadora),
+    CategoriaDispositivo: parseStr(mapped.CategoriaDispositivo),
+    PedidoRelacionado: parseStr(mapped.PedidoRelacionado),
+    TipoRelacionamento: parseStr(mapped.TipoRelacionamento),
   };
 }
 
+/** Informativo apenas — FVC não é mais excluído do dataset (os totais oficiais do BI corporativo só batem incluindo FVC). */
 function isFVC(order: Order): boolean {
   return order.Estrutura.trimStart().toUpperCase().startsWith('FVC');
 }
@@ -189,11 +224,11 @@ export async function parseXLSX(file: File): Promise<ParseResult> {
     });
 
     if (rawRows.length === 0) {
-      return { orders: [], errors: ['Planilha vazia'], rowCount: 0, fvcExcludedCount: 0, detectedColumns: [] };
+      return { orders: [], errors: ['Planilha vazia'], rowCount: 0, fvcCount: 0, detectedColumns: [] };
     }
 
     const detectedColumns = Object.keys(rawRows[0]);
-    const mapped = rawRows.map((row, i) => {
+    const orders = rawRows.map((row, i) => {
       try {
         return mapRow(row);
       } catch (e) {
@@ -201,16 +236,15 @@ export async function parseXLSX(file: File): Promise<ParseResult> {
         return null;
       }
     }).filter((o): o is Order => o !== null);
-    const orders = mapped.filter(o => !isFVC(o));
-    const fvcExcludedCount = mapped.length - orders.length;
+    const fvcCount = orders.filter(isFVC).length;
 
-    return { orders, errors, rowCount: rawRows.length, fvcExcludedCount, detectedColumns };
+    return { orders, errors, rowCount: rawRows.length, fvcCount, detectedColumns };
   } catch (e) {
     return {
       orders: [],
       errors: [`Erro ao ler arquivo: ${e instanceof Error ? e.message : String(e)}`],
       rowCount: 0,
-      fvcExcludedCount: 0,
+      fvcCount: 0,
       detectedColumns: [],
     };
   }
@@ -227,7 +261,7 @@ export async function parseCSV(file: File): Promise<ParseResult> {
         const errors: string[] = result.errors.map(e => `Linha ${e.row}: ${e.message}`);
         const detectedColumns = result.meta.fields ?? [];
 
-        const mapped = result.data.map((row, i) => {
+        const orders = result.data.map((row, i) => {
           try {
             return mapRow(row);
           } catch (e) {
@@ -235,14 +269,13 @@ export async function parseCSV(file: File): Promise<ParseResult> {
             return null;
           }
         }).filter((o): o is Order => o !== null);
-        const orders = mapped.filter(o => !isFVC(o));
-        const fvcExcludedCount = mapped.length - orders.length;
+        const fvcCount = orders.filter(isFVC).length;
 
         resolve({
           orders,
           errors,
           rowCount: result.data.length,
-          fvcExcludedCount,
+          fvcCount,
           detectedColumns,
         });
       },
@@ -251,7 +284,7 @@ export async function parseCSV(file: File): Promise<ParseResult> {
           orders: [],
           errors: [`Erro ao parsear CSV: ${err.message}`],
           rowCount: 0,
-          fvcExcludedCount: 0,
+          fvcCount: 0,
           detectedColumns: [],
         });
       },

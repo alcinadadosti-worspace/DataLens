@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import '../design-system/vdTheme.css';
 import '../design-system/chartTheme.css';
@@ -15,34 +15,18 @@ import DashboardScreen from '../screens/DashboardScreen';
 import SupervisorScreen from '../screens/SupervisorScreen';
 import DistribuicaoScreen from '../screens/DistribuicaoScreen';
 import ComparacaoSemanalScreen from '../screens/ComparacaoSemanalScreen';
-import { parseSpreadsheet } from '../parsers/spreadsheetParser';
+import VDReceitaScreen from '../screens/vd/VDReceitaScreen';
+import VDSellInScreen from '../screens/vd/VDSellInScreen';
+import VDRupturaScreen from '../screens/vd/VDRupturaScreen';
+import VDBaseScreen from '../screens/vd/VDBaseScreen';
+import VDProdutosScreen from '../screens/vd/VDProdutosScreen';
 import { useOrderStore } from '../store/useOrderStore';
-import { useFilterStore } from '../store/useFilterStore';
 
 function VDApp() {
-  const [route, setRoute] = useState('tiers');
+  const hasOrders = useOrderStore(s => s.orders.length > 0);
+  const [route, setRoute] = useState(hasOrders ? 'tiers' : 'import');
   const [selectedReseller, setSelectedReseller] = useState<{ id: string; name: string } | null>(null);
   const theme = useVDThemeStore(s => s.theme);
-  const setOrders = useOrderStore(s => s.setOrders);
-  const hasOrders = useOrderStore(s => s.orders.length > 0);
-  const setFilter = useFilterStore(s => s.setFilter);
-
-  useEffect(() => {
-    if (hasOrders) return;
-    fetch('/ConsultaPedidos_Unificado.xlsx')
-      .then(r => r.blob())
-      .then(blob => {
-        const file = new File([blob], 'ConsultaPedidos_Unificado.xlsx', { type: blob.type });
-        return parseSpreadsheet(file);
-      })
-      .then(result => {
-        if (result.orders.length > 0 && useOrderStore.getState().orders.length === 0) {
-          setOrders(result.orders, 'ConsultaPedidos_Unificado.xlsx');
-          useFilterStore.setState({ cycle: ['12/2026'], dateFrom: '2026-08-10', dateTo: '2026-08-30' });
-        }
-      })
-      .catch(() => {/* silently skip if sample not available */});
-  }, []);
 
   function navigate(r: string) {
     setRoute(r);
@@ -67,6 +51,16 @@ function VDApp() {
     screen = <ComparacaoSemanalScreen onNavigate={navigate} />;
   } else if (route === 'supervisors') {
     screen = <SupervisorScreen onNavigate={navigate} />;
+  } else if (route === 'vd-receita') {
+    screen = <VDReceitaScreen onNavigate={navigate} />;
+  } else if (route === 'vd-sellin') {
+    screen = <VDSellInScreen onNavigate={navigate} />;
+  } else if (route === 'vd-ruptura') {
+    screen = <VDRupturaScreen onNavigate={navigate} />;
+  } else if (route === 'vd-base') {
+    screen = <VDBaseScreen onNavigate={navigate} />;
+  } else if (route === 'vd-produtos') {
+    screen = <VDProdutosScreen onNavigate={navigate} onResellerClick={(id, name) => { setSelectedReseller({ id, name }); navigate('table'); }} />;
   } else if (activeTier) {
     screen = <DetailScreen tierId={activeTier} onBack={() => navigate('tiers')} onNavigate={navigate} onResellerClick={(id, name) => setSelectedReseller({ id, name })} />;
   }

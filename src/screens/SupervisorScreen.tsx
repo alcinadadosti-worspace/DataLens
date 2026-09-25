@@ -10,6 +10,7 @@ import InfoHint from '../components/ui/InfoHint';
 import Button from '../components/ui/Button';
 import { useExport } from '../hooks/useExport';
 import { useFilterStore } from '../store/useFilterStore';
+import { useVDCorporateStore } from '../store/useVDCorporateStore';
 import { getSupervisorColor } from '../design-system/supervisorColors';
 import { Order } from '../types/order';
 
@@ -23,6 +24,13 @@ interface SupervisorRow {
   avgTicket: number;
   avgSLAMinutes: number;
   cancelledCount: number;
+  /** Cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome normalizado — `null` quando não há BI carregado ou o nome não bate com nenhuma linha do relatório. */
+  rpa: number | null;
+  churnPct: number | null;
+}
+
+function normalizeSupervisorName(s: string): string {
+  return s.trim().toUpperCase().replace(/\s+/g, ' ');
 }
 
 type SortKey = keyof SupervisorRow;
@@ -34,6 +42,8 @@ interface SupervisorScreenProps {
 const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
   const orders = useFilteredOrders();
   const setFilter = useFilterStore(s => s.setFilter);
+  const corporateDataset = useVDCorporateStore(s => s.dataset);
+  const monitorPorSupervisor = corporateDataset?.monitoramentoBase?.porSupervisor ?? [];
   const [sortKey, setSortKey] = useState<SortKey>('totalRevenue');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [hoveredName, setHoveredName] = useState<string | null>(null);
@@ -70,12 +80,26 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
       if (sla !== null && sla >= 0) map[key].slaTimes.push(sla);
     }
 
+    // Cruzamento com o BI: várias linhas do Monitoramento podem cair no mesmo nome normalizado (o
+    // arquivo de origem às vezes repete um supervisor em mais de uma linha) — agregamos por soma de
+    // base ativa e média ponderada de RPA/churn por essa base, em vez de só pegar a primeira linha.
+    const biByName: Record<string, { baseAtivaSum: number; rpaWeighted: number; churnWeighted: number }> = {};
+    for (const row of monitorPorSupervisor) {
+      if (row.chave.trim().toUpperCase() === 'TOTAL') continue;
+      const key = normalizeSupervisorName(row.chave);
+      if (!biByName[key]) biByName[key] = { baseAtivaSum: 0, rpaWeighted: 0, churnWeighted: 0 };
+      biByName[key].baseAtivaSum += row.baseAtiva;
+      biByName[key].rpaWeighted += row.rpa * row.baseAtiva;
+      biByName[key].churnWeighted += row.churnPct * row.baseAtiva;
+    }
+
     return Object.values(map).map(s => {
       const eligibleOrders = s.orders.filter(isRevenueEligible);
       const totalRevenue = eligibleOrders.reduce((sum, o) => sum + o.ValorPraticado, 0);
       const avgSLAMinutes = s.slaTimes.length > 0
         ? s.slaTimes.reduce((sum, t) => sum + t, 0) / s.slaTimes.length
         : 0;
+      const bi = biByName[normalizeSupervisorName(s.name)];
       return {
         name: s.name,
         structure: s.structure,
@@ -86,14 +110,18 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
         avgTicket: eligibleOrders.length > 0 ? totalRevenue / eligibleOrders.length : 0,
         avgSLAMinutes,
         cancelledCount: s.orders.filter(o => !isRevenueEligible(o)).length,
+        rpa: bi && bi.baseAtivaSum > 0 ? bi.rpaWeighted / bi.baseAtivaSum : null,
+        churnPct: bi && bi.baseAtivaSum > 0 ? bi.churnWeighted / bi.baseAtivaSum : null,
       };
     });
-  }, [orders]);
+  }, [orders, monitorPorSupervisor]);
 
   const sorted = useMemo(() => {
     return [...supervisorData].sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
+      // rpa/churnPct podem ser `null` (sem cruzamento com o BI) — tratamos como "menor que
+      // qualquer número" pra não quebrar a ordenação nem cair na comparação de string.
+      const av = a[sortKey] === null ? -Infinity : a[sortKey];
+      const bv = b[sortKey] === null ? -Infinity : b[sortKey];
       if (typeof av === 'number' && typeof bv === 'number') {
         return sortDir === 'asc' ? av - bv : bv - av;
       }
@@ -113,6 +141,8 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
     'Ticket Médio': s.avgTicket,
     'ANS Médio (min)': Math.round(s.avgSLAMinutes),
     'Cancelados': s.cancelledCount,
+    'RPA (BI)': s.rpa !== null ? s.rpa.toFixed(2) : '',
+    '% Churn (BI)': s.churnPct !== null ? s.churnPct.toFixed(2) : '',
   }));
 
   const { exportCSV } = useExport(orders);
@@ -264,6 +294,26 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
                 <th style={{ ...thStyle('cancelledCount'), textAlign: 'right' }} onClick={() => toggleSort('cancelledCount')}>
                   Cancelados {sortKey === 'cancelledCount' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                 </th>
+                {monitorPorSupervisor.length > 0 && (
+                  <>
+                    <th style={{ ...thStyle('rpa'), textAlign: 'right' }} onClick={() => toggleSort('rpa')}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        RPA {sortKey === 'rpa' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                        <span onClick={e => e.stopPropagation()}>
+                          <InfoHint direction="down" text="Receita Por Ativo — cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome de supervisor. '—' quando o nome não bate com nenhuma linha do relatório de BI." />
+                        </span>
+                      </span>
+                    </th>
+                    <th style={{ ...thStyle('churnPct'), textAlign: 'right' }} onClick={() => toggleSort('churnPct')}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        % Churn {sortKey === 'churnPct' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                        <span onClick={e => e.stopPropagation()}>
+                          <InfoHint direction="down" text="Perda de base dessa estrutura no ciclo, cruzada do mesmo relatório de BI (Monitoramento da Base)." />
+                        </span>
+                      </span>
+                    </th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -320,6 +370,18 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
                       {row.cancelledCount}
                     </span>
                   </td>
+                  {monitorPorSupervisor.length > 0 && (
+                    <>
+                      <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--vd-text-secondary, #6B6258)' }}>
+                        {row.rpa !== null ? fmtBRLshort(row.rpa) : '—'}
+                      </td>
+                      <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--vd-bg-track, #F2EEE6)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        {row.churnPct !== null
+                          ? <span style={{ color: row.churnPct > 3 ? 'var(--vd-danger, #B83A3A)' : 'var(--vd-text-secondary, #6B6258)' }}>{row.churnPct.toFixed(2).replace('.', ',')}%</span>
+                          : '—'}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
