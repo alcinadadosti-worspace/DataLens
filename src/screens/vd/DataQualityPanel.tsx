@@ -2,9 +2,16 @@ import React, { useMemo } from 'react';
 import ChartCard from '../../components/charts/ChartCard';
 import { useOrderStore } from '../../store/useOrderStore';
 import { useVDCorporateStore } from '../../store/useVDCorporateStore';
-import { useFinancialMetrics } from '../../hooks/useAnalytics';
-import { fmtPct } from '../../utils/formatters';
+import { calcEligibleRevenue } from '../../analytics/financialMetrics';
+import { fmtBRL } from '../../utils/formatters';
 import { isFVCOrder } from '../../analytics/fvc';
+import { ReportContext, VDCorporateFile, VD_CORPORATE_FILE_LABELS } from '../../types/vdCorporate';
+
+/** Relatórios cujo valor é receita em R$ — só entre eles o tipo de receita precisa ser igual. */
+const RECEITA_FILES: VDCorporateFile[] = [
+  'receitaCanalVDPdv', 'receitaCanalVDUn', 'receitaCanalVDPeriodo',
+  'receitaPeriodo', 'receitaCanalUn', 'receitaCategoria',
+];
 
 type CheckStatus = 'ok' | 'warn' | 'info';
 
@@ -31,22 +38,26 @@ const STATUS_META: Record<CheckStatus, { icon: string; color: string }> = {
 const DataQualityPanel: React.FC = () => {
   const orders = useOrderStore(s => s.orders);
   const dataset = useVDCorporateStore(s => s.dataset);
-  const financial = useFinancialMetrics();
 
   const checks = useMemo<QualityCheck[]>(() => {
     const list: QualityCheck[] = [];
 
-    // 1) Reconciliação receita Order[] vs BI
+    // 1) Reconciliação receita Order[] vs BI — sobre o extrato inteiro, sem os filtros globais (o total
+    // do BI é o ciclo todo; um recorte mostraria divergência falsa).
     const totalRow = dataset?.receitaCanalVDPdv?.find(r => r.un.trim().toUpperCase() === 'TOTAL');
-    if (financial && totalRow) {
-      const diffPct = totalRow.total.receitaAtual > 0
-        ? ((financial.grossRevenue - totalRow.total.receitaAtual) / totalRow.total.receitaAtual) * 100
-        : 0;
+    if (orders.length > 0 && totalRow) {
+      const ordersRevenue = calcEligibleRevenue(orders);
+      const diffValor = ordersRevenue - totalRow.total.receitaAtual;
+      const diffPct = totalRow.total.receitaAtual > 0 ? (diffValor / totalRow.total.receitaAtual) * 100 : 0;
+      const bate = Math.abs(diffPct) <= 1;
+      // 2 casas: com 1 casa uma diferença de -0,04% aparecia como "-0,0%", que parece erro de conta.
+      const pctTxt = (diffPct >= 0 ? '+' : '−') + Math.abs(diffPct).toFixed(2).replace('.', ',') + '%';
+      const valorTxt = (diffValor >= 0 ? '+' : '−') + fmtBRL(Math.abs(diffValor));
       list.push({
         id: 'reconciliacao',
-        label: 'Receita de pedidos bate com o BI corporativo',
-        status: Math.abs(diffPct) <= 1 ? 'ok' : Math.abs(diffPct) <= 5 ? 'warn' : 'warn',
-        detail: `Diferença de ${fmtPct(diffPct)} entre a soma de Order[] (FVC incluído) e ReceitaCanalVD_Performance_por_PDV.xlsx.`,
+        label: bate ? 'Receita de pedidos bate com o BI corporativo' : 'Receita de pedidos não bate com o BI corporativo',
+        status: bate ? 'ok' : 'warn',
+        detail: `Pedidos (FVC incluído) ${fmtBRL(ordersRevenue)} × BI ${fmtBRL(totalRow.total.receitaAtual)} (ReceitaCanalVD_Performance_por_PDV.xlsx): diferença de ${pctTxt} (${valorTxt}). Tolerância: ±1%.`,
       });
     }
 
@@ -62,26 +73,43 @@ const DataQualityPanel: React.FC = () => {
       });
     }
 
-    // 3) Tipo de receita consistente entre relatórios de Família C
+    // 3) Tipo de receita consistente entre os relatórios de RECEITA. Ruptura (% de itens) e base
+    // (contagem de revendedores) também trazem o filtro na aba FILTROS ("Receita Bruta"/"Receita GMV"
+    // no Ciclo 13), mas não têm valor em R$ que seja somado ou comparado com os de receita — incluí-los
+    // gerava um alerta falso. Eles aparecem só como informação.
     if (dataset?.reportContexts) {
-      const tipos = new Set(
-        Object.values(dataset.reportContexts)
-          .map(ctx => ctx?.tipoReceita)
-          .filter((t): t is string => !!t)
-      );
-      if (tipos.size > 1) {
+      const tipoPorArquivo = (Object.entries(dataset.reportContexts) as [VDCorporateFile, ReportContext | undefined][])
+        .filter(([, ctx]) => !!ctx?.tipoReceita)
+        .map(([file, ctx]) => ({ file, tipo: ctx!.tipoReceita! }));
+      const receita = tipoPorArquivo.filter(r => RECEITA_FILES.includes(r.file));
+      const outros = tipoPorArquivo.filter(r => !RECEITA_FILES.includes(r.file));
+      const tiposReceita = [...new Set(receita.map(r => r.tipo))];
+
+      if (tiposReceita.length > 1) {
         list.push({
           id: 'tipo-receita',
-          label: 'Tipo de receita varia entre relatórios',
+          label: 'Tipo de receita varia entre relatórios de receita',
           status: 'warn',
-          detail: `Os relatórios carregados declaram tipos de receita diferentes na aba FILTROS (${[...tipos].join(', ')}) — comparar números entre eles sem checar isso pode gerar conclusão errada.`,
+          detail: `Os relatórios de receita declaram tipos diferentes na aba FILTROS: ${receita.map(r => `${VD_CORPORATE_FILE_LABELS[r.file]} = "${r.tipo}"`).join('; ')}. Reexporte todos do BI com o mesmo filtro "Tipo de receita" antes de comparar os valores.`,
         });
-      } else if (tipos.size === 1) {
+      } else if (tiposReceita.length === 1) {
         list.push({
           id: 'tipo-receita',
-          label: 'Tipo de receita consistente entre relatórios',
+          label: 'Tipo de receita consistente entre relatórios de receita',
           status: 'ok',
-          detail: `Todos os relatórios de receita carregados declaram "${[...tipos][0]}" na aba FILTROS.`,
+          detail: `Os ${receita.length} relatórios de receita declaram "${tiposReceita[0]}" na aba FILTROS.`,
+        });
+      }
+
+      const outrosDiferentes = outros.filter(r => !tiposReceita.includes(r.tipo));
+      if (outrosDiferentes.length > 0) {
+        const porTipo = new Map<string, string[]>();
+        for (const r of outrosDiferentes) porTipo.set(r.tipo, [...(porTipo.get(r.tipo) ?? []), VD_CORPORATE_FILE_LABELS[r.file]]);
+        list.push({
+          id: 'tipo-receita-outros',
+          label: 'Relatórios de ruptura e base usam outro tipo de receita',
+          status: 'info',
+          detail: `${[...porTipo].map(([tipo, arqs]) => `"${tipo}": ${arqs.join(', ')}`).join(' · ')}. Esses relatórios medem % de itens ou contagem de revendedores, não somam R$, então o filtro não altera a comparação com a receita.`,
         });
       }
     }
@@ -124,32 +152,52 @@ const DataQualityPanel: React.FC = () => {
     }
 
     return list;
-  }, [orders, dataset, financial]);
+  }, [orders, dataset]);
 
   if (checks.length === 0) return null;
 
-  const warnCount = checks.filter(c => c.status === 'warn').length;
+  const verificacoes = checks.filter(c => c.status !== 'info').sort((a, b) => (a.status === 'warn' ? 0 : 1) - (b.status === 'warn' ? 0 : 1));
+  const avisos = checks.filter(c => c.status === 'info');
+  const warnCount = verificacoes.filter(c => c.status === 'warn').length;
+
+  const renderCheck = (c: QualityCheck) => {
+    const meta = STATUS_META[c.status];
+    return (
+      <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <i className={`ph ph-bold ${meta.icon}`} style={{ fontSize: 16, color: meta.color, marginTop: 2, flexShrink: 0 }} />
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--vd-ink, #1C1814)' }}>{c.label}</div>
+          <div style={{ fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)', marginTop: 2 }}>{c.detail}</div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <ChartCard
       title="Verificações de qualidade"
-      subtitle={warnCount > 0 ? `${warnCount} ponto(s) de atenção de ${checks.length} verificações` : `${checks.length} verificações, sem alertas`}
-      hint="Roda automaticamente sobre os dados carregados as mesmas checagens de consistência feitas manualmente ao construir esta camada — não é teste de CI, é uma auditoria rápida do que está na tela agora."
+      subtitle={warnCount > 0
+        ? `${warnCount} ponto(s) de atenção de ${verificacoes.length} verificações`
+        : `${verificacoes.length} verificações, sem alertas`}
+      hint="Roda automaticamente sobre os dados carregados as mesmas checagens de consistência feitas manualmente ao construir esta camada — não é teste de CI, é uma auditoria rápida do que está na tela agora. Os itens em 'Para ter em mente' não são falhas: explicam como ler os números."
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {checks.map(c => {
-          const meta = STATUS_META[c.status];
-          return (
-            <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <i className={`ph ph-bold ${meta.icon}`} style={{ fontSize: 16, color: meta.color, marginTop: 2, flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--vd-ink, #1C1814)' }}>{c.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)', marginTop: 2 }}>{c.detail}</div>
-              </div>
-            </div>
-          );
-        })}
+        {verificacoes.map(renderCheck)}
       </div>
+      {avisos.length > 0 && (
+        <>
+          <div style={{
+            fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
+            color: 'var(--vd-text-muted, #9B9287)', margin: '18px 0 10px', paddingTop: 14,
+            borderTop: '1px solid var(--vd-border, #E8E2D6)',
+          }}>
+            Para ter em mente
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {avisos.map(renderCheck)}
+          </div>
+        </>
+      )}
     </ChartCard>
   );
 };

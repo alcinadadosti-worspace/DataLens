@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button';
 import { useVDCorporateStore } from '../../store/useVDCorporateStore';
 import { fmtNumber } from '../../utils/formatters';
 import { exportToCSV } from '../../services/exportService';
+import { pdvForOrder } from '../../analytics/pdvMapping';
 import GlossarioPanel from './GlossarioPanel';
 
 /** Normaliza nome de produto pra cruzar RupturaVD_detalhamento_ruptura_por_item (coluna SKU, na
@@ -14,6 +15,10 @@ import GlossarioPanel from './GlossarioPanel';
  * igualdade de texto normalizado (maiúsculas, sem espaço duplicado) — melhor esforço, não garantido. */
 function normalizeProdName(s: string): string {
   return s.trim().toUpperCase().replace(/\s+/g, ' ');
+}
+
+function vendaKey(pdv: string, nomeProduto: string): string {
+  return `${pdv}|${normalizeProdName(nomeProduto)}`;
 }
 
 interface Props {
@@ -30,12 +35,16 @@ const VDRupturaScreen: React.FC<Props> = ({ onNavigate }) => {
   const itens = dataset?.rupturaPorItem ?? [];
 
   // Cruzamento com ConsultaRankingVendas: quanto desse produto foi de fato vendido no ciclo,
-  // pra priorizar ruptura em itens que vendem muito (não só o % de ruptura isolado).
+  // pra priorizar ruptura em itens que vendem muito (não só o % de ruptura isolado). A ruptura é
+  // por SKU × PDV, então as vendas também: o PDV vem do prefixo de `Gerencia` ("13707 - ACQUA..."),
+  // a mesma regra de `pdvForOrder`. Sem isso, a linha do 13706 mostrava as vendas dos dois PDVs.
   const vendasPorProduto = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of dataset?.rankingVendas ?? []) {
       if (r.tipo !== 'Venda') continue;
-      const key = normalizeProdName(r.nomeProduto);
+      const pdv = pdvForOrder({ EstruturaPai: r.gerencia });
+      if (!pdv) continue;
+      const key = vendaKey(pdv, r.nomeProduto);
       map.set(key, (map.get(key) ?? 0) + r.quantidadeItens);
     }
     return map;
@@ -70,7 +79,7 @@ const VDRupturaScreen: React.FC<Props> = ({ onNavigate }) => {
       itens.map(r => ({
         Ciclo: r.ciclo, PDV: r.pdvCodigo, Canal: r.canal, SKU: r.sku,
         'Volume de Itens': r.volumeItens, Causa: r.causaRuptura, '% Ruptura': r.rupturaPct,
-        'Vendas no ciclo (un.)': vendasPorProduto.get(normalizeProdName(r.sku)) ?? '',
+        'Vendas no ciclo (un.)': vendasPorProduto.get(vendaKey(r.pdvCodigo, r.sku)) ?? '',
       })),
       `datalens-ruptura-item-${new Date().toISOString().slice(0, 10)}`
     );
@@ -131,7 +140,7 @@ const VDRupturaScreen: React.FC<Props> = ({ onNavigate }) => {
         <ChartCard
           title="Detalhamento por item"
           subtitle="Amostra de SKUs monitorados — não é o catálogo completo de produtos"
-          hint="RupturaVD_detalhamento_ruptura_por_item.xlsx, aba CICLO — uma linha por SKU × PDV, colunas 'VOLUME DE ITENS', 'CAUSA RUPTURA' e '% DE RUPTURA' lidas direto, ordenadas aqui por % de ruptura (maior primeiro). Este arquivo lista só os SKUs monitorados/críticos, não todo o catálogo (que tem milhares de itens) — não trate como universo completo de ruptura. A coluna 'Vendas no ciclo' cruza com ConsultaRankingVendas.csv por nome de produto normalizado (não há código de SKU em comum entre os dois arquivos) — melhor esforço, fica vazia quando não encontra correspondência exata."
+          hint="RupturaVD_detalhamento_ruptura_por_item.xlsx, aba CICLO — uma linha por SKU × PDV, colunas 'VOLUME DE ITENS', 'CAUSA RUPTURA' e '% DE RUPTURA' lidas direto, ordenadas aqui por % de ruptura (maior primeiro). Este arquivo lista só os SKUs monitorados/críticos, não todo o catálogo (que tem milhares de itens) — não trate como universo completo de ruptura. A coluna 'Vendas no ciclo' soma as unidades vendidas do mesmo produto no mesmo PDV em ConsultaRankingVendas.csv (PDV pelo prefixo de 'Gerencia'), casando por nome de produto normalizado (não há código de SKU em comum entre os dois arquivos) — melhor esforço, fica vazia quando não encontra correspondência exata."
           action={
             <Button variant="secondary" size="sm" icon={<i className="ph ph-file-csv" style={{ fontSize: 14 }} />} onClick={exportItens}>
               Exportar CSV
@@ -153,7 +162,7 @@ const VDRupturaScreen: React.FC<Props> = ({ onNavigate }) => {
               </thead>
               <tbody>
                 {topItens.map((r, i) => {
-                  const vendas = vendasPorProduto.get(normalizeProdName(r.sku));
+                  const vendas = vendasPorProduto.get(vendaKey(r.pdvCodigo, r.sku));
                   const prioridade = r.rupturaPct > 0 && !!vendas && vendas > 0;
                   return (
                     <tr key={i} style={prioridade ? { background: 'var(--vd-warning-bg, #FBF3D0)' } : undefined}>

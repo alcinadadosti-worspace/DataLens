@@ -28,6 +28,7 @@ const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
 
     const receitaRows = (dataset?.receitaCanalVDPdv ?? []).filter(r => r.pdvCodigo === pdvCodigo);
     const receitaAtual = receitaRows.reduce((s, r) => s + r.total.receitaAtual, 0);
+    const receitaVD = receitaRows.reduce((s, r) => s + r.vd.receitaAtual, 0);
     const metaPef = receitaRows.reduce((s, r) => s + r.total.metaPef, 0);
     const cidade = receitaRows[0]?.cidade ?? '';
 
@@ -40,12 +41,14 @@ const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
     const sellInSugestao = sellInRows.reduce((s, r) => s + r.sugestaoComercial, 0);
     const sellInRealizado = sellInRows.reduce((s, r) => s + r.pedidoRealizado, 0);
 
+    // Só os pedidos VD têm EstruturaPai (os OMNI vêm sem): a comparação justa é com a coluna VD do BI,
+    // não com o Total (VD + Omni Envio ER).
     const pdvOrders = orders.filter(o => pdvForOrder(o) === pdvCodigo);
     const pedidosElegiveis = pdvOrders.filter(isRevenueEligible);
     const receitaPedidos = pedidosElegiveis.reduce((s, o) => s + o.ValorPraticado, 0);
 
     return {
-      cidade, receitaAtual, metaPef, monitor,
+      cidade, receitaAtual, receitaVD, metaPef, monitor,
       rupturaMedia, rupturaCount: rupturaItens.length,
       sellInSugestao, sellInRealizado,
       pedidosCount: pdvOrders.length, receitaPedidos,
@@ -84,15 +87,24 @@ const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
         </div>
 
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--vd-accent, #C9A227)', marginBottom: 10 }}>Receita (BI corporativo)</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginBottom: 20 }}>
-          <div style={stat}><span style={statLabel}>Receita atual (Total)</span><span style={statValue}>{fmtBRL(info.receitaAtual)}</span></div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+          <div style={stat}><span style={statLabel}>Receita atual (VD + Omni)</span><span style={statValue}>{fmtBRL(info.receitaAtual)}</span></div>
+          <div style={stat}><span style={statLabel}>Receita VD</span><span style={statValue}>{fmtBRL(info.receitaVD)}</span></div>
           <div style={stat}><span style={statLabel}>Meta PEF</span><span style={statValue}>{fmtBRL(info.metaPef)}</span></div>
         </div>
 
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--vd-accent, #C9A227)', marginBottom: 10 }}>Pedidos (ConsultaPedidos, PDV pela EstruturaPai)</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginBottom: 20 }}>
           <div style={stat}><span style={statLabel}>Pedidos</span><span style={statValue}>{fmtNumber(info.pedidosCount)}</span></div>
-          <div style={stat}><span style={statLabel}>Receita elegível</span><span style={statValue}>{fmtBRL(info.receitaPedidos)}</span></div>
+          <div style={stat}>
+            <span style={statLabel}>Receita elegível (VD)</span>
+            <span style={statValue}>{fmtBRL(info.receitaPedidos)}</span>
+            {info.receitaVD > 0 && (
+              <span style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)' }}>
+                {(((info.receitaPedidos - info.receitaVD) / info.receitaVD) * 100).toFixed(2).replace('.', ',')}% vs. receita VD do BI
+              </span>
+            )}
+          </div>
         </div>
 
         {info.monitor && (

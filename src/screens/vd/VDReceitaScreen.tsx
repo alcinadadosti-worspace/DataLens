@@ -4,7 +4,8 @@ import ChartCard from '../../components/charts/ChartCard';
 import Button from '../../components/ui/Button';
 import GlossyContent from '../../components/ui/GlossyContent';
 import { useVDCorporateStore } from '../../store/useVDCorporateStore';
-import { useFinancialMetrics } from '../../hooks/useAnalytics';
+import { useOrderStore } from '../../store/useOrderStore';
+import { calcEligibleRevenue } from '../../analytics/financialMetrics';
 import { fmtBRL, fmtPct, fmtNumber } from '../../utils/formatters';
 import { ReceitaPeriodoRow, VDReceitaCategoriaRow } from '../../types/vdCorporate';
 import { pillBtn } from './pillBtn';
@@ -43,7 +44,7 @@ const CATEGORIA_TABS = [
 
 const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
   const dataset = useVDCorporateStore(s => s.dataset);
-  const financial = useFinancialMetrics();
+  const orders = useOrderStore(s => s.orders);
   const [periodoTab, setPeriodoTab] = useState<'dia' | 'mes'>('dia');
   const [catTab, setCatTab] = useState<typeof CATEGORIA_TABS[number]['id']>('categoria');
   const [openPdv, setOpenPdv] = useState<string | null>(null);
@@ -52,13 +53,15 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
   const totalRow = pdvRows.find(r => r.un.trim().toUpperCase() === 'TOTAL');
   const unRows = pdvRows.filter(r => r.un.trim().toUpperCase() !== 'TOTAL');
 
+  // Extrato inteiro, sem os filtros globais: o total do BI é o ciclo todo, então comparar com um
+  // recorte (supervisor, cidade, tier...) mostraria uma divergência que não existe.
   const reconciliacao = useMemo(() => {
-    if (!financial || !totalRow) return null;
-    const ordersTotal = financial.grossRevenue;
+    if (orders.length === 0 || !totalRow) return null;
+    const ordersTotal = calcEligibleRevenue(orders);
     const biTotal = totalRow.total.receitaAtual;
     const diffPct = biTotal > 0 ? ((ordersTotal - biTotal) / biTotal) * 100 : 0;
     return { ordersTotal, biTotal, diffPct };
-  }, [financial, totalRow]);
+  }, [orders, totalRow]);
 
   if (!dataset || pdvRows.length === 0) {
     return (

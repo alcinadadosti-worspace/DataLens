@@ -283,6 +283,10 @@ resolver só olhando os dados:
    variando entre `Receita GMV + Omni` (relatórios de receita/base) e `Receita Bruta` (relatórios de
    ruptura). Comparar números entre um relatório e outro sem checar esse filtro pode gerar
    conclusões erradas.
+   **Conferido (28/09/2026):** os 6 relatórios de receita declaram `Receita GMV + Omni`; os 3 de
+   ruptura, `Receita Bruta`; `VendaDireta_penetracao_base` e `VendaDireta_Detalhamento_de_Categorias_e_UN`,
+   `Receita GMV`; os outros 5 de base não trazem a linha. Como ruptura e base não somam R$, a
+   verificação de qualidade compara o tipo só entre os relatórios de receita.
 2. **Janela de datas do extrato de pedidos (`ConsultaPedidos`) é mais ampla que o "ciclo atual" do
    BI** (até 23/09 vs. corte em 20/09). Qualquer reconciliação numérica entre Família A e Família C
    deveria aplicar o mesmo filtro de data, ou aceitar a pequena divergência residual documentada em

@@ -8,6 +8,11 @@ export function isRevenueEligible(order: Order): boolean {
   );
 }
 
+/** Soma de `ValorPraticado` dos pedidos não cancelados — a receita que se compara com o BI. */
+export function calcEligibleRevenue(orders: Order[]): number {
+  return orders.filter(isRevenueEligible).reduce((s, o) => s + o.ValorPraticado, 0);
+}
+
 export function calcFinancialMetrics(orders: Order[]): FinancialMetrics {
   const eligible = orders.filter(isRevenueEligible);
 

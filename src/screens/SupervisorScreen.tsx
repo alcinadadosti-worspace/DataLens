@@ -81,15 +81,17 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
     }
 
     // Cruzamento com o BI: várias linhas do Monitoramento podem cair no mesmo nome normalizado (o
-    // arquivo de origem às vezes repete um supervisor em mais de uma linha) — agregamos por soma de
-    // base ativa e média ponderada de RPA/churn por essa base, em vez de só pegar a primeira linha.
-    const biByName: Record<string, { baseAtivaSum: number; rpaWeighted: number; churnWeighted: number }> = {};
+    // arquivo de origem repete o supervisor que atende os dois PDVs, uma linha por PDV) — agregamos em
+    // vez de só pegar a primeira linha. Cada média é ponderada pelo seu próprio denominador: RPA é
+    // receita ÷ ATIVOS (RPA × ativos reproduz a receita da linha), churn é perda ÷ BASE ATIVA.
+    const biByName: Record<string, { baseAtivaSum: number; ativosSum: number; rpaWeighted: number; churnWeighted: number }> = {};
     for (const row of monitorPorSupervisor) {
       if (row.chave.trim().toUpperCase() === 'TOTAL') continue;
       const key = normalizeSupervisorName(row.chave);
-      if (!biByName[key]) biByName[key] = { baseAtivaSum: 0, rpaWeighted: 0, churnWeighted: 0 };
+      if (!biByName[key]) biByName[key] = { baseAtivaSum: 0, ativosSum: 0, rpaWeighted: 0, churnWeighted: 0 };
       biByName[key].baseAtivaSum += row.baseAtiva;
-      biByName[key].rpaWeighted += row.rpa * row.baseAtiva;
+      biByName[key].ativosSum += row.ativosBaseTotal;
+      biByName[key].rpaWeighted += row.rpa * row.ativosBaseTotal;
       biByName[key].churnWeighted += row.churnPct * row.baseAtiva;
     }
 
@@ -110,7 +112,7 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
         avgTicket: eligibleOrders.length > 0 ? totalRevenue / eligibleOrders.length : 0,
         avgSLAMinutes,
         cancelledCount: s.orders.filter(o => !isRevenueEligible(o)).length,
-        rpa: bi && bi.baseAtivaSum > 0 ? bi.rpaWeighted / bi.baseAtivaSum : null,
+        rpa: bi && bi.ativosSum > 0 ? bi.rpaWeighted / bi.ativosSum : null,
         churnPct: bi && bi.baseAtivaSum > 0 ? bi.churnWeighted / bi.baseAtivaSum : null,
       };
     });

@@ -1,6 +1,6 @@
 import { Order } from '../types/order';
 import { VDCorporateDataset } from '../types/vdCorporate';
-import { isRevenueEligible } from './financialMetrics';
+import { calcEligibleRevenue } from './financialMetrics';
 import { isFVCOrder } from './fvc';
 
 export interface VDCycleSnapshot {
@@ -35,7 +35,7 @@ export function buildVDSnapshot(orders: Order[], corporate: VDCorporateDataset |
   const ciclo = dominantCiclo(orders);
   if (!ciclo) return null;
 
-  const grossRevenue = orders.filter(isRevenueEligible).reduce((s, o) => s + o.ValorPraticado, 0);
+  const grossRevenue = calcEligibleRevenue(orders);
   const fvcCount = orders.filter(isFVCOrder).length;
 
   const baseAtiva = corporate?.evolucaoBase?.[0]?.baseAtiva
