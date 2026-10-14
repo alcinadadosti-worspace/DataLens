@@ -42,6 +42,7 @@ const LojaLogisticaScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
       <div style={{ padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ color: 'var(--loja-text-secondary, #6B6258)', fontSize: 15, marginBottom: 24 }}>
           O arquivo <strong>GestaoPedidos_Visão_detalhada_da_utilização_por_pedido</strong> não foi importado — logística indisponível.
+          {dataset.aderencia && ' A aderência do pedido por curva do ciclo está na tela de Gestão de pedidos.'}
         </p>
         <Button variant="primary" size="lg" onClick={() => onNavigate('loja-import')}>Importar arquivo</Button>
       </div>

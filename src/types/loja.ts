@@ -42,7 +42,8 @@ export type LojaOptionalFile =
   | 'lojaDigital'
   | 'cuidadosFaciais'
   | 'logisticaAdesaoResumo'
-  | 'logisticaAdesaoDetalhe';
+  | 'logisticaAdesaoDetalhe'
+  | 'aderencia';
 
 export const LOJA_OPTIONAL_FILES: LojaOptionalFile[] = [
   'abc',
@@ -64,6 +65,7 @@ export const LOJA_OPTIONAL_FILES: LojaOptionalFile[] = [
   'cuidadosFaciais',
   'logisticaAdesaoResumo',
   'logisticaAdesaoDetalhe',
+  'aderencia',
 ];
 
 export const LOJA_OPTIONAL_FILE_LABELS: Record<LojaOptionalFile, string> = {
@@ -86,6 +88,7 @@ export const LOJA_OPTIONAL_FILE_LABELS: Record<LojaOptionalFile, string> = {
   cuidadosFaciais: 'Cuidados Faciais + Botik — receita por PDV/consultor',
   logisticaAdesaoResumo: 'Logística — adesão à plataforma (resumo)',
   logisticaAdesaoDetalhe: 'Logística — adesão à plataforma (detalhe por pedido)',
+  aderencia: 'Gestão de pedidos — aderência por curva (e histórico)',
 };
 
 /** Curva ABC (relatorioABCVenda*.csv) — uma linha por SKU x data (agregar por SKU para o ranking). */
@@ -415,6 +418,34 @@ export interface LogisticaAdesaoDetalheRow {
   dataLimiteEntrega: string;
 }
 
+/** Uma linha das abas CP/PDV/Categorias de GestaoPedidos_Aderência_por_Categoria / Histórico_de_Aderência: aderência (%) por curva. `null` = sem itens naquela curva (célula vazia). */
+export interface AderenciaCurvaRow {
+  nome: string;
+  curvaA: number | null;
+  curvaB: number | null;
+  curvaC: number | null;
+  curvaE: number | null;
+}
+
+export interface AderenciaPeriodoRow {
+  periodo: string;
+  aderenciaPct: number;
+}
+
+/** GestaoPedidos_Aderência_por_Categoria.xlsx + GestaoPedidos_Histórico_de_Aderência.xlsx (o histórico repete as abas do primeiro e acrescenta Semanal/Mensal/Anual). */
+export interface AderenciaDataset {
+  /** Janela do ciclo atual declarada na aba FILTROS (ex. "21/09/2026 - 12/10/2026"). */
+  periodo: string | null;
+  /** Ciclo declarado na aba FILTROS (ex. "14 - 2026 a 14 - 2026"). */
+  ciclo: string | null;
+  cp: AderenciaCurvaRow[];
+  pdv: AderenciaCurvaRow[];
+  categorias: AderenciaCurvaRow[];
+  semanal: AderenciaPeriodoRow[];
+  mensal: AderenciaPeriodoRow[];
+  anual: AderenciaPeriodoRow[];
+}
+
 export interface LojaDataset {
   lojas: LojaMetricRow[];
   forma: LojaMetricRow[];
@@ -446,6 +477,7 @@ export interface LojaDataset {
   cuidadosFaciais?: CuidadosFaciaisDataset;
   logisticaAdesaoResumo?: LogisticaAdesaoResumoRow[];
   logisticaAdesaoDetalhe?: LogisticaAdesaoDetalheRow[];
+  aderencia?: AderenciaDataset;
   optionalFileNames?: Partial<Record<LojaOptionalFile, string>>;
   /**
    * "Tipo de Receita" declarado na aba FILTROS de cada arquivo xlsx opcional importado (GMV,

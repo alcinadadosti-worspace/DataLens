@@ -3,7 +3,7 @@ import {
   ReceitaCanalRow, ReceitaCategoriaDataset, ReceitaCategoriaRow, ResumoPerformanceDataset, ResumoPerformanceIndicador, ResumoPerformanceRow,
   ServicosDataset, ServicoPdvRow, ServicoConsultorRow, FidelidadeDataset, FidelidadeRow, LojaDigitalDataset, LojaDigitalRow,
   CuidadosFaciaisDataset, CuidadosFaciaisRow, LogisticaAdesaoResumoRow, LogisticaAdesaoDetalheRow,
-  ReceitaCanalLojaBlock, ReceitaCanalLojaPdvRow, ReceitaCanalLojaUnDataset, ReceitaCanalLojaPeriodoRow,
+  ReceitaCanalLojaBlock, ReceitaCanalLojaPdvRow, AderenciaDataset, AderenciaCurvaRow, AderenciaPeriodoRow, ReceitaCanalLojaUnDataset, ReceitaCanalLojaPeriodoRow,
 } from '../types/loja';
 import { toNum, toPct } from './lojaNumberUtils';
 
@@ -290,11 +290,16 @@ export function parseReceitaCanalXlsx(workbook: XLSX.WorkBook): ReceitaCanalRow[
   const iVar = findColByName(header, 'Variação', 'Variacao', 'Var%', 'Var %');
   const iPart = findColByName(header, 'Participação', 'Participacao', '%');
 
+  // Linhas recuadas ("  Loja BOT") são a quebra por UN da linha de canal logo acima, com o mesmo
+  // valor quando o canal tem uma UN só — mantê-las duplicaria o canal na lista e dividiria a
+  // participação. Canais sem receita em nenhum dos dois ciclos (ex. "Venda Direta" no Modo Loja) também saem.
+  const isSubnivel = (r: unknown[]) => /^\s+\S/.test(String(r[iCanal] ?? ''));
   const list = dataRows
     .filter(r => {
       const nome = String(r[iCanal] ?? '').trim();
-      return nome !== '' && !isTotalRow(nome);
+      return nome !== '' && !isTotalRow(nome) && !isSubnivel(r);
     })
+    .filter(r => (iAtual >= 0 && toNum(r[iAtual]) !== 0) || (iAnterior >= 0 && toNum(r[iAnterior]) !== 0))
     .map(r => {
       const receitaAtual = iAtual >= 0 ? toNum(r[iAtual]) : 0;
       const receitaAnterior = iAnterior >= 0 ? toNum(r[iAnterior]) : 0;
@@ -803,4 +808,79 @@ export function parseReceitaCanalLojaPeriodoXlsx(workbook: XLSX.WorkBook): Recei
   return dataRows
     .filter(r => String(r[iData] ?? '').trim() !== '')
     .map(r => ({ data: String(r[iData] ?? '').trim(), receita: toNum(r[iReceita]) } as ReceitaCanalLojaPeriodoRow));
+}
+
+
+// --- GestaoPedidos_Aderência_por_Categoria.xlsx / GestaoPedidos_Histórico_de_Aderência.xlsx ---
+
+/** "83%" / "84.7%" → 83 / 84.7; célula vazia (sem itens naquela curva) → null. */
+function aderenciaPct(v: unknown): number | null {
+  if (typeof v === 'number') return Math.abs(v) <= 1 ? v * 100 : v;
+  const s = String(v ?? '').trim().replace('%', '').replace(',', '.');
+  if (s === '' || s === '-' || s === '--') return null;
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function parseAderenciaCurvaSheet(sheet: XLSX.WorkSheet | null): AderenciaCurvaRow[] {
+  if (!sheet) return [];
+  const rows = sheetToRows(sheet);
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iA = findColByName(header, 'Curva A');
+  const iB = findColByName(header, 'Curva B');
+  const iC = findColByName(header, 'Curva C');
+  const iE = findColByName(header, 'Curva E');
+  return rows.slice(1)
+    .filter(r => String(r[0] ?? '').trim() !== '')
+    .map(r => ({
+      nome: String(r[0]).trim(),
+      curvaA: iA >= 0 ? aderenciaPct(r[iA]) : null,
+      curvaB: iB >= 0 ? aderenciaPct(r[iB]) : null,
+      curvaC: iC >= 0 ? aderenciaPct(r[iC]) : null,
+      curvaE: iE >= 0 ? aderenciaPct(r[iE]) : null,
+    }));
+}
+
+function parseAderenciaPeriodoSheet(sheet: XLSX.WorkSheet | null): AderenciaPeriodoRow[] {
+  if (!sheet) return [];
+  return sheetToRows(sheet).slice(1)
+    .filter(r => String(r[0] ?? '').trim() !== '')
+    .map(r => ({ periodo: String(r[0]).trim(), aderenciaPct: aderenciaPct(r[1]) }))
+    .filter((r): r is AderenciaPeriodoRow => r.aderenciaPct != null);
+}
+
+/** Lê o valor de uma linha da aba FILTROS pelo nome do filtro; `match` escolhe entre linhas repetidas (há duas "CICLO ATUAL"). */
+function readFiltro(workbook: XLSX.WorkBook, nome: string, match: (v: string) => boolean): string | null {
+  const sheet = findSheet(workbook, 'FILTROS');
+  if (!sheet) return null;
+  for (const r of sheetToRows(sheet)) {
+    if (normalizeCell(r[0]) === normalizeCell(nome) && match(String(r[1] ?? '').trim())) return String(r[1]).trim();
+  }
+  return null;
+}
+
+export function parseAderenciaXlsx(workbook: XLSX.WorkBook): AderenciaDataset {
+  return {
+    periodo: readFiltro(workbook, 'CICLO ATUAL', v => /\d{2}\/\d{2}\/\d{4}/.test(v)),
+    ciclo: readFiltro(workbook, 'CICLO ATUAL', v => /^\d+\s*-\s*\d{4}/.test(v)),
+    cp: parseAderenciaCurvaSheet(findSheet(workbook, 'CP')),
+    pdv: parseAderenciaCurvaSheet(findSheet(workbook, 'PDV')),
+    categorias: parseAderenciaCurvaSheet(findSheet(workbook, 'Categorias')),
+    semanal: parseAderenciaPeriodoSheet(findSheet(workbook, 'Semanal')),
+    mensal: parseAderenciaPeriodoSheet(findSheet(workbook, 'Mensal')),
+    anual: parseAderenciaPeriodoSheet(findSheet(workbook, 'Anual')),
+  };
+}
+
+/** Junta dois arquivos de aderência (o por categoria e o histórico): o que um não traz, o outro completa. */
+export function mergeAderencia(a: AderenciaDataset | undefined, b: AderenciaDataset): AderenciaDataset {
+  if (!a) return b;
+  const pick = <T,>(x: T[], y: T[]) => (x.length >= y.length ? x : y);
+  return {
+    periodo: a.periodo ?? b.periodo,
+    ciclo: a.ciclo ?? b.ciclo,
+    cp: pick(a.cp, b.cp), pdv: pick(a.pdv, b.pdv), categorias: pick(a.categorias, b.categorias),
+    semanal: pick(a.semanal, b.semanal), mensal: pick(a.mensal, b.mensal), anual: pick(a.anual, b.anual),
+  };
 }

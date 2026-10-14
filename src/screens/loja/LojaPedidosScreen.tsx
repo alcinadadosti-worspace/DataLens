@@ -7,6 +7,7 @@ import { pedidosRates, classifyAbc, buildLojaNomeLookup, sellInSkuRanking } from
 import PageTitle from '../../components/ui/PageTitle';
 import InfoHint from '../../components/ui/InfoHint';
 import { fmtNumber, fmtPct } from '../../utils/formatters';
+import LojaAderenciaSection from './LojaAderenciaSection';
 
 const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
@@ -182,6 +183,13 @@ const LojaPedidosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNa
             />
           </ChartCard>
         </div>
+      )}
+
+      {dataset.aderencia && (
+        <LojaAderenciaSection
+          aderencia={dataset.aderencia}
+          lojaCodigos={new Set(dataset.lojas.map(l => l.lojaCodigo).filter((c): c is string => !!c))}
+        />
       )}
 
       {(dataset.logisticaAdesaoDetalhe || dataset.logisticaAdesaoResumo) && (

@@ -6,7 +6,7 @@ import InfoHint from '../../components/ui/InfoHint';
 import { useLojaStore } from '../../store/useLojaStore';
 import {
   rankLojas, aggregateByName, classifyAbcByLoja, pedidosRates, buildLojaNomeLookup,
-  logisticaAdesaoResumoPorPdv, sellInSkuRanking,
+  logisticaAdesaoResumoPorPdv, sellInSkuRanking, metaPefPorPdv,
 } from '../../analytics/lojaMetrics';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
@@ -84,10 +84,13 @@ const LojaPerfilScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNav
 
     const resumoRow = dataset.resumoPerformance?.pdv.find(r => r.nome === codigo) ?? null;
     const receitaCanalRow = dataset.receitaCanalLojaPdv?.find(r => r.pdvCodigo === codigo) ?? null;
+    // Sem ReceitaCanalLoja_Performance_por_PDV, a meta PEF da loja é reconstruída do Resumo de Performance.
+    const metaPef = receitaCanalRow ? null : metaPefPorPdv(dataset).find(m => m.pdvCodigo === codigo) ?? null;
+    const aderencia = dataset.aderencia?.pdv.find(r => r.nome === codigo) ?? null;
 
     return {
       nome, lojaRow, canais, formas, categorias, topProdutos, pedidosPorCategoria, sellInResumo,
-      fidelidade, servicos, lojaDigital, cuidados, logistica, resumoRow, receitaCanalRow,
+      fidelidade, servicos, lojaDigital, cuidados, logistica, resumoRow, receitaCanalRow, metaPef, aderencia,
     };
   }, [dataset, codigo]);
 
@@ -108,7 +111,7 @@ const LojaPerfilScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNav
     );
   }
 
-  const { nome, lojaRow, canais, formas, categorias, topProdutos, pedidosPorCategoria, sellInResumo, fidelidade, servicos, lojaDigital, cuidados, logistica, resumoRow, receitaCanalRow } = perfil;
+  const { nome, lojaRow, canais, formas, categorias, topProdutos, pedidosPorCategoria, sellInResumo, fidelidade, servicos, lojaDigital, cuidados, logistica, resumoRow, receitaCanalRow, metaPef, aderencia } = perfil;
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -235,16 +238,26 @@ const LojaPerfilScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNav
         </div>
       )}
 
-      {(logistica || receitaCanalRow) && (
+      {(logistica || receitaCanalRow || metaPef || aderencia) && (
         <div style={{ marginTop: 20 }}>
           <ChartCard glow
-            title="Logística e canal de cumprimento"
+            title="Meta, aderência e logística"
             hint="'Realizado vs. Meta PEF (canal Loja)' usa só o bloco Loja física de ReceitaCanalLoja_Performance_por_PDV.xlsx (base GMV), que bate com o GMV desta loja mostrado no topo da página — não inclui Clique e Retire."
-            subtitle="Transferência entre lojas e Loja x Clique e Retire"
+            subtitle="Meta PEF, aderência do pedido por curva e transferência entre lojas"
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {logistica && (
                 <StatRow label="Adesão à plataforma logística" value={`${logistica.usaBemPct.toFixed(0)}% "Usa Bem"`} meta={`${logistica.total} pedido(s) · ${logistica.dentroDoPrazoPct.toFixed(0)}% no prazo`} />
+              )}
+              {metaPef && (
+                <StatRow label="Realizado vs. Meta PEF (GMV)" value={`${metaPef.realizadoPct.toFixed(0)}%`} meta={`${fmtBRL(metaPef.receita)} de ${fmtBRL(metaPef.metaPef)}`} />
+              )}
+              {aderencia && (
+                <StatRow
+                  label="Aderência do pedido por curva"
+                  value={[['A', aderencia.curvaA], ['B', aderencia.curvaB], ['C', aderencia.curvaC], ['E', aderencia.curvaE]].map(([c, v]) => `${c} ${v != null ? (v as number).toFixed(0) + '%' : '—'}`).join(' · ')}
+                  meta="Gestão de pedidos"
+                />
               )}
               {receitaCanalRow && (
                 <StatRow label="Realizado vs. Meta PEF (canal Loja)" value={receitaCanalRow.loja.realizadoPct != null ? `${receitaCanalRow.loja.realizadoPct.toFixed(0)}%` : '—'} meta={fmtBRL(receitaCanalRow.loja.receitaAtual)} />

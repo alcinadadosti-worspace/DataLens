@@ -875,3 +875,43 @@ export function optionalConsistencyWarnings(dataset: LojaDataset): string[] {
 
   return warnings;
 }
+
+export interface MetaPefPdv {
+  pdvCodigo: string;
+  receita: number;
+  /** Meta PEF reconstruída: o Resumo de Performance só traz "Vs. Meta PEF" (receita/meta − 1), então meta = receita / (1 + vs/100), com vs em %. */
+  metaPef: number;
+  gapValor: number;
+  realizadoPct: number;
+  vsAnoAnteriorPct: number | null;
+}
+
+/**
+ * Meta PEF por loja a partir do Resumo de Performance (base GMV). Substitui a leitura do
+ * ReceitaCanalLoja_Performance_por_PDV, que não vem em todos os lotes. Lojas sem meta ("-" no
+ * arquivo) ficam de fora — não dá para inferir meta delas. Como o "Vs. Meta PEF" vem arredondado
+ * em 4 casas, a meta derivada tem erro de ~0,01% (a soma das lojas fecha com a meta do CP).
+ */
+export function metaPefPorPdv(dataset: LojaDataset): MetaPefPdv[] {
+  const pdvs = dataset.resumoPerformance?.pdv ?? [];
+  return pdvs
+    .filter(r => /^\d+$/.test(r.nome.trim()) && r.vsMetaPEFPct != null && r.vsMetaPEFPct > -100)
+    .map(r => {
+      const metaPef = r.receita / (1 + (r.vsMetaPEFPct as number) / 100);
+      return {
+        pdvCodigo: r.nome.trim(),
+        receita: r.receita,
+        metaPef,
+        gapValor: r.receita - metaPef,
+        realizadoPct: (r.receita / metaPef) * 100,
+        vsAnoAnteriorPct: r.vsAnoAnteriorPct,
+      };
+    });
+}
+
+/** Meta PEF, realizado (GMV) e variação vs. ano anterior da rede, da aba CP do Resumo de Performance. */
+export function metaPefRede(dataset: LojaDataset): { meta: number; realizado: number; vsAnoPassadoPct: number | null } | null {
+  const row = dataset.resumoPerformance?.cp.find(i => i.indicador.trim().toUpperCase() === 'RECEITA TOTAL');
+  if (!row || row.metaPEF == null || row.realizado == null) return null;
+  return { meta: row.metaPEF, realizado: row.realizado, vsAnoPassadoPct: row.vsAnoPassadoPct };
+}

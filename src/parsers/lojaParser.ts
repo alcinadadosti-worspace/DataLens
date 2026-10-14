@@ -8,7 +8,7 @@ import {
 import {
   parseResumoPerformanceXlsx, parseReceitaCanalXlsx, parseReceitaCategoriaXlsx,
   parseServicosXlsx, parseFidelidadeXlsx, parseLojaDigitalXlsx, parseCuidadosFaciaisXlsx,
-  parseLogisticaAdesaoResumoXlsx, parseLogisticaAdesaoDetalheXlsx,
+  parseLogisticaAdesaoResumoXlsx, parseLogisticaAdesaoDetalheXlsx, parseAderenciaXlsx, mergeAderencia,
   parseReceitaCanalLojaPdvXlsx, parseReceitaCanalLojaUnXlsx, parseReceitaCanalLojaPeriodoXlsx,
   readTipoReceitaFromFiltros,
 } from './lojaXlsxParser';
@@ -52,7 +52,8 @@ const OPTIONAL_CSV_FILENAME_HINTS: Partial<Record<LojaOptionalFile, string>> = {
 type LojaXlsxKind =
   | 'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' | 'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais'
   | 'logisticaAdesaoResumo' | 'logisticaAdesaoDetalhe'
-  | 'receitaCanalLojaPdv' | 'receitaCanalLojaUn' | 'receitaCanalLojaPeriodo';
+  | 'receitaCanalLojaPdv' | 'receitaCanalLojaUn' | 'receitaCanalLojaPeriodo'
+  | 'aderencia';
 
 const XLSX_FILENAME_HINTS: Record<LojaXlsxKind, string> = {
   resumoPerformance: 'RESUMO_DE_PERFORMANCE',
@@ -67,6 +68,8 @@ const XLSX_FILENAME_HINTS: Record<LojaXlsxKind, string> = {
   receitaCanalLojaPdv: 'RECEITACANALLOJA_PERFORMANCE_POR_PDV',
   receitaCanalLojaPeriodo: 'RECEITACANALLOJA_POR_PERIODO',
   receitaCanalLojaUn: 'RECEITACANALLOJA_POR_UN',
+  // "Aderência_por_Categoria" e "Histórico_de_Aderência" — mesmo relatório, o histórico só acrescenta as abas Semanal/Mensal/Anual.
+  aderencia: 'ADERENCIA',
 };
 
 function stripBOM(s: string): string {
@@ -402,7 +405,7 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
     'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' |
     'receitaCanalLojaPdv' | 'receitaCanalLojaUn' | 'receitaCanalLojaPeriodo' |
     'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais' |
-    'logisticaAdesaoResumo' | 'logisticaAdesaoDetalhe'>> = {};
+    'logisticaAdesaoResumo' | 'logisticaAdesaoDetalhe' | 'aderencia'>> = {};
 
   for (const file of files) {
     const isXlsx = /\.xlsx?$/i.test(file.name);
@@ -411,7 +414,7 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
       if (isXlsx) {
         const xlsxKind = detectOptionalXlsx(file.name);
         if (!xlsxKind) {
-          errors.push(`${file.name}: arquivo xlsx não reconhecido (esperado Resumo de Performance, Receita por Canal, Receita por Categoria, Receita por Canal (PDV/UN/Período), Serviços em Loja, Programa Fidelidade, Loja Digital, Cuidados Faciais ou Logística de Adesão)`);
+          errors.push(`${file.name}: arquivo xlsx não reconhecido (esperado Resumo de Performance, Receita por Canal, Receita por Categoria, Receita por Canal (PDV/UN/Período), Serviços em Loja, Programa Fidelidade, Loja Digital, Cuidados Faciais, Logística de Adesão ou Aderência por curva)`);
           continue;
         }
         const buffer = await file.arrayBuffer();
@@ -444,6 +447,14 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
         } else if (xlsxKind === 'logisticaAdesaoDetalhe') {
           optional.logisticaAdesaoDetalhe = parseLogisticaAdesaoDetalheXlsx(workbook);
           detectedOptional.logisticaAdesaoDetalhe = { fileName: file.name, rowCount: optional.logisticaAdesaoDetalhe.length };
+        } else if (xlsxKind === 'aderencia') {
+          optional.aderencia = mergeAderencia(optional.aderencia, parseAderenciaXlsx(workbook));
+          // Dois arquivos alimentam a aderência (por categoria + histórico) — lista os dois na tela de importação.
+          const anterior = detectedOptional.aderencia?.fileName;
+          detectedOptional.aderencia = {
+            fileName: !anterior ? file.name : anterior.split(' + ').includes(file.name) ? anterior : `${anterior} + ${file.name}`,
+            rowCount: optional.aderencia.pdv.length + optional.aderencia.categorias.length + optional.aderencia.semanal.length,
+          };
         } else if (xlsxKind === 'receitaCanalLojaPdv') {
           optional.receitaCanalLojaPdv = parseReceitaCanalLojaPdvXlsx(workbook);
           detectedOptional.receitaCanalLojaPdv = { fileName: file.name, rowCount: optional.receitaCanalLojaPdv.length };
@@ -455,7 +466,7 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
           optional.receitaCanalLojaPeriodo = parseReceitaCanalLojaPeriodoXlsx(workbook);
           detectedOptional.receitaCanalLojaPeriodo = { fileName: file.name, rowCount: optional.receitaCanalLojaPeriodo.length };
         }
-        optionalFileNames![xlsxKind] = file.name;
+        optionalFileNames![xlsxKind] = detectedOptional[xlsxKind]?.fileName ?? file.name;
         receitaBasesPorArquivo![xlsxKind] = readTipoReceitaFromFiltros(workbook);
         continue;
       }

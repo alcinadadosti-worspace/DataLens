@@ -4,7 +4,7 @@ import RankingChart, { ExtraStat } from '../../components/charts/RankingChart';
 import { RankingItem } from '../../components/charts/RankingList';
 import Button from '../../components/ui/Button';
 import { useLojaStore } from '../../store/useLojaStore';
-import { aggregateByName, listLojasInDimension } from '../../analytics/lojaMetrics';
+import { aggregateByName, listLojasInDimension, metaPefPorPdv, metaPefRede } from '../../analytics/lojaMetrics';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { AggregatedRow } from '../../types/loja';
 import PageTitle from '../../components/ui/PageTitle';
@@ -112,6 +112,56 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
           </ChartCard>
         </div>
       )}
+
+      {!(dataset.receitaCanalLojaPdv && dataset.receitaCanalLojaPdv.length > 0) && metaPefPorPdv(dataset).length > 0 && (() => {
+        const metas = [...metaPefPorPdv(dataset)];
+        const rede = metaPefRede(dataset);
+        return (
+          <div style={{ marginTop: 20 }}>
+            <ChartCard glow
+              title="Meta PEF por loja"
+              hint="Receita GMV de cada loja contra a Meta PEF, vinda do Resumo de Performance. O arquivo traz só o '% vs. Meta PEF'; a meta em R$ é reconstruída (receita ÷ (1 + % vs. meta)) e a soma das lojas bate com a meta da rede. Lojas sem meta no arquivo não aparecem. Base GMV (sem Clique e Retire)."
+              subtitle={rede ? `Rede: meta ${fmtBRLshort(rede.meta)} · realizado ${fmtBRLshort(rede.realizado)} (${((rede.realizado / rede.meta) * 100).toFixed(0)}% da meta${rede.vsAnoPassadoPct != null ? `, ${fmtPct(rede.vsAnoPassadoPct)} vs. ano anterior` : ''})` : 'Resumo_de_Performance_Indicadores_Loja.xlsx (GMV)'}
+            >
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                <Button variant={gapView === 'pct' ? 'primary' : 'ghost'} size="sm" onClick={() => setGapView('pct')}>% da meta</Button>
+                <Button variant={gapView === 'valor' ? 'primary' : 'ghost'} size="sm" onClick={() => setGapView('valor')}>Gap em R$ até a meta</Button>
+              </div>
+              {gapView === 'pct' ? (
+                <RankingChart
+                  medals={false}
+                  items={metas
+                    .sort((a, b) => b.realizadoPct - a.realizadoPct)
+                    .map(r => ({
+                      label: resolveLojaNome(r.pdvCodigo, r.pdvCodigo),
+                      value: r.receita,
+                      valueLabel: fmtBRLshort(r.receita),
+                      meta: `${r.realizadoPct.toFixed(0)}% da meta PEF`,
+                    }))}
+                />
+              ) : (
+                <RankingChart
+                  medals={false}
+                  items={metas
+                    .filter(r => r.gapValor < 0)
+                    .sort((a, b) => a.gapValor - b.gapValor)
+                    .map(r => ({
+                      label: resolveLojaNome(r.pdvCodigo, r.pdvCodigo),
+                      value: Math.abs(r.gapValor),
+                      valueLabel: fmtBRLshort(Math.abs(r.gapValor)),
+                      meta: `Meta ${fmtBRLshort(r.metaPef)} · realizado ${r.realizadoPct.toFixed(0)}%`,
+                    }))}
+                />
+              )}
+              {gapView === 'valor' && metas.every(r => r.gapValor >= 0) && (
+                <div style={{ color: 'var(--loja-success, #2E7D5B)', fontSize: 13, marginTop: 8 }}>
+                  Todas as lojas estão acima da Meta PEF nesse recorte — sem gap negativo a priorizar.
+                </div>
+              )}
+            </ChartCard>
+          </div>
+        );
+      })()}
 
       {(dataset.receitaCanalLojaUn || (dataset.receitaCanalLojaPdv && dataset.receitaCanalLojaPdv.length > 0)) && (
         <div style={{ marginTop: 20 }}>
