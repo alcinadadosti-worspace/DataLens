@@ -239,6 +239,11 @@ Esta é a camada que efetivamente cruza os diferentes arquivos entre si. Princip
   colocação vs. o consolidado da Visão Geral do Ciclo; total de `pedidosDetalhamentoSku` vs.
   `pedidosMetaSellIn`; contagem por categoria de `logisticaAdesaoResumo` vs. `logisticaAdesaoDetalhe`),
   sinalizando divergência acima de 1% (ou contagem diferente, no caso da logística).
+- **Base de receita no Resumo de Performance** — quando as abas CP, PDV e CONSULTOR declaram
+  bases diferentes para o mesmo indicador, o parser (`resolveBasesDivergentes`) adota a base que a
+  maioria das abas declara e a grava no `tipoReceita` das três abas; o ajuste fica registrado em
+  `basesDivergentes` e aparece como nota no Scorecard. Só os casos sem maioria (empate) viram aviso
+  em `optionalConsistencyWarnings`.
 
 ### 3.5 Telas e visualizações — Modo Loja
 

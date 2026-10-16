@@ -133,6 +133,8 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
   const rp = dataset?.resumoPerformance;
 
   const mismatches = useMemo(() => (dataset ? receitaBaseMismatches(dataset) : []), [dataset]);
+  const basesAjustadas = mismatches.filter(m => m.baseAdotada);
+  const basesSemMaioria = mismatches.filter(m => !m.baseAdotada);
 
   const receitaBasesArquivos = useMemo(() => {
     if (!dataset?.receitaBasesPorArquivo) return [];
@@ -454,24 +456,41 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
           Indicadores sem etiqueta (contagens como "Quantidade de Serviços em Loja", ou "Clique & Retire" na aba CP) não
           são sobre receita — a planilha marca a base deles como "N/A".
         </div>
-        {mismatches.length > 0 ? (
-          <div style={{ marginTop: 8, color: 'var(--loja-warning-text, #8A6D00)' }}>
-            <strong>{mismatches.length} inconsistência(s) detectada(s) na planilha de origem:</strong> checagem automática
-            comparando a base declarada na aba CP com a base declarada nas abas PDV/CONSULTOR, indicador a indicador.
+        {basesAjustadas.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <strong>{basesAjustadas.length} base(s) ajustada(s) pela maioria das abas:</strong> a planilha de origem
+            declarou bases diferentes pro mesmo indicador conforme a aba (CP, PDV, CONSULTOR). Vale a base que a
+            maioria das abas declara, e ela é usada em todas as visões.
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
-              {mismatches.map((m, i) => (
+              {basesAjustadas.map((m, i) => (
                 <div key={i}>
-                  "{m.indicadorCp}" — <BaseTag tipo={m.tipoReceitaCp} /> na aba CP (visão Rede) vs. <BaseTag tipo={m.tipoReceitaPdv} />{' '}
-                  nas abas PDV/CONSULTOR (visões Por loja/Por consultor).
+                  "{m.indicadorCp}" — adotado <BaseTag tipo={m.baseAdotada} /> ({m.declaracoes.map(d => `${d.aba}: ${d.base}`).join(' · ')}).
                 </div>
               ))}
             </div>
-            Não é erro deste app: é assim que o sistema de origem exportou os dois relatórios.
           </div>
-        ) : (
+        )}
+        {basesSemMaioria.length > 0 ? (
+          <div style={{ marginTop: 8, color: 'var(--loja-warning-text, #8A6D00)' }}>
+            <strong>{basesSemMaioria.length} inconsistência(s) sem maioria na planilha de origem:</strong> as abas
+            declaram bases diferentes e nenhuma base aparece em mais abas que as outras, então cada visão mostra a
+            base da própria aba.
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+              {basesSemMaioria.map((m, i) => (
+                <div key={i}>
+                  "{m.indicadorCp}" —{' '}
+                  {m.declaracoes.map((d, j) => (
+                    <span key={j}>{j > 0 && ' vs. '}<BaseTag tipo={d.base} /> na aba {d.aba}</span>
+                  ))}.
+                </div>
+              ))}
+            </div>
+            Não é erro deste app: é assim que o sistema de origem exportou o relatório.
+          </div>
+        ) : basesAjustadas.length === 0 && (
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--loja-success, #2E7D5B)' }}>
             <i className="ph-bold ph-check-circle" />
-            Checagem automática: nenhuma inconsistência de base entre a aba CP e as abas PDV/CONSULTOR neste ciclo.
+            Checagem automática: nenhuma inconsistência de base entre as abas CP, PDV e CONSULTOR neste ciclo.
           </div>
         )}
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>

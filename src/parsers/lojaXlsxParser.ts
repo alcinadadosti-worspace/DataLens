@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import {
   ReceitaCanalRow, ReceitaCategoriaDataset, ReceitaCategoriaRow, ResumoPerformanceDataset, ResumoPerformanceIndicador, ResumoPerformanceRow,
+  ResumoPerformanceAba, ResumoPerformanceBaseDivergente,
   ServicosDataset, ServicoPdvRow, ServicoConsultorRow, FidelidadeDataset, FidelidadeRow, LojaDigitalDataset, LojaDigitalRow,
   CuidadosFaciaisDataset, CuidadosFaciaisRow, LogisticaAdesaoResumoRow, LogisticaAdesaoDetalheRow,
   ReceitaCanalLojaBlock, ReceitaCanalLojaPdvRow, AderenciaDataset, AderenciaCurvaRow, AderenciaPeriodoRow, ReceitaCanalLojaUnDataset, ReceitaCanalLojaPeriodoRow,
@@ -265,12 +266,91 @@ function parseEntitySheet(sheet: XLSX.WorkSheet | null, hasPdvCol: boolean): Res
     } as ResumoPerformanceRow));
 }
 
+/**
+ * Correspondência entre o nome de cada indicador na aba CP do Resumo de Performance e o nome do
+ * mesmo indicador nas abas PDV/CONSULTOR — os dois lados descrevem o mesmo conceito, mas o
+ * sistema de origem não usa o texto exatamente igual entre as abas (ex. "Share de alavancas BT e
+ * BP" na CP vs. "Share de Alavancas BT/BP" na PDV), então a correspondência é mapeada à mão a
+ * partir dos nomes reais observados nos exports — comparar por nome exato ou por similaridade de
+ * texto deixaria passar pares válidos ou juntaria pares errados.
+ */
+const CP_TO_PDV_INDICADOR: Record<string, string> = {
+  'Receita Total': 'Receita',
+  'Quantidade de Boletos': 'Quantidade de Boletos',
+  'Boleto Médio': 'Boleto Médio',
+  'Quantidade de Itens': 'Quantidade de Itens',
+  'Itens por Boleto': 'Itens por Boleto',
+  'Preço Médio': 'Preço Médio',
+  'Share de alavancas BT e BP': 'Share de Alavancas BT/BP',
+  'Penetração de Boleto B1': 'Penetração de Boletos 1',
+  'Penetração de Boleto Turbinado': 'Penetração de Boleto Turbinado',
+  'Penetração de Boleto Promocional': 'Penetração de Boleto Promocional',
+  'Penetração de Receita Mobshop': 'Penetração de Receita Mobshop',
+  'Penetração de Boletos Fidelidade': 'Penetração de Boletos Fidelidade',
+  'Resgate Fidelidade': 'Resgate Fidelidade',
+  'Conversão de Ação de Fluxo': 'Conversão de Ação de Fluxo',
+  'Penetração de Cuidados Faciais': 'Penetração de Cuidados Faciais',
+  '% Boletos ID Cliente': '% Boletos ID Cliente',
+  'Quantidade de Serviços em Loja': 'Quantidade de Serviços em Loja',
+  'Clique & Retire - % de separação no prazo': 'Clique & Retire',
+  'Loja Digital Ativo - % de atendimento': 'Loja Digital Ativo - % de Atendimento',
+  'Loja Digital Receptivo - TME 1ª resposta': 'Loja Digital Receptivo - TME 1ª resposta',
+};
+
+/** Base declarada por mais abas; `null` em empate (ex. CP diz uma coisa, PDV outra, sem CONSULTOR). */
+function baseDaMaioria(declaracoes: { base: string }[]): string | null {
+  const votos = new Map<string, number>();
+  for (const d of declaracoes) votos.set(d.base, (votos.get(d.base) ?? 0) + 1);
+  const ranking = [...votos.entries()].sort((a, b) => b[1] - a[1]);
+  if (ranking.length > 1 && ranking[0][1] === ranking[1][1]) return null;
+  return ranking[0]?.[0] ?? null;
+}
+
+/**
+ * O sistema de origem às vezes declara bases diferentes pro mesmo indicador conforme a aba (ex.
+ * "Penetração de Boletos Fidelidade" como Líquida na CP e GMV na PDV/CONSULTOR, com o mesmo
+ * valor realizado nas três). Vale a base que a maioria das abas declara: ela é gravada no
+ * `tipoReceita` das três abas, pra que etiqueta, export e avisos do app falem a mesma base em
+ * qualquer recorte. Sem maioria, cada aba fica como veio e a divergência segue sinalizada.
+ */
+function resolveBasesDivergentes(
+  cp: ResumoPerformanceIndicador[], pdv: ResumoPerformanceRow[], consultor: ResumoPerformanceRow[],
+): ResumoPerformanceBaseDivergente[] {
+  const baseNaAba = (rows: ResumoPerformanceRow[], nome: string) =>
+    rows[0]?.metricas.find(m => m.metrica === nome)?.tipoReceita ?? null;
+  const divergentes: ResumoPerformanceBaseDivergente[] = [];
+
+  for (const [cpNome, pdvNome] of Object.entries(CP_TO_PDV_INDICADOR)) {
+    const cpInd = cp.find(i => i.indicador === cpNome);
+    const declaracoes = ([
+      ['CP', cpInd?.tipoReceita ?? null],
+      ['PDV', baseNaAba(pdv, pdvNome)],
+      ['CONSULTOR', baseNaAba(consultor, pdvNome)],
+    ] as [ResumoPerformanceAba, string | null][])
+      .filter((d): d is [ResumoPerformanceAba, string] => d[1] !== null)
+      .map(([aba, base]) => ({ aba, base }));
+    if (new Set(declaracoes.map(d => d.base)).size < 2) continue;
+
+    const baseAdotada = baseDaMaioria(declaracoes);
+    if (baseAdotada) {
+      if (cpInd) cpInd.tipoReceita = baseAdotada;
+      for (const row of [...pdv, ...consultor]) {
+        const m = row.metricas.find(mm => mm.metrica === pdvNome);
+        if (m) m.tipoReceita = baseAdotada;
+      }
+    }
+    divergentes.push({ indicadorCp: cpNome, indicadorPdv: pdvNome, declaracoes, baseAdotada });
+  }
+  return divergentes;
+}
+
 export function parseResumoPerformanceXlsx(workbook: XLSX.WorkBook): ResumoPerformanceDataset {
   const periodo = readPeriodoFromFiltros(workbook);
   const cp = parseCPIndicators(findSheet(workbook, 'CP'));
   const pdv = parseEntitySheet(findSheet(workbook, 'PDV'), false);
   const consultor = parseEntitySheet(findSheet(workbook, 'CONSULTOR'), true);
-  return { periodo, cp, pdv, consultor };
+  const basesDivergentes = resolveBasesDivergentes(cp, pdv, consultor);
+  return { periodo, cp, pdv, consultor, basesDivergentes };
 }
 
 export function parseReceitaCanalXlsx(workbook: XLSX.WorkBook): ReceitaCanalRow[] {

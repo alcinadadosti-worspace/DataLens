@@ -305,11 +305,27 @@ export interface ResumoPerformanceIndicador {
   vsAnoPassadoPct: number | null;
 }
 
+export type ResumoPerformanceAba = 'CP' | 'PDV' | 'CONSULTOR';
+
+/**
+ * Indicador cuja base de receita não é a mesma nas abas CP/PDV/CONSULTOR do Resumo de
+ * Performance. `baseAdotada` é a base declarada pela maioria das abas — e já foi aplicada no
+ * `tipoReceita` das três abas pelo parser; `null` quando não há maioria (empate), caso em que cada
+ * aba fica com a base que ela mesma declarou.
+ */
+export interface ResumoPerformanceBaseDivergente {
+  indicadorCp: string;
+  indicadorPdv: string;
+  declaracoes: { aba: ResumoPerformanceAba; base: string }[];
+  baseAdotada: string | null;
+}
+
 export interface ResumoPerformanceDataset {
   periodo: string | null;
   cp: ResumoPerformanceIndicador[];
   pdv: ResumoPerformanceRow[];
   consultor: ResumoPerformanceRow[];
+  basesDivergentes: ResumoPerformanceBaseDivergente[];
 }
 
 /** Servicos_em_loja.xlsx — aba PDV: totais de serviços realizados/completos por loja. */

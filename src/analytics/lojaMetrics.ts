@@ -1,7 +1,7 @@
 import {
   AbcRow, AggregatedRow, LojaDataset, LojaMetricRow, PedidoHistoricoRow, VendaHoraRow,
   FidelidadeRow, LojaDigitalRow, ServicoConsultorRow, CuidadosFaciaisRow,
-  PedidoDetalhamentoSkuRow, LogisticaAdesaoDetalheRow,
+  PedidoDetalhamentoSkuRow, LogisticaAdesaoDetalheRow, ResumoPerformanceBaseDivergente,
 } from '../types/loja';
 import { normalizeStoreDisplayName } from '../parsers/lojaParser';
 import { resolveLojaNome } from './lojaStoreAliases';
@@ -733,63 +733,12 @@ export function logisticaPedidosEmAberto(rows: LogisticaAdesaoDetalheRow[]): Log
 // --- Validações cruzadas dos arquivos opcionais ---
 
 /**
- * Correspondência entre o nome de cada indicador na aba CP do Resumo de Performance e o nome do
- * mesmo indicador nas abas PDV/CONSULTOR — os dois lados descrevem o mesmo conceito, mas o
- * sistema de origem não usa o texto exatamente igual entre as abas (ex. "Share de alavancas BT e
- * BP" na CP vs. "Share de Alavancas BT/BP" na PDV), então a correspondência é mapeada à mão a
- * partir dos nomes reais observados nos exports — comparar por nome exato ou por similaridade de
- * texto deixaria passar pares válidos ou juntaria pares errados.
+ * Indicadores do Resumo de Performance cuja base de receita veio diferente entre as abas
+ * CP/PDV/CONSULTOR. O parser já aplicou a base da maioria das abas (`baseAdotada`) — o que sobra
+ * como divergência de verdade são os casos sem maioria (`baseAdotada === null`).
  */
-const CP_TO_PDV_INDICADOR: Record<string, string> = {
-  'Receita Total': 'Receita',
-  'Quantidade de Boletos': 'Quantidade de Boletos',
-  'Boleto Médio': 'Boleto Médio',
-  'Quantidade de Itens': 'Quantidade de Itens',
-  'Itens por Boleto': 'Itens por Boleto',
-  'Preço Médio': 'Preço Médio',
-  'Share de alavancas BT e BP': 'Share de Alavancas BT/BP',
-  'Penetração de Boleto B1': 'Penetração de Boletos 1',
-  'Penetração de Boleto Turbinado': 'Penetração de Boleto Turbinado',
-  'Penetração de Boleto Promocional': 'Penetração de Boleto Promocional',
-  'Penetração de Receita Mobshop': 'Penetração de Receita Mobshop',
-  'Penetração de Boletos Fidelidade': 'Penetração de Boletos Fidelidade',
-  'Resgate Fidelidade': 'Resgate Fidelidade',
-  'Conversão de Ação de Fluxo': 'Conversão de Ação de Fluxo',
-  'Penetração de Cuidados Faciais': 'Penetração de Cuidados Faciais',
-  '% Boletos ID Cliente': '% Boletos ID Cliente',
-  'Quantidade de Serviços em Loja': 'Quantidade de Serviços em Loja',
-  'Clique & Retire - % de separação no prazo': 'Clique & Retire',
-  'Loja Digital Ativo - % de atendimento': 'Loja Digital Ativo - % de Atendimento',
-  'Loja Digital Receptivo - TME 1ª resposta': 'Loja Digital Receptivo - TME 1ª resposta',
-};
-
-export interface ReceitaBaseMismatch {
-  indicadorCp: string;
-  indicadorPdv: string;
-  tipoReceitaCp: string;
-  tipoReceitaPdv: string;
-}
-
-/**
- * Indicadores em que a aba CP e a aba PDV do MESMO arquivo Resumo de Performance declaram uma
- * base de receita diferente pro mesmo conceito (ex. um diz "GMV", o outro diz "Receita Líquida").
- * Não é bug deste app — é o próprio sistema de origem exportando de forma inconsistente — mas
- * precisa aparecer pra quem for usar esse número saber que a base pode não ser a que ele espera.
- */
-export function receitaBaseMismatches(dataset: LojaDataset): ReceitaBaseMismatch[] {
-  const rp = dataset.resumoPerformance;
-  if (!rp || rp.cp.length === 0 || rp.pdv.length === 0) return [];
-  const pdvMetricas = rp.pdv[0].metricas;
-  const mismatches: ReceitaBaseMismatch[] = [];
-  for (const [cpNome, pdvNome] of Object.entries(CP_TO_PDV_INDICADOR)) {
-    const cpInd = rp.cp.find(i => i.indicador === cpNome);
-    const pdvMetrica = pdvMetricas.find(m => m.metrica === pdvNome);
-    if (!cpInd?.tipoReceita || !pdvMetrica?.tipoReceita) continue;
-    if (cpInd.tipoReceita !== pdvMetrica.tipoReceita) {
-      mismatches.push({ indicadorCp: cpNome, indicadorPdv: pdvNome, tipoReceitaCp: cpInd.tipoReceita, tipoReceitaPdv: pdvMetrica.tipoReceita });
-    }
-  }
-  return mismatches;
+export function receitaBaseMismatches(dataset: LojaDataset): ResumoPerformanceBaseDivergente[] {
+  return dataset.resumoPerformance?.basesDivergentes ?? [];
 }
 
 export function optionalConsistencyWarnings(dataset: LojaDataset): string[] {
@@ -846,7 +795,9 @@ export function optionalConsistencyWarnings(dataset: LojaDataset): string[] {
   }
 
   for (const m of receitaBaseMismatches(dataset)) {
-    warnings.push(`"${m.indicadorCp}" é declarado com base ${m.tipoReceitaCp} na aba CP (visão Rede), mas ${m.tipoReceitaPdv} na aba PDV/CONSULTOR (visões Por loja/Por consultor) do Resumo de Performance — mesmo indicador, base diferente conforme o recorte.`);
+    if (m.baseAdotada) continue;
+    const porAba = m.declaracoes.map(d => `${d.base} na aba ${d.aba}`).join(', ');
+    warnings.push(`"${m.indicadorCp}" é declarado com bases diferentes no Resumo de Performance (${porAba}), sem uma base que a maioria das abas declare — mesmo indicador, base diferente conforme o recorte.`);
   }
 
   if (dataset.resumoPerformance) {
