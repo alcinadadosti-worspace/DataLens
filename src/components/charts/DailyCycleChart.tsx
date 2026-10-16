@@ -57,12 +57,17 @@ const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
 
   const W = 600;
   const H = height;
-  const padL = 52, padR = 12, padT = 12, padB = 28;
   const allVals = [
     ...series.flatMap(s => s.points),
     ...(showTotal ? totalPoints : []),
   ];
   const maxV = Math.max(...allVals, 1) * 1.1;
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(t => maxV * t);
+  // Eixo em reais inteiros, por extenso (sem abreviar, como o resto do app). A margem esquerda cresce
+  // com o rótulo mais longo — com 52px fixos, valores acima de R$ 100 mil saíam cortados à esquerda.
+  const yTickLabel = (v: number) => Math.round(v).toLocaleString('pt-BR');
+  const padL = Math.max(52, Math.max(...yTicks.map(v => yTickLabel(v).length)) * 5.6 + 14);
+  const padR = 12, padT = 12, padB = 28;
   const xStep = days.length > 1 ? (W - padL - padR) / (days.length - 1) : W - padL - padR;
   const yScale = (v: number) => padT + (H - padT - padB) * (1 - v / maxV);
 
@@ -72,7 +77,6 @@ const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
       .join(' ');
   }
 
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(t => maxV * t);
   const step = Math.ceil(days.length / 10);
   const labeledDays = days.filter((_, i) => i % step === 0 || i === days.length - 1);
 
@@ -207,7 +211,7 @@ const DailyCycleChart: React.FC<DailyCycleChartProps> = ({
             <line x1={padL} x2={W - padR} y1={yScale(v)} y2={yScale(v)} stroke="#F2EEE6" strokeWidth="1" />
             <text x={padL - 8} y={yScale(v) + 3} textAnchor="end"
               style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, fill: '#9B9287' }}>
-              {v >= 1000 ? fmtBRLshort(v).replace('R$ ', '') : Math.round(v)}
+              {yTickLabel(v)}
             </text>
           </g>
         ))}

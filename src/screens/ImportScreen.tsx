@@ -94,11 +94,18 @@ const DEFAULT_FILE_NAMES = [
   '20261016_ativas_uma_compra_er_667be7987584.xlsx',
 ];
 
+/**
+ * Último lote importado nesta sessão. A tela é desmontada ao navegar para outra rota; sem isso, voltar
+ * em "Importar" começava do zero, buscava de novo os dados padrão e, ao terminar, chamava `onComplete`
+ * e jogava o usuário de volta para a Visão geral no meio do que ele ia fazer.
+ */
+let ultimoLote: { files: File[]; result: VDImportResult } | null = null;
+
 const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
   const [drag, setDrag] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
-  const [result, setResult] = useState<VDImportResult | null>(null);
-  const [phase, setPhase] = useState<Phase>('idle');
+  const [files, setFiles] = useState<File[]>(() => ultimoLote?.files ?? []);
+  const [result, setResult] = useState<VDImportResult | null>(() => ultimoLote?.result ?? null);
+  const [phase, setPhase] = useState<Phase>(() => (ultimoLote?.result.orders?.length ? 'done' : 'idle'));
   const [loadingDefaults, setLoadingDefaults] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const userInteractedRef = useRef(false);
@@ -113,6 +120,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
     setPhase('loading');
     const r = await parseVDFiles(fileList);
     setResult(r);
+    ultimoLote = { files: fileList, result: r };
     if (r.orders) {
       clearFilters();
       setOrders(r.orders, r.pedidosFileName ?? 'pedidos');
@@ -129,7 +137,8 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
   }
 
   useEffect(() => {
-    if (files.length > 0) return;
+    // Só a primeira abertura do Modo VD (nada carregado ainda) busca o lote padrão e segue direto para a análise.
+    if (files.length > 0 || useOrderStore.getState().orders.length > 0) return;
     let cancelled = false;
     setLoadingDefaults(true);
     Promise.all(
@@ -150,6 +159,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
       const r = await parseVDFiles(valid);
       if (cancelled || userInteractedRef.current) return;
       setResult(r);
+      ultimoLote = { files: valid, result: r };
       if (r.orders) {
         clearFilters();
         setOrders(r.orders, r.pedidosFileName ?? 'pedidos');
@@ -197,6 +207,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
 
   function handleClear() {
     userInteractedRef.current = true;
+    ultimoLote = null;
     setFiles([]);
     setResult(null);
     clearOrders();
