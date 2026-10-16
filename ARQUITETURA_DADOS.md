@@ -215,10 +215,13 @@ Esta é a camada que efetivamente cruza os diferentes arquivos entre si. Princip
   `gestao` e `forma` (todas deveriam somar o mesmo total, vindo do mesmo pedido de origem, só que
   quebrado diferente) — usado como selo de confiança dos dados importados.
 - **`crossInsights`** — gera frases automáticas cruzando várias dimensões e os xlsx opcionais:
-  canal líder, forma de pagamento líder, categoria líder, gap entre 1º e 2º lugar no ranking de
-  lojas, anomalias de desconto > 100% da receita, funil Fidelidade (% cliente cadastrado vs. % que
-  completa o desafio), loja líder em Botik/Cuidados Faciais cruzada com sua posição no ranking
-  geral de GMV, pior conversão de Loja Digital vs. média da rede, loja com maior GMV em Serviços.
+  canal "Loja" vs. canais de experimentação (participação e ticket médio), forma de pagamento
+  líder (% do valor e % das compras), categoria líder vs. a 2ª, gap entre 1º e 2º lugar no ranking
+  de lojas explicado por volume ou ticket, funil Fidelidade (% cliente identificado vs. % que
+  completa o desafio, com as lojas de menor e maior taxa), loja onde Cuidados Faciais mais pesa no
+  GMV vs. a rede, pior adesão à plataforma logística e peso das vendas com Serviços em loja no GMV
+  de cada loja. Não geram mais frase: desconto > 100% da receita por categoria, conversão da Loja
+  Digital por loja e "canal fora da loja" (motivos no comentário da função).
 - **`classifyAbc`** / **`classifyAbcByLoja`** — classificação ABC por faturamento acumulado (A até
   80%, B até 95%, C o resto), com heurística de item não-comercial (sacolas, amostras, preço
   unitário < R$3, sufixo "PRM") sobreponível por override manual do usuário

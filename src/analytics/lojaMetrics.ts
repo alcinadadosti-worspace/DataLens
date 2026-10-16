@@ -329,6 +329,24 @@ export function consistencyCheck(dataset: LojaDataset): ConsistencyCheck {
   return { ok: maxDiffPct < 0.5, lojasTotal, canalTotal, gestaoTotal, formaTotal, maxDiffPct };
 }
 
+const fmtPct = (v: number, casas = 1) => `${v.toFixed(casas).replace('.', ',')}%`;
+const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+/** "CUIDADOS COM A PELE" -> "Cuidados com a pele"; o arquivo às vezes traz espaço duplo ("HOME  CARE"). */
+const fmtCategoria = (s: string) => { const t = s.replace(/\s+/g, ' ').trim().toLowerCase(); return t.charAt(0).toUpperCase() + t.slice(1); };
+/** Apelido da loja; sem apelido cadastrado, "Loja 12345" quando veio só o código, ou o próprio nome. */
+const nomeLoja = (codigo: string) => resolveLojaNome(codigo, /^\d+$/.test(codigo.trim()) ? `Loja ${codigo.trim()}` : codigo);
+/** "a, b e c" */
+const listaPt = (itens: string[]) => itens.length <= 1 ? itens.join('') : `${itens.slice(0, -1).join(', ')} e ${itens[itens.length - 1]}`;
+
+/**
+ * Frases de leitura cruzada da Visão Geral, escritas pra quem não conhece os arquivos de origem:
+ * cada uma afirma só o que os números sustentam. Cortes deliberados: alerta de desconto acima da
+ * receita líquida por categoria (o desconto é contra preço de tabela — material de apoio vendido a
+ * preço simbólico e categorias de volume ínfimo disparavam o alerta sem haver problema), conversão
+ * da Loja Digital por loja (amostra de poucos clientes convertidos por loja, diferença virava ruído)
+ * e "canal fora da loja" (os canais de Experimentação acompanham o GMV de Serviços em loja — são
+ * venda dentro da loja, não fora dela).
+ */
 export function crossInsights(dataset: LojaDataset): string[] {
   const insights: string[] = [];
 
@@ -336,82 +354,85 @@ export function crossInsights(dataset: LojaDataset): string[] {
   const formas = aggregateByName(dataset.forma);
   const categorias = aggregateByName(dataset.gestao);
   const lojas = rankLojas(dataset.lojas);
+  const gmvPorLoja = new Map(lojas.filter(l => l.lojaCodigos[0]).map(l => [l.lojaCodigos[0], l.gmv]));
+  const gmvRede = lojas.reduce((s, l) => s + l.gmv, 0);
 
-  if (canais.length > 0) {
-    const topCanal = canais[0];
-    insights.push(
-      `O canal "${topCanal.key}" concentra ${topCanal.participacaoPct.toFixed(1).replace('.', ',')}% do GMV do grupo, com ticket médio de ${topCanal.ticketMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`
-    );
+  const canalLoja = canais.find(c => /^loja$/i.test(c.key.trim()));
+  if (canalLoja) {
+    let texto = `O canal "Loja" gera ${fmtPct(canalLoja.participacaoPct)} do GMV, com ticket médio de ${fmtBRL(canalLoja.ticketMedio)}.`;
+    const experimentacao = canais.filter(c => /experimenta/i.test(c.key) && c.gmv > 0);
+    const expGmv = experimentacao.reduce((s, c) => s + c.gmv, 0);
+    const expBoletos = experimentacao.reduce((s, c) => s + c.qtdBoletos, 0);
+    const expTicket = expBoletos > 0 ? expGmv / expBoletos : 0;
+    if (expTicket > canalLoja.ticketMedio) {
+      const nomes = experimentacao.map(c => c.key.replace(/\s*experimenta[çc][ãa]o\s*/i, '').trim());
+      const expPct = experimentacao.reduce((s, c) => s + c.participacaoPct, 0);
+      texto += ` Os canais de experimentação (${listaPt(nomes)}) geram ${fmtPct(expPct)} e têm ticket médio maior, de ${fmtBRL(expTicket)} — quem passa por uma experiência na loja tende a levar mais.`;
+    }
+    insights.push(texto);
+  } else if (canais.length > 0) {
+    insights.push(`O canal "${canais[0].key}" é o que mais gera GMV: ${fmtPct(canais[0].participacaoPct)} do total, com ticket médio de ${fmtBRL(canais[0].ticketMedio)}.`);
   }
 
   if (formas.length > 0) {
-    const topForma = formas[0];
-    insights.push(
-      `"${topForma.key}" é a forma de pagamento mais usada, representando ${topForma.participacaoPct.toFixed(1).replace('.', ',')}% do GMV recebido.`
-    );
+    const top = formas[0];
+    const totalBoletos = formas.reduce((s, f) => s + f.qtdBoletos, 0);
+    const boletosPct = totalBoletos > 0 ? (top.qtdBoletos / totalBoletos) * 100 : 0;
+    const maisBoletos = formas.every(f => f.qtdBoletos <= top.qtdBoletos);
+    insights.push(maisBoletos
+      ? `"${top.key}" é a forma de pagamento mais usada: ${fmtPct(top.participacaoPct)} do valor vendido e ${fmtPct(boletosPct, 0)} das compras.`
+      : `"${top.key}" é a forma de pagamento que mais movimenta valor: ${fmtPct(top.participacaoPct)} do valor vendido, em ${fmtPct(boletosPct, 0)} das compras.`);
   }
 
   if (categorias.length > 0) {
-    const topCategoria = categorias[0];
+    const [top, segunda] = categorias;
     insights.push(
-      `A categoria "${topCategoria.key}" lidera o mix de portfólio com ${topCategoria.participacaoPct.toFixed(1).replace('.', ',')}% do GMV.`
+      `${fmtCategoria(top.key)} é a categoria que sustenta a venda, com ${fmtPct(top.participacaoPct)} do GMV` +
+      (segunda ? ` — a 2ª, ${fmtCategoria(segunda.key)}, tem ${fmtPct(segunda.participacaoPct)}.` : '.')
     );
   }
 
   if (lojas.length >= 2) {
-    const gap = lojas[0].gmv - lojas[1].gmv;
-    const gapPct = lojas[1].gmv > 0 ? (gap / lojas[1].gmv) * 100 : 0;
-    insights.push(
-      `"${lojas[0].key}" lidera o ranking de lojas com ${gapPct.toFixed(1).replace('.', ',')}% a mais de GMV que a 2ª colocada, "${lojas[1].key}".`
-    );
+    const [lider, vice] = lojas;
+    const nomeLider = resolveLojaNome(lider.lojaCodigos[0], lider.key);
+    const nomeVice = resolveLojaNome(vice.lojaCodigos[0], vice.key);
+    const gapPct = vice.gmv > 0 ? ((lider.gmv - vice.gmv) / vice.gmv) * 100 : 0;
+    const boletos = `${lider.qtdBoletos.toLocaleString('pt-BR')} contra ${vice.qtdBoletos.toLocaleString('pt-BR')} boletos`;
+    const maisBoletos = lider.qtdBoletos >= vice.qtdBoletos;
+    const ticketMaior = lider.ticketMedio >= vice.ticketMedio;
+    const ticket = `ticket médio ${ticketMaior ? 'maior' : 'menor'} (${fmtBRL(lider.ticketMedio)} contra ${fmtBRL(vice.ticketMedio)})`;
+    const motivo = maisBoletos && ticketMaior ? `vende mais vezes (${boletos}) e com ${ticket}`
+      : maisBoletos ? `pelo volume: vende mais vezes (${boletos}), mesmo com ${ticket}`
+      : `pelo ticket: ${ticket}, mesmo vendendo menos vezes (${boletos})`;
+    insights.push(`${nomeLider} lidera o GMV do ciclo, ${fmtPct(gapPct)} à frente da ${nomeVice}. Ganha ${motivo}.`);
   }
-
-  const anomalias = categorias.filter(c => c.descontoPct > 100);
-  for (const a of anomalias) {
-    insights.push(
-      `Atenção: a categoria "${a.key}" tem desconto total (${a.descontoPct.toFixed(0)}%) acima da receita líquida — possível erro de lançamento ou promoção agressiva.`
-    );
-  }
-
-  // --- Cruzamentos com os xlsx novos (Fidelidade, Serviços, Loja Digital, Cuidados Faciais) ---
 
   const kpis = computeOverallKPIs(dataset.lojas);
   if (dataset.fidelidade && dataset.fidelidade.cp.length > 0 && kpis.fidelidadePenetracaoPctGeral > 0) {
     const desafioPct = dataset.fidelidade.cp[0].penetracaoPct;
-    insights.push(
-      `${kpis.fidelidadePenetracaoPctGeral.toFixed(0)}% dos boletos da rede são de cliente cadastrado no Fidelidade, mas só ${desafioPct.toFixed(0)}% ` +
-      `desses boletos concluem o desafio Fidelidade — funil de engajamento com bastante espaço para melhorar entre "é cliente" e "participa ativamente".`
-    );
-  }
-
-  if (dataset.cuidadosFaciais && dataset.cuidadosFaciais.pdv.length >= 2) {
-    const top = [...dataset.cuidadosFaciais.pdv].sort((a, b) => b.receitaBotik - a.receitaBotik)[0];
-    const topLojaGmv = lojas.find(l => l.key.startsWith(top.pdvCodigo ?? '__'));
-    insights.push(
-      `A loja ${resolveLojaNome(top.pdvCodigo, top.nome)} lidera a receita de Botik/Cuidados Faciais (${top.receitaBotik.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})` +
-      (topLojaGmv ? `, e ocupa a ${lojas.indexOf(topLojaGmv) + 1}ª posição no ranking geral de GMV — vale ver se essa especialização em Botik é motivo ou consequência do desempenho.` : '.')
-    );
-  }
-
-  if (dataset.lojaDigital && dataset.lojaDigital.pdv.length > 0) {
-    const totalAtendidos = dataset.lojaDigital.pdv.reduce((s, r) => s + r.clientesAtendidos, 0);
-    const totalConvertidos = dataset.lojaDigital.pdv.reduce((s, r) => s + r.clientesConvertidos, 0);
-    const convRede = totalAtendidos > 0 ? (totalConvertidos / totalAtendidos) * 100 : 0;
-    const pior = [...dataset.lojaDigital.pdv].sort((a, b) => a.conversaoPct - b.conversaoPct)[0];
-    if (pior && pior.conversaoPct < convRede) {
-      insights.push(
-        `A conversão da Loja Digital na rede é ${convRede.toFixed(1).replace('.', ',')}%, mas a loja ${resolveLojaNome(pior.pdvCodigo, pior.nome)} converte só ` +
-        `${pior.conversaoPct.toFixed(1).replace('.', ',')}% dos clientes atendidos — maior oportunidade de melhoria no atendimento via WhatsApp/digital.`
-      );
+    let texto =
+      `${fmtPct(kpis.fidelidadePenetracaoPctGeral, 0)} das compras têm o cliente identificado no Fidelidade, mas só ${fmtPct(desafioPct, 0)} ` +
+      `das compras Fidelidade concluíram um desafio do programa — quase todos se identificam, mas poucos participam dos desafios.`;
+    const porLoja = [...dataset.fidelidade.pdv].sort((a, b) => a.penetracaoPct - b.penetracaoPct);
+    if (porLoja.length >= 3) {
+      const piores = porLoja.slice(0, 2).map(p => `${nomeLoja(p.nome)} (${fmtPct(p.penetracaoPct, 0)})`);
+      const melhor = porLoja[porLoja.length - 1];
+      texto += ` Menores taxas: ${listaPt(piores)}; a melhor é ${nomeLoja(melhor.nome)} (${fmtPct(melhor.penetracaoPct, 0)}).`;
     }
+    insights.push(texto);
   }
 
-  if (dataset.canal && dataset.canal.length > 0) {
-    const canaisVenda = aggregateByName(dataset.canal).filter(c => !/^loja$/i.test(c.key.trim()));
-    if (canaisVenda.length > 0) {
-      const top = canaisVenda[0];
+  if (dataset.cuidadosFaciais && dataset.cuidadosFaciais.pdv.length >= 2 && gmvRede > 0) {
+    const pesoRede = dataset.cuidadosFaciais.pdv.reduce((s, r) => s + r.receitaTotal, 0) / gmvRede * 100;
+    const porLoja = dataset.cuidadosFaciais.pdv
+      .filter(r => r.pdvCodigo && (gmvPorLoja.get(r.pdvCodigo) ?? 0) > 0)
+      .map(r => ({ codigo: r.pdvCodigo!, peso: r.receitaTotal / gmvPorLoja.get(r.pdvCodigo!)! * 100, receita: r.receitaTotal }))
+      .sort((a, b) => b.peso - a.peso);
+    const top = porLoja[0];
+    if (top && top.peso > pesoRede) {
       insights.push(
-        `Fora da loja física, o canal de venda "${top.key}" é o que mais gera GMV (${top.participacaoPct.toFixed(1).replace('.', ',')}% do total da rede) — oportunidade de ativação fora do PDV.`
+        `Cuidados Faciais pesa mais na ${nomeLoja(top.codigo)}: ${fmtPct(top.peso)} do GMV da loja (${fmtBRL(top.receita)}), ` +
+        `contra ${fmtPct(pesoRede)} na rede.`
       );
     }
   }
@@ -421,16 +442,25 @@ export function crossInsights(dataset: LojaDataset): string[] {
     const pior = [...porPdv].filter(p => p.total >= 5).sort((a, b) => a.usaBemPct - b.usaBemPct)[0];
     if (pior) {
       insights.push(
-        `A loja ${resolveLojaNome(pior.pdvCodigo, pior.pdvCodigo)} tem a pior adesão à plataforma logística de transferência entre lojas (${pior.usaBemPct.toFixed(0)}% "Usa Bem" em ${pior.total} pedidos) — vale reforçar o treinamento de uso da ferramenta ali.`
+        `${nomeLoja(pior.pdvCodigo)} tem a pior adesão à plataforma logística de transferência entre lojas (${fmtPct(pior.usaBemPct, 0)} "Usa Bem" em ${pior.total} pedidos) — vale reforçar o treinamento de uso da ferramenta ali.`
       );
     }
   }
 
-  if (dataset.servicos && dataset.servicos.pdv.length >= 2) {
-    const top = [...dataset.servicos.pdv].sort((a, b) => b.gmv - a.gmv)[0];
-    insights.push(
-      `Serviços em loja (maquiagem, cuidados faciais, cabelo) geraram ${top.gmv.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} na loja ${resolveLojaNome(top.pdvCodigo, top.pdvCodigo)}, a que mais converteu esse tipo de atendimento em venda.`
-    );
+  if (dataset.servicos && dataset.servicos.pdv.length >= 2 && gmvRede > 0) {
+    const porLoja = dataset.servicos.pdv
+      .filter(r => (gmvPorLoja.get(r.pdvCodigo) ?? 0) > 0)
+      .map(r => ({ codigo: r.pdvCodigo, peso: r.gmv / gmvPorLoja.get(r.pdvCodigo)! * 100 }))
+      .sort((a, b) => b.peso - a.peso);
+    if (porLoja.length >= 3) {
+      const pesoRede = dataset.servicos.pdv.reduce((s, r) => s + r.gmv, 0) / gmvRede * 100;
+      const maiores = porLoja.slice(0, 2).map(p => `${fmtPct(p.peso, 0)} na ${nomeLoja(p.codigo)}`);
+      const menor = porLoja[porLoja.length - 1];
+      insights.push(
+        `Vendas com serviço em loja (maquiagem, cuidados faciais, cabelo) são ${fmtPct(pesoRede, 0)} do GMV da rede, mas o peso varia muito entre lojas: ` +
+        `chega a ${listaPt(maiores)}, contra só ${fmtPct(menor.peso, 0)} na ${nomeLoja(menor.codigo)}.`
+      );
+    }
   }
 
   return insights;
