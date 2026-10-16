@@ -197,7 +197,7 @@ Esta é a camada que efetivamente cruza os diferentes arquivos entre si. Princip
 
 - **`aggregateByName`** — agrega `LojaMetricRow[]` de uma dimensão (canal, forma, categoria/gestão)
   pelo nome da quebra, somando GMV, boletos, receita líquida, descontos, trocas, e calculando
-  ticket médio, % de desconto, % de participação no total e penetração Fidelidade ponderada por
+  boleto médio (campo `ticketMedio`: GMV ÷ boletos), % de desconto, % de participação no total e penetração Fidelidade ponderada por
   boletos. É a base dos rankings de Canais, Formas e Categorias.
 - **`rankLojas`** — ranking de lojas a partir do CSV `lojas`, usando o **código do PDV** como
   chave (não o nome, já que a mesma razão social se repete em lojas físicas diferentes); resolve o
@@ -222,7 +222,7 @@ Esta é a camada que efetivamente cruza os diferentes arquivos entre si. Princip
   `gestao` e `forma` (todas deveriam somar o mesmo total, vindo do mesmo pedido de origem, só que
   quebrado diferente) — usado como selo de confiança dos dados importados.
 - **`crossInsights`** — gera frases automáticas cruzando várias dimensões e os xlsx opcionais:
-  canal "Loja" vs. canais de experimentação (participação e ticket médio), forma de pagamento
+  canal "Loja" vs. canais de experimentação (participação e boleto médio), forma de pagamento
   líder (% do valor e % das compras), categoria líder vs. a 2ª, gap entre 1º e 2º lugar no ranking
   de lojas explicado por volume ou ticket, funil Fidelidade (% cliente identificado vs. % que
   completa o desafio, com as lojas de menor e maior taxa), loja onde Cuidados Faciais mais pesa no
@@ -259,7 +259,7 @@ Esta é a camada que efetivamente cruza os diferentes arquivos entre si. Princip
 
 | Tela (arquivo) | Fonte de dados (`LojaDataset`) | Cruzamento aplicado | Visualizações alimentadas |
 |---|---|---|---|
-| `LojaOverviewScreen.tsx` | `dataset.lojas` | `computeOverallKPIs`, `rankLojas` | `KpiCard`s (GMV, receita líquida, ticket médio, penetração Fidelidade), `RankingChart` com `DetailView` (ranking de lojas com drill-down) |
+| `LojaOverviewScreen.tsx` | `dataset.lojas` | `computeOverallKPIs`, `rankLojas` | `KpiCard`s (GMV, receita líquida, boleto médio, penetração Fidelidade), `RankingChart` com `DetailView` (ranking de lojas com drill-down) |
 | `LojaConsultoresScreen.tsx` | `dataset.consultor`, `dataset.operador` | `aggregateConsultoresPorLoja`, `listLojasInDimension` (filtro por loja), `findConsultorExtras` (cruza com Fidelidade/Loja Digital/Serviços/Cuidados Faciais) | `ChartCard`s com ranking de consultores/operadores e `ConsultorDetailPanel` (painel de detalhe cruzando os 4 xlsx opcionais por pessoa) |
 | `LojaCanaisFormasScreen.tsx` | `dataset.canal`, `dataset.forma`, `dataset.receitaCanal` (legado), `dataset.receitaCanalLojaUn`/`receitaCanalLojaPdv` | `aggregateByName`, filtro opcional por loja via `listLojasInDimension` | Dois `RankingChart` lado a lado (canal de venda/ativação, formas de pagamento) + seção "Canal de cumprimento do pedido — Loja x Clique e Retire" (composição + ranking de PDV por % da meta) — rótulos explícitos para não confundir os dois sentidos de "canal" (ver §3.6) |
 | `LojaCategoriasScreen.tsx` | `dataset.gestao`, `dataset.receitaCategoria` (xlsx legado) | `aggregateByName` sobre `gestao`; ranking direto das abas categoria/subcategoria/linha/marca do xlsx de Receita por Categoria | `RankingChart` (categorias via CSV de gestão) + `RankingChart`s adicionais para subcategoria/linha/marca quando o xlsx opcional está presente |

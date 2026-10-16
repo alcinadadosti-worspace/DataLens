@@ -359,7 +359,7 @@ export function crossInsights(dataset: LojaDataset): string[] {
 
   const canalLoja = canais.find(c => /^loja$/i.test(c.key.trim()));
   if (canalLoja) {
-    let texto = `O canal "Loja" gera ${fmtPct(canalLoja.participacaoPct)} do GMV, com ticket médio de ${fmtBRL(canalLoja.ticketMedio)}.`;
+    let texto = `O canal "Loja" gera ${fmtPct(canalLoja.participacaoPct)} do GMV, com boleto médio de ${fmtBRL(canalLoja.ticketMedio)}.`;
     const experimentacao = canais.filter(c => /experimenta/i.test(c.key) && c.gmv > 0);
     const expGmv = experimentacao.reduce((s, c) => s + c.gmv, 0);
     const expBoletos = experimentacao.reduce((s, c) => s + c.qtdBoletos, 0);
@@ -367,11 +367,11 @@ export function crossInsights(dataset: LojaDataset): string[] {
     if (expTicket > canalLoja.ticketMedio) {
       const nomes = experimentacao.map(c => c.key.replace(/\s*experimenta[çc][ãa]o\s*/i, '').trim());
       const expPct = experimentacao.reduce((s, c) => s + c.participacaoPct, 0);
-      texto += ` Os canais de experimentação (${listaPt(nomes)}) geram ${fmtPct(expPct)} e têm ticket médio maior, de ${fmtBRL(expTicket)} — quem passa por uma experiência na loja tende a levar mais.`;
+      texto += ` Os canais de experimentação (${listaPt(nomes)}) geram ${fmtPct(expPct)} e têm boleto médio maior, de ${fmtBRL(expTicket)} — quem passa por uma experiência na loja tende a levar mais.`;
     }
     insights.push(texto);
   } else if (canais.length > 0) {
-    insights.push(`O canal "${canais[0].key}" é o que mais gera GMV: ${fmtPct(canais[0].participacaoPct)} do total, com ticket médio de ${fmtBRL(canais[0].ticketMedio)}.`);
+    insights.push(`O canal "${canais[0].key}" é o que mais gera GMV: ${fmtPct(canais[0].participacaoPct)} do total, com boleto médio de ${fmtBRL(canais[0].ticketMedio)}.`);
   }
 
   if (formas.length > 0) {
@@ -400,10 +400,10 @@ export function crossInsights(dataset: LojaDataset): string[] {
     const boletos = `${lider.qtdBoletos.toLocaleString('pt-BR')} contra ${vice.qtdBoletos.toLocaleString('pt-BR')} boletos`;
     const maisBoletos = lider.qtdBoletos >= vice.qtdBoletos;
     const ticketMaior = lider.ticketMedio >= vice.ticketMedio;
-    const ticket = `ticket médio ${ticketMaior ? 'maior' : 'menor'} (${fmtBRL(lider.ticketMedio)} contra ${fmtBRL(vice.ticketMedio)})`;
+    const ticket = `boleto médio ${ticketMaior ? 'maior' : 'menor'} (${fmtBRL(lider.ticketMedio)} contra ${fmtBRL(vice.ticketMedio)})`;
     const motivo = maisBoletos && ticketMaior ? `vende mais vezes (${boletos}) e com ${ticket}`
       : maisBoletos ? `pelo volume: vende mais vezes (${boletos}), mesmo com ${ticket}`
-      : `pelo ticket: ${ticket}, mesmo vendendo menos vezes (${boletos})`;
+      : `pelo valor de cada venda: ${ticket}, mesmo vendendo menos vezes (${boletos})`;
     insights.push(`${nomeLider} lidera o GMV do ciclo, ${fmtPct(gapPct)} à frente da ${nomeVice}. Ganha ${motivo}.`);
   }
 

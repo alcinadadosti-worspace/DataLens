@@ -88,7 +88,7 @@ const LojaPerfilScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNav
     const metaPef = receitaCanalRow ? null : metaPefPorPdv(dataset).find(m => m.pdvCodigo === codigo) ?? null;
     const aderencia = dataset.aderencia?.pdv.find(r => r.nome === codigo) ?? null;
 
-    // Boleto médio = GMV ÷ boletos (o mesmo "ticket médio" das outras telas). A rede é a média
+    // Boleto médio = GMV ÷ boletos. A rede é a média
     // ponderada por boletos — não a média simples dos boletos médios das lojas.
     const gmvRede = dataset.lojas.reduce((s, r) => s + r.gmv, 0);
     const boletosRede = dataset.lojas.reduce((s, r) => s + r.qtdBoletos, 0);
@@ -161,7 +161,7 @@ const LojaPerfilScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNav
         <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '14px 18px' }}>
           <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
             Boleto médio
-            <InfoHint text="Quanto, em média, cada venda (boleto) desta loja rendeu: GMV ÷ quantidade de boletos. É o mesmo indicador chamado de 'ticket médio' em outras telas. A comparação com a meta PEF e com o ano passado vem do Resumo de Performance; a da rede é o GMV de todas as lojas ÷ todos os boletos." />
+            <InfoHint text="Quanto, em média, cada venda (boleto) desta loja rendeu: GMV ÷ quantidade de boletos. A comparação com a meta PEF e com o ano passado vem do Resumo de Performance; a da rede é o GMV de todas as lojas ÷ todos os boletos." />
           </div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>{fmtBRL(boletoMedio.valor)}</div>
           {boletoMedio.rede != null && (

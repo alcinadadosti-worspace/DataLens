@@ -84,7 +84,7 @@ const ConsultorDetailPanel: React.FC<ConsultorDetailPanelProps> = ({ dataset, no
           value={fmtNumber(agg.qtdBoletos)}
         />
         <KpiCard glow
-          eyebrow="Ticket médio"
+          eyebrow="Boleto médio"
           hint="GMV dividido pela quantidade de boletos — quanto, em média, cada venda fechada por essa pessoa valeu."
           value={fmtBRLshort(agg.ticketMedio)}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(agg.ticketMedio)}</span>}

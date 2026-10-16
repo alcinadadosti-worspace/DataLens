@@ -215,7 +215,7 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
         <PageTitle
           eyebrow="Modo Loja"
           title="Ranking geral"
-          hint="Visão consolidada de todas as lojas da rede no ciclo importado — GMV, ticket médio e indicadores cruzados entre os arquivos."
+          hint="Visão consolidada de todas as lojas da rede no ciclo importado — GMV, boleto médio e indicadores cruzados entre os arquivos."
         />
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
@@ -312,7 +312,7 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(kpis.gmvTotal)}</span>}
         />
         <KpiCard glow
-          eyebrow="Ticket médio geral"
+          eyebrow="Boleto médio geral"
           hint="GMV total dividido pela quantidade de boletos — o valor médio de cada venda fechada na rede."
           value={fmtBRLshort(kpis.ticketMedioGeral)}
           meta={`${fmtNumber(kpis.qtdBoletosTotal)} boletos`}

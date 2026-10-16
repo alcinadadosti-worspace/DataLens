@@ -16,7 +16,7 @@ function makeExtraStats(list: AggregatedRow[]) {
     const row = list.find(r => r.key === item.label);
     if (!row) return null;
     return [
-      { label: 'Ticket médio', value: fmtBRL(row.ticketMedio) },
+      { label: 'Boleto médio', value: fmtBRL(row.ticketMedio) },
       { label: 'Boletos', value: fmtNumber(row.qtdBoletos) },
       { label: 'Receita líquida', value: fmtBRLshort(row.receitaLiquida) },
       { label: '% desconto s/ receita', value: row.descontoPct.toFixed(1).replace('.', ',') + '%' },
@@ -78,14 +78,14 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <ChartCard glow
           title="Mix de canais de venda (ativação)"
-          hint="GMV — Gross Merchandise Value: cada canal de ATIVAÇÃO por onde a venda pode entrar (loja física, WhatsApp, Live Commerce, experimentação, calçada...), com o % que representa do total. Não confundir com o canal de CUMPRIMENTO do pedido (Loja x Clique e Retire), mostrado mais abaixo. Em tela cheia, clique num canal para ver ticket médio, boletos, receita líquida, desconto, trocas e penetração de Fidelidade daquele canal."
+          hint="GMV — Gross Merchandise Value: cada canal de ATIVAÇÃO por onde a venda pode entrar (loja física, WhatsApp, Live Commerce, experimentação, calçada...), com o % que representa do total. Não confundir com o canal de CUMPRIMENTO do pedido (Loja x Clique e Retire), mostrado mais abaixo. Em tela cheia, clique num canal para ver boleto médio, boletos, receita líquida, desconto, trocas e penetração de Fidelidade daquele canal."
           subtitle="Participação no GMV do grupo — canal de venda/ativação"
         >
           <RankingChart items={toItems(canais)} getExtraStats={makeExtraStats(canais)} />
         </ChartCard>
         <ChartCard glow
           title="Mix de formas de pagamento"
-          hint="Como o GMV recebido se divide entre as formas de pagamento usadas pelo cliente (cartão de crédito, débito, PIX, dinheiro...). Em tela cheia, clique numa forma para ver ticket médio, boletos, receita líquida, desconto, trocas e penetração de Fidelidade daquela forma."
+          hint="Como o GMV recebido se divide entre as formas de pagamento usadas pelo cliente (cartão de crédito, débito, PIX, dinheiro...). Em tela cheia, clique numa forma para ver boleto médio, boletos, receita líquida, desconto, trocas e penetração de Fidelidade daquela forma."
           subtitle="Participação no GMV recebido"
         >
           <RankingChart items={toItems(formas)} getExtraStats={makeExtraStats(formas)} />
