@@ -1,23 +1,17 @@
 import * as XLSX from 'xlsx';
 import {
   ReceitaCanalRow, ReceitaCategoriaDataset, ReceitaCategoriaRow, ResumoPerformanceDataset, ResumoPerformanceIndicador, ResumoPerformanceRow,
-  ResumoPerformanceAba, ResumoPerformanceBaseDivergente,
+  ResumoPerformanceAba, ResumoPerformanceBaseDivergente, TipoIndicadorPef,
   ServicosDataset, ServicoPdvRow, ServicoConsultorRow, FidelidadeDataset, FidelidadeRow, LojaDigitalDataset, LojaDigitalRow,
   CuidadosFaciaisDataset, CuidadosFaciaisRow, LogisticaAdesaoResumoRow, LogisticaAdesaoDetalheRow,
   ReceitaCanalLojaBlock, ReceitaCanalLojaPdvRow, AderenciaDataset, AderenciaCurvaRow, AderenciaPeriodoRow, ReceitaCanalLojaUnDataset, ReceitaCanalLojaPeriodoRow,
 } from '../types/loja';
 import { toNum, toPct } from './lojaNumberUtils';
+import { tipoIndicadorPef, parseDuracaoSegundos, variacaoImpossivel } from '../analytics/indicadorPef';
 
-/** Como toPct, mas devolve `null` para célula "-"/"--"/vazia em vez de 0 — nas abas PDV/CONSULTOR
+/** Como toNum, mas devolve `null` para célula "-"/"--"/vazia em vez de 0 — nas abas PDV/CONSULTOR
  * do Resumo de Performance, "-" significa "sem meta/comparativo aplicável para esse indicador",
  * não "0% de variação"; tratar como 0 faria o indicador parecer "na meta" indevidamente. */
-function toPctOrNull(v: unknown): number | null {
-  const s = String(v ?? '').trim();
-  if (s === '' || s === '-' || s === '--') return null;
-  return toPct(v);
-}
-
-/** Como toNum, mas devolve `null` para célula "-"/"--"/vazia em vez de 0 — mesma razão de toPctOrNull. */
 function toNumOrNull(v: unknown): number | null {
   const s = String(v ?? '').trim();
   if (s === '' || s === '-' || s === '--') return null;
@@ -140,9 +134,28 @@ export function readTipoReceitaFromFiltros(workbook: XLSX.WorkBook): string | nu
   return row ? normalizeTipoReceita(row[1]) : null;
 }
 
+/** Fração do arquivo (−0,22) → % (−22). `null` pra célula vazia/"-"/"--". */
+function fracaoParaPct(v: unknown): number | null {
+  const n = toNumOrNull(v);
+  return n == null ? null : n * 100;
+}
+
+/** Valor de um indicador na unidade canônica: tempo em segundos, o resto como número. */
+function lerValorIndicador(tipo: TipoIndicadorPef, v: unknown): number | null {
+  return tipo === 'tempo' ? parseDuracaoSegundos(v) : toNumOrNull(v);
+}
+
 /**
  * Aba CP: NÃO é uma linha por loja — é uma linha por indicador (Receita Total, Quantidade de
  * Boletos, Boleto Médio...), com colunas Meta PEF / Realizado / Vs. Meta PEF / Vs. Ano Passado.
+ *
+ * Escalas da aba (iguais nos exports de 04/09, 21/09 e 14/10/2026): taxas realizadas já em %
+ * (2,89 = 2,89%); TME como texto "mm:ss" ("11:04s"); "Vs. Meta PEF" como fração (−0,22 = −22%);
+ * "Vs. Ano Passado" já em unidade de % — variação relativa pra contagens/R$/tempo (−16,19% na
+ * receita reproduz contagens inteiras do ano passado: 2.395 boletos, 6.950 itens) e diferença em
+ * p.p. pras taxas (99,22% com −0,78 → 100,00% no ano passado; e os valores trazem o resíduo de
+ * ponto flutuante típico de subtração, ex. −2,3100000000000023). Por isso nada aqui passa pela
+ * heurística de magnitude de `toPct` (que multiplicava −0,78 por 100).
  */
 function parseCPIndicators(sheet: XLSX.WorkSheet | null): ResumoPerformanceIndicador[] {
   if (!sheet) return [];
@@ -161,14 +174,23 @@ function parseCPIndicators(sheet: XLSX.WorkSheet | null): ResumoPerformanceIndic
 
   return dataRows
     .filter(r => String(r[iIndicador] ?? '').trim() !== '')
-    .map(r => ({
-      indicador: String(r[iIndicador] ?? '').trim(),
-      tipoReceita: iTipoReceita >= 0 ? normalizeTipoReceita(r[iTipoReceita]) : null,
-      metaPEF: iMetaPEF >= 0 ? toNumOrNull(r[iMetaPEF]) : null,
-      realizado: iRealizado >= 0 ? toNumOrNull(r[iRealizado]) : null,
-      vsMetaPEFPct: iVsMeta >= 0 ? toPctOrNull(r[iVsMeta]) : null,
-      vsAnoPassadoPct: iVsAno >= 0 ? toPctOrNull(r[iVsAno]) : null,
-    } as ResumoPerformanceIndicador));
+    .map(r => {
+      const indicador = String(r[iIndicador] ?? '').trim();
+      const tipo = tipoIndicadorPef(indicador);
+      const realizado = iRealizado >= 0 ? lerValorIndicador(tipo, r[iRealizado]) : null;
+      const vsAno = iVsAno >= 0 ? toNumOrNull(r[iVsAno]) : null;
+      const vsAnoPassadoInvalido = vsAno != null && variacaoImpossivel(indicador, realizado, vsAno);
+      return {
+        indicador,
+        tipo,
+        tipoReceita: iTipoReceita >= 0 ? normalizeTipoReceita(r[iTipoReceita]) : null,
+        metaPEF: iMetaPEF >= 0 ? lerValorIndicador(tipo, r[iMetaPEF]) : null,
+        realizado,
+        vsMetaPEFPct: iVsMeta >= 0 ? fracaoParaPct(r[iVsMeta]) : null,
+        vsAnoPassadoPct: vsAnoPassadoInvalido ? null : vsAno,
+        vsAnoPassadoInvalido,
+      } as ResumoPerformanceIndicador;
+    });
 }
 
 function isVsMetaHeaderCell(h: unknown): boolean {
@@ -244,26 +266,58 @@ function parseEntitySheet(sheet: XLSX.WorkSheet | null, hasPdvCol: boolean): Res
   // `dataRows` por `isSubheaderRow`, então precisa ser lida à parte, direto de `rows`.
   const tipoReceitaRow = rows[headerIdx + 1] ?? [];
 
-  return dataRows
-    .filter(r => {
-      const nome = String(r[iNome] ?? '').trim();
-      return nome !== '' && !isTotalRow(nome) && !isSubheaderRow(nome);
-    })
-    .map(r => ({
-      nome: String(r[iNome] ?? '').trim(),
-      receita: iReceita >= 0 ? toNum(r[iReceita]) : 0,
-      boletos: iBoletos >= 0 ? toNum(r[iBoletos]) : null,
-      ticketMedio: iTicket >= 0 ? toNum(r[iTicket]) : null,
-      vsMetaPEFPct: metaIdx.length > 0 ? toPctOrNull(r[metaIdx[0]]) : null,
-      vsAnoAnteriorPct: anoIdx.length > 0 ? toPctOrNull(r[anoIdx[0]]) : null,
-      metricas: metricBlocks.map(b => ({
+  const entityRows = dataRows.filter(r => {
+    const nome = String(r[iNome] ?? '').trim();
+    return nome !== '' && !isTotalRow(nome) && !isSubheaderRow(nome);
+  });
+
+  // Escalas destas abas (iguais nos exports de 04/09, 21/09 e 14/10/2026), por linha de
+  // loja/consultor: "Vs. Meta PEF" e "Vs. Período Anterior" de contagens/R$ vêm como fração de
+  // variação relativa (−0,3472 = −34,72%; 6,6 = +660%); a variação do TME já vem em % (53,96).
+  // Taxas variam em p.p. e a escala é por COLUNA, não fixa: quase todas guardam valor e variação
+  // como fração (0,2532 e +0,1172 = 25,32% e +11,72 p.p.), mas "Resgate Fidelidade" tem o valor em
+  // % e a variação em fração, e "% Boletos ID Cliente" da aba CONSULTOR tem os dois em %. A
+  // escala sai da MEDIANA da coluna, não do máximo: há frações legítimas acima de 1 (consultor
+  // com conversão de 4,00 = 400%, Mobshop em 1,01) que não podem arrastar a coluna inteira pra %.
+  // (A linha TOTAL fica de fora: lá algumas taxas trazem variação relativa em vez de p.p.)
+  const colunaEmPct = (col: number, limite: number) => {
+    const abs = entityRows.map(r => Math.abs(toNumOrNull(r[col]) ?? 0)).filter(v => v > 0).sort((a, b) => a - b);
+    return abs.length > 0 && abs[Math.floor(abs.length / 2)] > limite;
+  };
+  const escalas = metricBlocks.map(b => {
+    const tipo = tipoIndicadorPef(b.name);
+    return {
+      tipo,
+      valorX: tipo === 'taxa' && !colunaEmPct(b.valorCol, 1.5) ? 100 : 1,
+      anteriorX: tipo === 'tempo' || (tipo === 'taxa' && b.anteriorCol >= 0 && colunaEmPct(b.anteriorCol, 1)) ? 1 : 100,
+    };
+  });
+
+  return entityRows.map(r => ({
+    nome: String(r[iNome] ?? '').trim(),
+    receita: iReceita >= 0 ? toNum(r[iReceita]) : 0,
+    boletos: iBoletos >= 0 ? toNum(r[iBoletos]) : null,
+    ticketMedio: iTicket >= 0 ? toNum(r[iTicket]) : null,
+    vsMetaPEFPct: metaIdx.length > 0 ? fracaoParaPct(r[metaIdx[0]]) : null,
+    vsAnoAnteriorPct: anoIdx.length > 0 ? fracaoParaPct(r[anoIdx[0]]) : null,
+    metricas: metricBlocks.map((b, k) => {
+      const { tipo, valorX, anteriorX } = escalas[k];
+      const bruto = lerValorIndicador(tipo, r[b.valorCol]);
+      const valor = bruto == null ? null : bruto * valorX;
+      const anteriorBruto = b.anteriorCol >= 0 ? toNumOrNull(r[b.anteriorCol]) : null;
+      const vsAnterior = anteriorBruto == null ? null : anteriorBruto * anteriorX;
+      const vsAnoAnteriorInvalido = vsAnterior != null && variacaoImpossivel(b.name, valor, vsAnterior);
+      return {
         metrica: b.name,
-        valor: toNumOrNull(r[b.valorCol]),
-        vsMetaPEFPct: b.metaCol >= 0 ? toPctOrNull(r[b.metaCol]) : null,
-        vsAnoAnteriorPct: b.anteriorCol >= 0 ? toPctOrNull(r[b.anteriorCol]) : null,
+        tipo,
+        valor,
+        vsMetaPEFPct: b.metaCol >= 0 ? fracaoParaPct(r[b.metaCol]) : null,
+        vsAnoAnteriorPct: vsAnoAnteriorInvalido ? null : vsAnterior,
+        vsAnoAnteriorInvalido,
         tipoReceita: normalizeTipoReceita(tipoReceitaRow[b.valorCol]),
-      })),
-    } as ResumoPerformanceRow));
+      };
+    }),
+  } as ResumoPerformanceRow));
 }
 
 /**

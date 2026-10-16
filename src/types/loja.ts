@@ -263,11 +263,22 @@ export interface ReceitaCanalLojaPeriodoRow {
  * Fidelidade", "Loja Digital Ativo - % de Atendimento". A aba CONSULTOR não tem coluna de Meta PEF
  * por métrica (só Vs. Período Anterior), então `vsMetaPEFPct` fica `null` nesses casos.
  */
+/** Natureza de um indicador do Resumo de Performance — ver `tipoIndicadorPef`. */
+export type TipoIndicadorPef = 'taxa' | 'moeda' | 'tempo' | 'numero';
+
+/**
+ * Unidades já normalizadas pelo parser (as abas PDV/CONSULTOR guardam frações; a CP, percentuais):
+ * `valor` de taxa em % (0-100), de tempo em segundos; `vsMetaPEFPct` em % relativo;
+ * `vsAnoAnteriorPct` em p.p. quando `tipo === 'taxa'`, em % relativo nos demais.
+ */
 export interface ResumoPerformanceMetricValue {
   metrica: string;
+  tipo: TipoIndicadorPef;
   valor: number | null;
   vsMetaPEFPct: number | null;
   vsAnoAnteriorPct: number | null;
+  /** O arquivo trouxe uma variação impossível (ver `variacaoImpossivel`) — `vsAnoAnteriorPct` fica `null`. */
+  vsAnoAnteriorInvalido: boolean;
   /**
    * Base de receita sobre a qual esse indicador é calculado, declarada pelo próprio arquivo
    * (linha de subheader "Tipo de Receita" logo abaixo do cabeçalho): "Receita GMV", "Receita
@@ -297,12 +308,18 @@ export interface ResumoPerformanceRow {
  */
 export interface ResumoPerformanceIndicador {
   indicador: string;
+  tipo: TipoIndicadorPef;
   /** Base de receita declarada pela própria coluna "Tipo de Receita" da aba CP — ver o aviso em `ResumoPerformanceMetricValue.tipoReceita`. */
   tipoReceita: string | null;
+  /** Mesmas unidades de `ResumoPerformanceMetricValue.valor` (taxa em %, tempo em segundos). */
   metaPEF: number | null;
   realizado: number | null;
+  /** % relativo à meta. */
   vsMetaPEFPct: number | null;
+  /** p.p. quando `tipo === 'taxa'`, % relativo nos demais. */
   vsAnoPassadoPct: number | null;
+  /** O arquivo trouxe uma variação impossível (ver `variacaoImpossivel`) — `vsAnoPassadoPct` fica `null`. */
+  vsAnoPassadoInvalido: boolean;
 }
 
 export type ResumoPerformanceAba = 'CP' | 'PDV' | 'CONSULTOR';

@@ -7,6 +7,7 @@ import InfoHint from '../../components/ui/InfoHint';
 import { useLojaStore } from '../../store/useLojaStore';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { receitaBaseMismatches } from '../../analytics/lojaMetrics';
+import { tipoIndicadorPef, unidadeVariacao, fmtDuracao } from '../../analytics/indicadorPef';
 import { exportToCSV, exportToPDF } from '../../services/exportService';
 import { fmtBRL, fmtNumber } from '../../utils/formatters';
 import { ResumoPerformanceRow, LOJA_OPTIONAL_FILE_LABELS, LojaOptionalFile } from '../../types/loja';
@@ -60,25 +61,38 @@ function isLowerBetter(nomeIndicador: string): boolean {
 }
 
 /**
- * Formata o valor de um indicador sem assumir uma unidade que não dá pra confirmar a partir do
- * nome (ex. TME pode ser minutos ou segundos conforme a exportação — mostramos o número cru em
- * vez de inventar "min"/"s"). A categoria (%/R$/contagem) é decidida pelo NOME do indicador, não
- * pela magnitude do valor — a aba CP e a aba PDV guardam o mesmo indicador em escalas diferentes
- * pro mesmo nome (ex. "Penetração de Receita Mobshop" vem como fração 0-1 na aba PDV mas já em
- * pontos percentuais na aba CP), então só a magnitude decide se precisa multiplicar por 100 ou
- * não, nunca se o indicador É um percentual.
+ * Formata o valor de um indicador pela natureza dele (`tipoIndicadorPef`, decidida pelo nome). Os
+ * valores já chegam do parser na unidade canônica — taxa em % (0-100), tempo em segundos —
+ * qualquer que seja a escala da aba de origem, então aqui não se adivinha nada pela magnitude.
  */
 function formatIndicatorValue(nome: string, valor: number | null): string {
   if (valor === null) return '—';
-  const n = nome.toLowerCase();
-  if (/penetra|share|convers|%/.test(n)) {
-    const pct = Math.abs(valor) <= 1.5 ? valor * 100 : valor;
-    return pct.toFixed(1).replace('.', ',') + '%';
+  switch (tipoIndicadorPef(nome)) {
+    case 'taxa': return valor.toFixed(1).replace('.', ',') + '%';
+    case 'moeda': return fmtBRL(valor);
+    case 'tempo': return fmtDuracao(valor);
+    default: return fmtNumber(valor);
   }
-  if (/receita|boleto médio|boleto medio|preço médio|preco medio|resgate/.test(n)) {
-    return fmtBRL(valor);
-  }
-  return fmtNumber(valor);
+}
+
+/** Variação em % relativo ("+13,1%") ou em pontos percentuais ("−19,9 p.p."). */
+function fmtVariacao(valor: number, unidade: 'pct' | 'pp'): string {
+  return `${valor >= 0 ? '+' : ''}${valor.toFixed(1).replace('.', ',')}${unidade === 'pp' ? ' p.p.' : '%'}`;
+}
+
+/**
+ * Texto de apoio da variação vs. ano passado: numa taxa, a diferença em p.p. esconde o tamanho
+ * da mudança (−19,9 p.p. saindo de 32,9% é uma queda de 61%), então o tooltip reconstrói o valor
+ * do ano passado e a variação relativa.
+ */
+function explicaVariacaoAno(nome: string, atual: number | null, variacao: number | null): string | undefined {
+  if (variacao == null) return undefined;
+  if (tipoIndicadorPef(nome) !== 'taxa') return 'Variação relativa sobre o mesmo período do ano passado.';
+  if (atual == null) return 'Diferença em pontos percentuais sobre a taxa do mesmo período do ano passado.';
+  const anoPassado = atual - variacao;
+  const fmt = (v: number) => v.toFixed(1).replace('.', ',') + '%';
+  const relativa = anoPassado > 0 ? ` — variação relativa de ${fmtVariacao((variacao / anoPassado) * 100, 'pct')}` : '';
+  return `Ano passado: ${fmt(anoPassado)} → agora ${fmt(atual)} (${fmtVariacao(variacao, 'pp')}${relativa}).`;
 }
 
 const BASE_COLOR: Record<string, string> = {
@@ -107,19 +121,32 @@ function BaseTag({ tipo }: { tipo: string | null }) {
   );
 }
 
-function DeltaBadge({ pct, lowerBetter }: { pct: number | null; lowerBetter: boolean }) {
+function DeltaBadge({ pct, unidade = 'pct', lowerBetter, invalido = false, title }: {
+  pct: number | null; unidade?: 'pct' | 'pp'; lowerBetter: boolean; invalido?: boolean; title?: string;
+}) {
+  if (invalido) {
+    return (
+      <span
+        title="O arquivo de origem trouxe uma variação impossível para este indicador (ex. uma taxa que teria passado de 100% no ano passado) — o número foi descartado."
+        style={{ color: 'var(--loja-warning-text, #8A6D00)', fontSize: 11, cursor: 'help', borderBottom: '1px dotted currentColor' }}
+      >
+        dado inválido
+      </span>
+    );
+  }
   if (pct === null) {
     return <span style={{ color: 'var(--loja-text-muted, #9B9287)', fontSize: 11 }}>sem dado</span>;
   }
   const isGood = lowerBetter ? pct <= 0 : pct >= 0;
   return (
-    <span style={{
+    <span title={title} style={{
+      cursor: title ? 'help' : undefined,
       fontSize: 11, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
       color: isGood ? 'var(--loja-success, #2E7D5B)' : 'var(--loja-danger, #B83A3A)',
       background: isGood ? 'var(--loja-success-bg, #E0F2E8)' : 'var(--loja-danger-bg, #FBE5E9)',
       padding: '2px 6px', borderRadius: 6, whiteSpace: 'nowrap',
     }}>
-      {pct >= 0 ? '+' : ''}{pct.toFixed(1).replace('.', ',')}%
+      {fmtVariacao(pct, unidade)}
     </span>
   );
 }
@@ -201,8 +228,8 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
         Base: ind.tipoReceita ?? '',
         'Meta PEF': formatIndicatorValue(ind.indicador, ind.metaPEF),
         Realizado: formatIndicatorValue(ind.indicador, ind.realizado),
-        'Vs. Meta PEF': ind.vsMetaPEFPct != null ? `${ind.vsMetaPEFPct.toFixed(1)}%` : '',
-        'Vs. Ano Passado': ind.vsAnoPassadoPct != null ? `${ind.vsAnoPassadoPct.toFixed(1)}%` : '',
+        'Vs. Meta PEF': ind.vsMetaPEFPct != null ? fmtVariacao(ind.vsMetaPEFPct, 'pct') : '',
+        'Vs. Ano Passado': ind.vsAnoPassadoInvalido ? 'dado inválido' : ind.vsAnoPassadoPct != null ? fmtVariacao(ind.vsAnoPassadoPct, unidadeVariacao(ind.tipo)) : '',
       }));
       exportToCSV(rows, `indicadores-pef-rede-${todayStr}`);
     } else if (scope === 'loja') {
@@ -220,7 +247,7 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
         Indicador: m.metrica,
         Base: m.tipoReceita ?? '',
         Valor: formatIndicatorValue(m.metrica, m.valor),
-        'Vs. Ano Passado': m.vsAnoAnteriorPct != null ? `${m.vsAnoAnteriorPct.toFixed(1)}%` : '',
+        'Vs. Ano Passado': m.vsAnoAnteriorInvalido ? 'dado inválido' : m.vsAnoAnteriorPct != null ? fmtVariacao(m.vsAnoAnteriorPct, unidadeVariacao(m.tipo)) : '',
       }));
       exportToCSV(rows, `indicadores-pef-${consultorRow.nome.replace(/\s+/g, '-').toLowerCase()}-${todayStr}`);
     }
@@ -294,7 +321,12 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
                         {formatIndicatorValue(ind.indicador, ind.realizado)}
                       </td>
                       <td style={{ padding: '10px', textAlign: 'right' }}><DeltaBadge pct={ind.vsMetaPEFPct} lowerBetter={lowerBetter} /></td>
-                      <td style={{ padding: '10px', textAlign: 'right' }}><DeltaBadge pct={ind.vsAnoPassadoPct} lowerBetter={lowerBetter} /></td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>
+                        <DeltaBadge
+                          pct={ind.vsAnoPassadoPct} unidade={unidadeVariacao(ind.tipo)} lowerBetter={lowerBetter}
+                          invalido={ind.vsAnoPassadoInvalido} title={explicaVariacaoAno(ind.indicador, ind.realizado, ind.vsAnoPassadoPct)}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
@@ -402,7 +434,12 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
                         </div>
                       </td>
                       <td style={{ padding: '10px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>{formatIndicatorValue(m.metrica, m.valor)}</td>
-                      <td style={{ padding: '10px', textAlign: 'right' }}><DeltaBadge pct={m.vsAnoAnteriorPct} lowerBetter={isLowerBetter(m.metrica)} /></td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>
+                        <DeltaBadge
+                          pct={m.vsAnoAnteriorPct} unidade={unidadeVariacao(m.tipo)} lowerBetter={isLowerBetter(m.metrica)}
+                          invalido={m.vsAnoAnteriorInvalido} title={explicaVariacaoAno(m.metrica, m.valor, m.vsAnoAnteriorPct)}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -494,8 +531,8 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
           </div>
         )}
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <InfoHint text="Indicadores como 'Penetração', 'Share', 'Conversão' e os que têm '%' no nome já vêm como fração no arquivo (0,15 = 15%) e são exibidos em percentual. 'Receita', 'Boleto Médio', 'Preço Médio' e 'Resgate' são exibidos em R$. Os demais (contagens, TME) são exibidos como o número cru do arquivo, sem inventar unidade." />
-          Sobre a formatação dos valores
+          <InfoHint text="Taxas ('Penetração', 'Share', 'Conversão', 'Resgate', 'Clique & Retire' e os que têm '%' no nome) são exibidas em %, e a variação delas vs. ano passado em pontos percentuais (p.p.): taxa atual menos a do ano passado — passe o mouse na variação pra ver o valor do ano passado e a variação relativa. 'Receita', 'Boleto Médio' e 'Preço Médio' são exibidos em R$, o TME em minutos e segundos, e a variação desses e das contagens é relativa (%). Quando o arquivo traz uma variação impossível, ela aparece como 'dado inválido'." />
+          Sobre a formatação dos valores e das variações
         </div>
       </div>
     </div>

@@ -144,6 +144,13 @@ ação do usuário, exceto se ele interagir manualmente com o import (o que canc
   parseados em `src/parsers/lojaXlsxParser.ts`, um parser dedicado por arquivo, cada aba do
   workbook tratada separadamente (ex. Resumo de Performance tem aba "CP" — indicador por indicador
   — e abas "PDV"/"CONSULTOR" — uma linha por entidade).
+  - **Unidades do Resumo de Performance**: as abas guardam o mesmo indicador em escalas
+    diferentes (a CP em %, a PDV/CONSULTOR em fração, com exceções por coluna), então o parser
+    normaliza tudo pela natureza do indicador (`tipoIndicadorPef` em
+    `src/analytics/indicadorPef.ts`): taxa em % (0-100), TME em segundos, "Vs. Meta PEF" em %
+    relativo e "Vs. Ano Passado" em **p.p. para taxas** (taxa atual − taxa do ano passado) e em
+    % relativo para contagens, R$ e tempo. Variações impossíveis (ex. "% Boletos ID Cliente" com
+    −715,39, que implicaria 809% no ano passado) ficam `null` e marcadas como inválidas.
   - `receitaCanal`/`receitaCategoria` (campos legados, `Receita_por_Canal_UN.xlsx` /
     `Receita_por_Cat_Sub_Mar.xlsx`) continuam suportados para exports antigos, mas os lotes
     recebidos a partir de set/2026 não trazem mais esses arquivos — no lugar veio a família
