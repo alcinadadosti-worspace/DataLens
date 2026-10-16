@@ -7,10 +7,18 @@ import { fmtBRL } from '../../utils/formatters';
 import { isFVCOrder } from '../../analytics/fvc';
 import { ReportContext, VDCorporateFile, VD_CORPORATE_FILE_LABELS } from '../../types/vdCorporate';
 
-/** Relatórios cujo valor é receita em R$ — só entre eles o tipo de receita precisa ser igual. */
+/**
+ * Relatórios cujo valor é receita em R$, em duas famílias. Dentro de cada família o tipo de receita
+ * precisa ser igual; entre as famílias ele muda de propósito (Ciclo 14: ReceitaCanalVD_* e Receita_por_*
+ * em "Receita Bruta", VendaDireta_* sempre em "Receita GMV"), então isso é informação, não alerta.
+ */
 const RECEITA_FILES: VDCorporateFile[] = [
-  'receitaCanalVDPdv', 'receitaCanalVDUn', 'receitaCanalVDPeriodo',
+  'receitaCanalVDPdv', 'receitaCanalVDUn', 'receitaCanalVDPeriodo', 'receitaCanalVDCiclo',
   'receitaPeriodo', 'receitaCanalUn', 'receitaCategoria',
+];
+const RECEITA_VD_FILES: VDCorporateFile[] = [
+  'vdReceitaCiclo', 'distribuicaoReceita', 'receitaCategoriaMix', 'arvorePedidos',
+  'performancePdvSupervisor', 'receitaUnGmv',
 ];
 
 type CheckStatus = 'ok' | 'warn' | 'info';
@@ -42,8 +50,8 @@ const DataQualityPanel: React.FC = () => {
   const checks = useMemo<QualityCheck[]>(() => {
     const list: QualityCheck[] = [];
 
-    // 1) Reconciliação receita Order[] vs BI — sobre o extrato inteiro, sem os filtros globais (o total
-    // do BI é o ciclo todo; um recorte mostraria divergência falsa).
+    // 1) Reconciliação receita Order[] vs Extranet — sobre o extrato inteiro, sem os filtros globais (o total
+    // da Extranet é o ciclo todo; um recorte mostraria divergência falsa).
     const totalRow = dataset?.receitaCanalVDPdv?.find(r => r.un.trim().toUpperCase() === 'TOTAL');
     if (orders.length > 0 && totalRow) {
       const ordersRevenue = calcEligibleRevenue(orders);
@@ -55,9 +63,9 @@ const DataQualityPanel: React.FC = () => {
       const valorTxt = (diffValor >= 0 ? '+' : '−') + fmtBRL(Math.abs(diffValor));
       list.push({
         id: 'reconciliacao',
-        label: bate ? 'Receita de pedidos bate com o BI corporativo' : 'Receita de pedidos não bate com o BI corporativo',
+        label: bate ? 'Receita de pedidos bate com a Extranet' : 'Receita de pedidos não bate com a Extranet',
         status: bate ? 'ok' : 'warn',
-        detail: `Pedidos (FVC incluído) ${fmtBRL(ordersRevenue)} × BI ${fmtBRL(totalRow.total.receitaAtual)} (ReceitaCanalVD_Performance_por_PDV.xlsx): diferença de ${pctTxt} (${valorTxt}). Tolerância: ±1%.`,
+        detail: `Pedidos (FVC incluído) ${fmtBRL(ordersRevenue)} × Extranet ${fmtBRL(totalRow.total.receitaAtual)} (ReceitaCanalVD_Performance_por_PDV.xlsx): diferença de ${pctTxt} (${valorTxt}). Tolerância: ±1%.`,
       });
     }
 
@@ -67,9 +75,9 @@ const DataQualityPanel: React.FC = () => {
       const pct = (fvcCount / orders.length) * 100;
       list.push({
         id: 'fvc',
-        label: 'Pedidos FVC: no total do BI, fora da Visão geral',
+        label: 'Pedidos FVC: no total da Extranet, fora da Visão geral',
         status: 'info',
-        detail: `${fvcCount} de ${orders.length} pedidos (${pct.toFixed(1).replace('.', ',')}%) são de estrutura FVC. Eles entram nesta reconciliação, porque a receita do BI os inclui, mas a Visão geral os deixa de fora: a participação deles fica na tela FVC.`,
+        detail: `${fvcCount} de ${orders.length} pedidos (${pct.toFixed(1).replace('.', ',')}%) são de estrutura FVC. Eles entram nesta reconciliação, porque a receita da Extranet os inclui, mas a Visão geral os deixa de fora: a participação deles fica na tela FVC.`,
       });
     }
 
@@ -82,26 +90,40 @@ const DataQualityPanel: React.FC = () => {
         .filter(([, ctx]) => !!ctx?.tipoReceita)
         .map(([file, ctx]) => ({ file, tipo: ctx!.tipoReceita! }));
       const receita = tipoPorArquivo.filter(r => RECEITA_FILES.includes(r.file));
-      const outros = tipoPorArquivo.filter(r => !RECEITA_FILES.includes(r.file));
+      const receitaVD = tipoPorArquivo.filter(r => RECEITA_VD_FILES.includes(r.file));
+      const outros = tipoPorArquivo.filter(r => !RECEITA_FILES.includes(r.file) && !RECEITA_VD_FILES.includes(r.file));
       const tiposReceita = [...new Set(receita.map(r => r.tipo))];
+      const tiposReceitaVD = [...new Set(receitaVD.map(r => r.tipo))];
 
-      if (tiposReceita.length > 1) {
+      const checarFamilia = (id: string, nome: string, arquivos: typeof receita, tipos: string[]) => {
+        if (tipos.length > 1) {
+          list.push({
+            id,
+            label: `Tipo de receita varia entre os relatórios ${nome}`,
+            status: 'warn',
+            detail: `Declaram tipos diferentes na aba FILTROS: ${arquivos.map(r => `${VD_CORPORATE_FILE_LABELS[r.file]} = "${r.tipo}"`).join('; ')}. Reexporte esses relatórios da Extranet com o mesmo filtro "Tipo de receita" antes de comparar os valores.`,
+          });
+        } else if (tipos.length === 1) {
+          list.push({
+            id,
+            label: `Tipo de receita consistente entre os relatórios ${nome}`,
+            status: 'ok',
+            detail: `Os ${arquivos.length} relatórios declaram "${tipos[0]}" na aba FILTROS.`,
+          });
+        }
+      };
+      checarFamilia('tipo-receita', 'de receita por canal (ReceitaCanalVD / Receita_por)', receita, tiposReceita);
+      checarFamilia('tipo-receita-vd', 'VendaDireta', receitaVD, tiposReceitaVD);
+      if (tiposReceita.length === 1 && tiposReceitaVD.length === 1 && tiposReceita[0] !== tiposReceitaVD[0]) {
         list.push({
-          id: 'tipo-receita',
-          label: 'Tipo de receita varia entre relatórios de receita',
-          status: 'warn',
-          detail: `Os relatórios de receita declaram tipos diferentes na aba FILTROS: ${receita.map(r => `${VD_CORPORATE_FILE_LABELS[r.file]} = "${r.tipo}"`).join('; ')}. Reexporte todos do BI com o mesmo filtro "Tipo de receita" antes de comparar os valores.`,
-        });
-      } else if (tiposReceita.length === 1) {
-        list.push({
-          id: 'tipo-receita',
-          label: 'Tipo de receita consistente entre relatórios de receita',
-          status: 'ok',
-          detail: `Os ${receita.length} relatórios de receita declaram "${tiposReceita[0]}" na aba FILTROS.`,
+          id: 'tipo-receita-familias',
+          label: 'Duas bases de receita no lote',
+          status: 'info',
+          detail: `Receita & Metas usa "${tiposReceita[0]}"; Pedidos & Mix usa "${tiposReceitaVD[0]}" (relatórios VendaDireta). Os totais não são iguais e não devem ser comparados entre as duas telas como se fossem a mesma conta.`,
         });
       }
 
-      const outrosDiferentes = outros.filter(r => !tiposReceita.includes(r.tipo));
+      const outrosDiferentes = outros.filter(r => !tiposReceita.includes(r.tipo) && !tiposReceitaVD.includes(r.tipo));
       if (outrosDiferentes.length > 0) {
         const porTipo = new Map<string, string[]>();
         for (const r of outrosDiferentes) porTipo.set(r.tipo, [...(porTipo.get(r.tipo) ?? []), VD_CORPORATE_FILE_LABELS[r.file]]);
@@ -141,7 +163,118 @@ const DataQualityPanel: React.FC = () => {
       });
     }
 
-    // 6) Ruptura por item — sempre lembrete, nunca falha
+    // 6) Meta PEF zerada — a Extranet exporta 0 quando a meta do ciclo ainda não foi cadastrada.
+    if (totalRow && totalRow.total.metaPef === 0 && totalRow.total.receitaAtual > 0) {
+      list.push({
+        id: 'meta-zerada',
+        label: 'Meta PEF do ciclo veio zerada',
+        status: 'warn',
+        detail: 'ReceitaCanalVD_Performance_por_PDV, ReceitaCanalVD_por_UN e ReceitaCanalVD_por_Ciclo trazem meta 0 em todas as linhas: a meta ainda não foi lançada na Extranet. % realizado e gap ficam sem valor até os arquivos serem exportados de novo, com a meta.',
+      });
+    }
+
+    // 7) Ativos: o mesmo número em 3 relatórios de base.
+    const monitorTotal = dataset?.monitoramentoBase?.porPdv.find(r => r.chave.trim().toUpperCase() === 'TOTAL');
+    const digitaisTotal = dataset?.ferramentasDigitaisPdv?.find(r => r.pdv === 'TOTAL');
+    const ativosFontes = [
+      monitorTotal ? { nome: 'Monitoramento da base', v: monitorTotal.ativosBaseTotal } : null,
+      digitaisTotal ? { nome: 'Ferramentas digitais por PDV', v: digitaisTotal.ativas } : null,
+      dataset?.ativasCanaisDigitais ? { nome: 'Ativas — canais digitais', v: dataset.ativasCanaisDigitais.ativas } : null,
+      dataset?.ativasEspacoRevendedor ? { nome: 'Ativas — Espaço Revendedor', v: dataset.ativasEspacoRevendedor.ativas } : null,
+    ].filter((x): x is { nome: string; v: number } => !!x);
+    if (ativosFontes.length >= 2) {
+      const bate = ativosFontes.every(f => f.v === ativosFontes[0].v);
+      list.push({
+        id: 'ativos-consistentes',
+        label: bate ? 'Número de ativos bate entre os relatórios de base' : 'Número de ativos diverge entre os relatórios de base',
+        status: bate ? 'ok' : 'warn',
+        detail: `${ativosFontes.map(f => `${f.nome}: ${f.v.toLocaleString('pt-BR')}`).join(' · ')}.`,
+      });
+    }
+
+    // 8) Opt-out: a base total do relatório de catálogo é a mesma do Monitoramento.
+    if (dataset?.optOutBase && monitorTotal) {
+      const bate = dataset.optOutBase.baseTotal === monitorTotal.baseTotal;
+      list.push({
+        id: 'optout-base',
+        label: bate ? 'Base do opt-out de catálogos bate com o Monitoramento' : 'Base do opt-out de catálogos não bate com o Monitoramento',
+        status: bate ? 'ok' : 'warn',
+        detail: `Opt-out: base total ${dataset.optOutBase.baseTotal.toLocaleString('pt-BR')} · Monitoramento: ${monitorTotal.baseTotal.toLocaleString('pt-BR')}.`,
+      });
+    }
+
+    // 9) Histórico de colocação por SKU soma o mesmo que a Visão geral do ciclo.
+    const visao = dataset?.pedidosVisaoGeral?.[0];
+    if (visao && dataset?.pedidosColocacao && dataset.pedidosColocacao.length > 0) {
+      const soma = (k: 'volumeSugestao' | 'volumeColocado' | 'volumeFaturado') => dataset.pedidosColocacao!.reduce((s, r) => s + r[k], 0);
+      const pares = [
+        ['sugestão', soma('volumeSugestao'), visao.metaSugestao],
+        ['pedido', soma('volumeColocado'), visao.pedidoRealizado],
+        ['faturado', soma('volumeFaturado'), visao.pedidoFaturado],
+      ] as const;
+      const bate = pares.every(([, a, b]) => Math.abs(a - b) < 0.5);
+      list.push({
+        id: 'colocacao-integridade',
+        label: bate ? 'Histórico de colocação bate com a visão geral de pedidos' : 'Histórico de colocação não bate com a visão geral de pedidos',
+        status: bate ? 'ok' : 'warn',
+        detail: pares.map(([n, a, b]) => `${n}: ${a.toLocaleString('pt-BR')} por SKU × ${b.toLocaleString('pt-BR')} no total`).join(' · ') + '.',
+      });
+    }
+
+    // 10) Árvore de pedidos: faixas somam o total; e o total contra o ConsultaPedidos.
+    const arvore = dataset?.arvorePedidos;
+    if (arvore?.totalPedidos && arvore.faixas.length > 0) {
+      const somaFaixas = arvore.faixas.reduce((s, f) => s + f.atual, 0);
+      const bate = somaFaixas === arvore.totalPedidos.atual;
+      const naoCancelados = orders.filter(o => o.SituacaoComercial !== 'Cancelado').length;
+      list.push({
+        id: 'arvore-pedidos',
+        label: bate ? 'Faixas de valor somam o total de pedidos' : 'Faixas de valor não somam o total de pedidos',
+        status: bate ? 'ok' : 'warn',
+        detail: `Árvore de Pedidos: ${somaFaixas.toLocaleString('pt-BR')} nas faixas × ${arvore.totalPedidos.atual.toLocaleString('pt-BR')} no total.`
+          + (orders.length > 0 ? ` O ConsultaPedidos tem ${orders.length.toLocaleString('pt-BR')} pedidos (${naoCancelados.toLocaleString('pt-BR')} não cancelados) — os relatórios da Extranet e o extrato saem em momentos diferentes, então alguns pedidos de diferença são esperados.` : ''),
+      });
+    }
+
+    // 11) Performance PDV/Supervisor: fora da linha TOTAL, as faixas somam mais que os pedidos.
+    const perfTotal = dataset?.performancePdvSupervisor?.pdv.find(r => r.nome.toUpperCase() === 'TOTAL');
+    if (perfTotal) {
+      const somaFaixas = perfTotal.faixas.reduce((s, f) => s + f.quantidade, 0);
+      if (somaFaixas !== perfTotal.qtdPedidos) {
+        list.push({
+          id: 'performance-faixas',
+          label: 'Faixas de valor da Performance por PDV/supervisor não são pedidos',
+          status: 'info',
+          detail: `As colunas de faixa somam ${somaFaixas.toLocaleString('pt-BR')} contra ${perfTotal.qtdPedidos.toLocaleString('pt-BR')} pedidos, e o "pedido médio" das linhas por PDV/supervisor divide a receita por essa soma. Em Pedidos & Mix o pedido médio é recalculado (receita ÷ pedidos) e as faixas aparecem só como proporção.`,
+        });
+      }
+    }
+
+    // 12) Mix de categorias: o total não fecha com a receita GMV dos outros relatórios VendaDireta.
+    const mixCp = dataset?.receitaCategoriaMix?.cp[0];
+    const gmvCp = dataset?.distribuicaoReceita?.cp[0]?.atual ?? dataset?.vdReceitaCiclo?.[0]?.atual;
+    if (mixCp && gmvCp) {
+      const diffPct = ((mixCp.totalReceita - gmvCp) / gmvCp) * 100;
+      const bate = Math.abs(diffPct) <= 0.5;
+      list.push({
+        id: 'mix-categoria-total',
+        label: bate ? 'Mix de categorias bate com a receita GMV' : 'Mix de categorias não fecha com a receita GMV',
+        status: bate ? 'ok' : 'warn',
+        detail: `Distribuição por categoria: ${fmtBRL(mixCp.totalReceita)} × receita GMV do CP: ${fmtBRL(gmvCp)} (${diffPct >= 0 ? '+' : '−'}${Math.abs(diffPct).toFixed(2).replace('.', ',')}%). Os dois declaram "Receita GMV". Use o mix para comparar a composição, não o valor.`,
+      });
+    }
+
+    // 13) Aderência: a Extranet ignora o filtro de canal.
+    if (dataset?.aderencia && dataset.aderencia.pdv.length > 0) {
+      list.push({
+        id: 'aderencia-canal',
+        label: 'Aderência por curva traz lojas e VD juntos',
+        status: 'info',
+        detail: `O arquivo vem com CANAL = VD na aba FILTROS, mas lista ${dataset.aderencia.pdv.length} PDVs (lojas físicas incluídas) e os mesmos números do Modo Loja. A tela Sell-In & Reposição mostra só os PDVs da Venda Direta; a linha do CP e a evolução semanal são da rede inteira.`,
+      });
+    }
+
+    // 14) Ruptura por item — sempre lembrete, nunca falha
     if (dataset?.rupturaPorItem && dataset.rupturaPorItem.length > 0) {
       list.push({
         id: 'ruptura-amostra',

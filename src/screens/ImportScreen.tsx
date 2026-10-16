@@ -6,7 +6,7 @@ import { useVDCorporateStore } from '../store/useVDCorporateStore';
 import { useVDHistoryStore } from '../store/useVDHistoryStore';
 import { useFilterStore } from '../store/useFilterStore';
 import { VDCorporateFile, VD_CORPORATE_FILE_LABELS } from '../types/vdCorporate';
-import { buildVDSnapshot } from '../analytics/vdSnapshot';
+import { buildVDSnapshot, dominantCiclo } from '../analytics/vdSnapshot';
 
 interface ImportScreenProps {
   onComplete: () => void;
@@ -14,16 +14,28 @@ interface ImportScreenProps {
 
 type Phase = 'idle' | 'loading' | 'done' | 'error';
 
+// 'receitaCanalVDPeriodo' (ReceitaCanalVD_por_Periodo, Ciclo 13) saiu da lista: a partir do Ciclo 14 a Extranet
+// exporta ReceitaCanalVD_por_Ciclo no lugar. O parser ainda lê o arquivo antigo, se alguém importar.
 const OPTIONAL_FILES: VDCorporateFile[] = [
   'rankingVendas',
   'sellInMeta',
   'sellInDetalheSku',
+  'pedidosVisaoGeral',
+  'pedidosGiro',
+  'pedidosColocacao',
+  'aderencia',
   'receitaCanalVDPdv',
   'receitaCanalVDUn',
-  'receitaCanalVDPeriodo',
+  'receitaCanalVDCiclo',
   'receitaPeriodo',
   'receitaCanalUn',
   'receitaCategoria',
+  'vdReceitaCiclo',
+  'distribuicaoReceita',
+  'receitaUnGmv',
+  'receitaCategoriaMix',
+  'arvorePedidos',
+  'performancePdvSupervisor',
   'rupturaCausaFranqueado',
   'rupturaDetalhada',
   'rupturaPorItem',
@@ -34,29 +46,52 @@ const OPTIONAL_FILES: VDCorporateFile[] = [
   'ativasPorTier',
   'segmentacaoBase',
   'detalhamentoCategoriasUn',
+  'ativasCanaisDigitais',
+  'ativasEspacoRevendedor',
+  'ferramentasDigitaisPdv',
+  'optOutBase',
+  'optOutDetalhe',
+  'optOutPdv',
 ];
 
 const DEFAULT_FILE_NAMES = [
   'ConsultaPedidos.xlsx',
   'ConsultaRankingVendas.csv',
-  '20260924_GestaoPedidos_Meta_Sell_In_Por_Ciclo_7817cad1b38c.csv',
-  '20260924_GestaoPedidos_Detalhamento_por_Sku_meta_Sell_In_por_Ciclo_f0a309c40f80.csv',
-  '20260924_ReceitaCanalVD_Performance_por_PDV_d89fbdbc17ca.xlsx',
-  '20260924_ReceitaCanalVD_por_UN_5fac385f854d.xlsx',
-  '20260924_ReceitaCanalVD_por_Periodo_9bb0825f11b8.xlsx',
-  '20260924_Receita_por_Periodo_3a471a55bd59.xlsx',
-  '20260924_Receita_por_Canal_UN_7fc026a14b25.xlsx',
-  '20260924_Receita_por_Cat_Sub_Mar_4ee40247a0da.xlsx',
-  '20260924_RupturaVD_Ruptura_causa_franqueado_11909ad218c1.xlsx',
-  '20260924_RupturaVD_Ruptura_detalhada_ciclo_915dc20c818e.xlsx',
-  '20260924_RupturaVD_detalhamento_ruptura_por_item_b4dd7201b900.xlsx',
-  '20260924_VendaDireta_Evolucao_da_base_4b40e714e356.xlsx',
-  '20260924_VendaDireta_Monitoramento_base_PDV_Supervisor_deb808fe9d62.xlsx',
-  '20260924_VendaDireta_penetracao_base_dfe479c1446f.xlsx',
-  '20260924_VendaDireta_Penetracao_de_Ativos_Detalhada_cf5ad8ea90c7.xlsx',
-  '20260924_VendaDireta_Ativas_por_tier_7b33cc14aeac.xlsx',
-  '20260924_VendaDireta_Segmentacao_da_Base_7a7e878e8af1.xlsx',
-  '20260924_VendaDireta_Detalhamento_de_Categorias_e_UN_no_Periodo_de_Ciclos_ada3d167a9a8.xlsx',
+  '20261016_BaseComOptOutDeCatalogo_Base_Total_Com_E_Sem_Opt_Out_b1f446277d02.xlsx',
+  '20261016_BaseComOptOutDeCatalogo_Det_Base_Total_Com_Opt_Out_22058d30b656.xlsx',
+  '20261016_BaseComOptOutDeCatalogo_Opt_Out_de_Catalogos_BOT_por_PDV_01b74e05a78c.xlsx',
+  '20261016_GestaoPedidos_Aderência_por_Categoria_dff25dd2094e.xlsx',
+  '20261016_GestaoPedidos_Detalhamento_por_Sku_meta_Sell_In_por_Ciclo_206c5b74fa71.csv',
+  '20261016_GestaoPedidos_Giro_Pedidos_Canais_por_Ciclo_f94db448218a.csv',
+  '20261016_GestaoPedidos_Historico_Colocacao_Pedido_57ac1d775805.csv',
+  '20261016_GestaoPedidos_Histórico_de_Aderência_5953823338d7.xlsx',
+  '20261016_GestaoPedidos_Meta_Sell_In_Por_Ciclo_fcf69ab9406c.csv',
+  '20261016_GestaoPedidos_Visao_Geral_por_Ciclo_caea0f8bbf54.csv',
+  '20261016_Monitoramento_base_com_penetracao_em_ferramentas_digitais_pdv_7d6c7f3785fe.xlsx',
+  '20261016_ReceitaCanalVD_Performance_por_PDV_fb9f995f4667.xlsx',
+  '20261016_ReceitaCanalVD_por_Ciclo_167f111608ab.xlsx',
+  '20261016_ReceitaCanalVD_por_UN_1e3f8550c904.xlsx',
+  '20261016_Receita_por_Canal_UN_1f26cbec9d95.xlsx',
+  '20261016_Receita_por_Cat_Sub_Mar_0f829af28ff0.xlsx',
+  '20261016_Receita_por_Ciclo_58489d8f32f7.xlsx',
+  '20261016_RupturaVD_Ruptura_causa_franqueado_0f6945be1c4a.xlsx',
+  '20261016_RupturaVD_Ruptura_detalhada_ciclo_4828145f8c70.xlsx',
+  '20261016_RupturaVD_detalhamento_ruptura_por_item_56ddaaebf96c.xlsx',
+  '20261016_VendaDireta_Arvore_De_Pedidos_65b8c2493572.xlsx',
+  '20261016_VendaDireta_Ativas_por_tier_3377e0acbc8a.xlsx',
+  '20261016_VendaDireta_Detalhamento_de_Categorias_e_UN_no_Periodo_de_Ciclos_28c3bcf0fcfa.xlsx',
+  '20261016_VendaDireta_Distribuicao_da_Receita_581a752d231b.xlsx',
+  '20261016_VendaDireta_Distribuicao_da_receita_por_categoria_47299acbb849.xlsx',
+  '20261016_VendaDireta_Evolucao_da_base_751fa07d0bd4.xlsx',
+  '20261016_VendaDireta_Monitoramento_base_PDV_Supervisor_2bc469f01610.xlsx',
+  '20261016_VendaDireta_Penetracao_de_Ativos_Detalhada_969cb399f09b.xlsx',
+  '20261016_VendaDireta_Performance_PDV_Supervisor_7b7938627f17.xlsx',
+  '20261016_VendaDireta_Receita_Por_UN_7ddbe0f68c73.xlsx',
+  '20261016_VendaDireta_Receita_por_Ciclo_d61ebae19f63.xlsx',
+  '20261016_VendaDireta_Segmentacao_da_Base_4bc3f774d429.xlsx',
+  '20261016_VendaDireta_penetracao_base_cd0332120206.xlsx',
+  '20261016_ativas_uma_compra_canais_digitais_00d987068954.xlsx',
+  '20261016_ativas_uma_compra_er_667be7987584.xlsx',
 ];
 
 const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
@@ -171,19 +206,22 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
   }
 
   const canProceed = !!result?.orders && result.orders.length > 0;
+  // "14/2026" → "Ciclo 14 - 2026": o ciclo vem dos próprios pedidos, não fica fixo no código.
+  const cicloImportado = result?.orders ? dominantCiclo(result.orders) : null;
+  const cicloLabel = cicloImportado ? `Ciclo ${cicloImportado.replace('/', ' - ')}` : null;
   const detectedOptionalCount = result?.corporate ? Object.keys(result.corporate.detected).length : 0;
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px' }}>
       <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)' }}>
-        Importar dados · Ciclo 13
+        Importar dados{cicloLabel ? ` · ${cicloLabel}` : ''}
       </div>
       <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', margin: '6px 0 6px' }}>
         Importar planilhas do Modo VD
       </h1>
       <p style={{ color: 'var(--vd-text-secondary, #6B6258)', fontSize: 15, marginTop: 0, marginBottom: 28 }}>
         Arraste o arquivo <strong>Consulta Pedidos</strong> (obrigatório) e, se tiver, os demais arquivos
-        do lote — ranking de vendas, meta de sell-in e os relatórios de BI corporativo (receita, ruptura,
+        do lote — ranking de vendas, meta de sell-in e os relatórios da Extranet (receita, ruptura,
         base de revendedores). Todos os dados são processados localmente no navegador.
       </p>
 

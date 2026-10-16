@@ -89,8 +89,8 @@ export function useFilteredOrders(opts?: OrderScopeOptions): Order[] {
 }
 
 /**
- * `true` quando a tela mostra o ciclo inteiro do BI, sem recortes (só o filtro de ciclo, no ciclo do
- * lote). É a única situação em que os números oficiais do BI valem: com qualquer outro filtro, o BI
+ * `true` quando a tela mostra o ciclo inteiro da Extranet, sem recortes (só o filtro de ciclo, no ciclo do
+ * lote). É a única situação em que os números oficiais da Extranet valem: com qualquer outro filtro, a Extranet
  * não tem o número equivalente.
  */
 function useIsFullCycleView(): boolean {
@@ -105,7 +105,7 @@ function useIsFullCycleView(): boolean {
 }
 
 /**
- * Receita oficial do canal VD no BI (coluna VD, linha TOTAL de ReceitaCanalVD_Performance_por_PDV),
+ * Receita oficial do canal VD na Extranet (coluna VD, linha TOTAL de ReceitaCanalVD_Performance_por_PDV),
  * que inclui os pedidos FVC. `null` fora do ciclo inteiro sem recortes ou sem o relatório carregado.
  */
 export function useOfficialVDRevenue(): number | null {
@@ -116,7 +116,7 @@ export function useOfficialVDRevenue(): number | null {
 }
 
 /**
- * RPA oficial do BI (linha TOTAL do Monitoramento por PDV), que inclui os revendedores FVC. `null`
+ * RPA oficial da Extranet (linha TOTAL do Monitoramento por PDV), que inclui os revendedores FVC. `null`
  * fora do ciclo inteiro sem recortes ou sem o relatório carregado.
  */
 export function useOfficialRPA(): number | null {

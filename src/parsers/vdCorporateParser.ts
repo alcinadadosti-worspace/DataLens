@@ -4,27 +4,51 @@ import {
   VDCorporateDataset, VDCorporateParseResult, VDCorporateFile, VD_CORPORATE_FILE_LABELS,
 } from '../types/vdCorporate';
 import { VDSellInMetaRow, VDSellInDetalheSkuRow } from '../types/vdSellIn';
+import { VDPedidosVisaoGeralRow, VDPedidosGiroRow, VDPedidosColocacaoRow } from '../types/vdCorporate';
 import {
-  readReportContext, parseReceitaCanalVDPdvXlsx, parseReceitaCanalVDUnXlsx, parseReceitaCanalVDPeriodoXlsx,
+  readReportContext, parseReceitaCanalVDUnXlsx, parseReceitaCanalVDPeriodoXlsx,
   parseReceitaPeriodoXlsx, parseReceitaCanalUnXlsx, parseReceitaCategoriaXlsx,
   parseRupturaCausaFranqueadoXlsx, parseRupturaDetalhadaXlsx, parseRupturaPorItemXlsx,
   parseEvolucaoBaseXlsx, parseMonitoramentoBaseXlsx, parsePenetracaoBaseXlsx,
   parsePenetracaoAtivosDetalhadaXlsx, parseAtivasPorTierXlsx, parseSegmentacaoBaseXlsx,
-  parseDetalhamentoCategoriasUnXlsx,
+  parseDetalhamentoCategoriasUnXlsx, parseReceitaCanalVDPdvXlsxComLayout, parseReceitaCanalVDCicloXlsx,
+  parseVDReceitaCicloXlsx, parseDistribuicaoReceitaXlsx, parseReceitaCategoriaMixXlsx, parseArvorePedidosXlsx,
+  parsePerformancePdvSupervisorXlsx, parseReceitaUnGmvXlsx, parseAtivasUmaCompraXlsx,
+  parseFerramentasDigitaisPdvXlsx, parseOptOutBaseXlsx, parseOptOutDetalheXlsx, parseOptOutPdvXlsx,
 } from './vdXlsxParser';
-import { toNum, toPctOrNull } from './vdNumberUtils';
+import { parseAderenciaXlsx, mergeAderencia } from './lojaXlsxParser';
+import { toNum, toPct, toPctOrNull } from './vdNumberUtils';
 
-type XlsxKind = Exclude<VDCorporateFile, 'sellInMeta' | 'sellInDetalheSku' | 'rankingVendas'>;
+type CsvKind = 'sellInMeta' | 'sellInDetalheSku' | 'pedidosVisaoGeral' | 'pedidosGiro' | 'pedidosColocacao';
+type XlsxKind = Exclude<VDCorporateFile, CsvKind | 'rankingVendas'>;
 
 // Ordem importa: hints mais específicos primeiro, para não colidir com substrings de hints mais genéricos
-// (ex. "Receita_por_Cat_Sub_Mar" não pode casar com o hint de "Receita_por_Canal_UN").
+// (ex. "Receita_por_Cat_Sub_Mar" não pode casar com o hint de "Receita_por_Canal_UN", e
+// "VendaDireta_Distribuicao_da_receita_por_categoria" contém "RECEITA_POR_CAT" — por isso vem antes).
 const XLSX_FILENAME_HINTS: [XlsxKind, string][] = [
   ['receitaCanalVDPdv', 'RECEITACANALVD_PERFORMANCE_POR_PDV'],
   ['receitaCanalVDPeriodo', 'RECEITACANALVD_POR_PERIODO'],
+  ['receitaCanalVDCiclo', 'RECEITACANALVD_POR_CICLO'],
   ['receitaCanalVDUn', 'RECEITACANALVD_POR_UN'],
+  ['receitaCategoriaMix', 'VENDADIRETA_DISTRIBUICAO_DA_RECEITA_POR_CATEGORIA'],
+  ['distribuicaoReceita', 'VENDADIRETA_DISTRIBUICAO_DA_RECEITA'],
+  ['vdReceitaCiclo', 'VENDADIRETA_RECEITA_POR_CICLO'],
+  ['receitaUnGmv', 'VENDADIRETA_RECEITA_POR_UN'],
+  ['arvorePedidos', 'VENDADIRETA_ARVORE_DE_PEDIDOS'],
+  ['performancePdvSupervisor', 'VENDADIRETA_PERFORMANCE_PDV_SUPERVISOR'],
   ['receitaCategoria', 'RECEITA_POR_CAT'],
   ['receitaPeriodo', 'RECEITA_POR_PERIODO'],
+  // Ciclo 14+: "Receita_por_Periodo" virou "Receita_por_Ciclo" (aba CICLO no lugar de DIA/MÊS).
+  ['receitaPeriodo', 'RECEITA_POR_CICLO'],
   ['receitaCanalUn', 'RECEITA_POR_CANAL_UN'],
+  ['ativasCanaisDigitais', 'ATIVAS_UMA_COMPRA_CANAIS_DIGITAIS'],
+  ['ativasEspacoRevendedor', 'ATIVAS_UMA_COMPRA_ER'],
+  ['ferramentasDigitaisPdv', 'MONITORAMENTO_BASE_COM_PENETRACAO_EM_FERRAMENTAS_DIGITAIS'],
+  ['optOutBase', 'BASECOMOPTOUTDECATALOGO_BASE_TOTAL_COM_E_SEM_OPT_OUT'],
+  ['optOutDetalhe', 'BASECOMOPTOUTDECATALOGO_DET_BASE_TOTAL'],
+  ['optOutPdv', 'BASECOMOPTOUTDECATALOGO_OPT_OUT_DE_CATALOGOS_BOT_POR_PDV'],
+  ['aderencia', 'GESTAOPEDIDOS_ADERENCIA_POR_CATEGORIA'],
+  ['aderencia', 'GESTAOPEDIDOS_HISTORICO_DE_ADERENCIA'],
   ['rupturaPorItem', 'RUPTURAVD_DETALHAMENTO'],
   ['rupturaCausaFranqueado', 'RUPTURAVD_RUPTURA_CAUSA_FRANQUEADO'],
   ['rupturaDetalhada', 'RUPTURAVD_RUPTURA_DETALHADA'],
@@ -37,15 +61,19 @@ const XLSX_FILENAME_HINTS: [XlsxKind, string][] = [
   ['segmentacaoBase', 'VENDADIRETA_SEGMENTACAO_DA_BASE'],
 ];
 
-const CSV_FILENAME_HINTS: ['sellInDetalheSku' | 'sellInMeta', string][] = [
+const CSV_FILENAME_HINTS: [CsvKind, string][] = [
   // "Detalhamento_por_Sku" precisa vir antes de "Meta_Sell_In": o nome de arquivo de sell-in por
   // SKU também contém "META_SELL_IN" (ex. "..._Detalhamento_por_Sku_meta_Sell_In_por_Ciclo_...").
   ['sellInDetalheSku', 'GESTAOPEDIDOS_DETALHAMENTO_POR_SKU'],
   ['sellInMeta', 'GESTAOPEDIDOS_META_SELL_IN'],
+  ['pedidosVisaoGeral', 'GESTAOPEDIDOS_VISAO_GERAL'],
+  ['pedidosGiro', 'GESTAOPEDIDOS_GIRO_PEDIDOS'],
+  ['pedidosColocacao', 'GESTAOPEDIDOS_HISTORICO_COLOCACAO'],
 ];
 
+/** Remove acento antes de tirar o resto — senão "Aderência" vira "ADERNCIA" e não casa com o hint. */
 function normalizeName(fileName: string): string {
-  return fileName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return fileName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
 function detectXlsxKind(fileName: string): XlsxKind | null {
@@ -56,7 +84,7 @@ function detectXlsxKind(fileName: string): XlsxKind | null {
   return null;
 }
 
-function detectCsvKind(fileName: string): 'sellInDetalheSku' | 'sellInMeta' | null {
+function detectCsvKind(fileName: string): CsvKind | null {
   const norm = normalizeName(fileName);
   for (const [kind, hint] of CSV_FILENAME_HINTS) {
     if (norm.includes(hint.replace(/_/g, ''))) return kind;
@@ -76,7 +104,7 @@ async function readCsvRows(file: File): Promise<string[][]> {
 }
 
 function findCol(header: string[], ...names: string[]): number {
-  const norm = header.map(h => h.toUpperCase().trim());
+  const norm = header.map(h => (h ?? '').toUpperCase().trim());
   for (const name of names) {
     const idx = norm.indexOf(name.toUpperCase());
     if (idx >= 0) return idx;
@@ -135,6 +163,85 @@ function rowsToSellInDetalheSku(rows: string[][]): VDSellInDetalheSkuRow[] {
     });
 }
 
+// --- Gestão de pedidos (CSV, Ciclo 14+) ---
+
+function rowsToPedidosVisaoGeral(rows: string[][]): VDPedidosVisaoGeralRow[] {
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iCiclo = findCol(header, 'CICLO');
+  const iMeta = findCol(header, 'META SUGESTÃO DE PEDIDOS', 'META SUGESTAO DE PEDIDOS', 'META SUGESTÃO');
+  const iRealizado = findCol(header, 'PEDIDO REALIZADO');
+  const iFaturado = findCol(header, 'PEDIDO FATURADO');
+  const iVendaReal = findCol(header, 'VENDA REAL');
+  const iGiro = findCol(header, 'GIRO');
+  return rows.slice(1)
+    .filter(r => (r[iCiclo] ?? '').trim() !== '')
+    .map(r => ({
+      ciclo: r[iCiclo].trim(),
+      metaSugestao: toNum(r[iMeta]),
+      pedidoRealizado: toNum(r[iRealizado]),
+      pedidoFaturado: toNum(r[iFaturado]),
+      vendaReal: toNum(r[iVendaReal]),
+      giroPct: toPct(r[iGiro]),
+    }));
+}
+
+function rowsToPedidosGiro(rows: string[][]): VDPedidosGiroRow[] {
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iCiclo = findCol(header, 'CICLO');
+  const iCanal = findCol(header, 'CANAL');
+  const iPedido = findCol(header, 'VOLUME PEDIDO');
+  const iFaturado = findCol(header, 'VOLUME FATURADO');
+  const iGiro = findCol(header, 'GIRO');
+  return rows.slice(1)
+    .filter(r => (r[iCanal] ?? '').trim() !== '')
+    .map(r => ({
+      ciclo: (r[iCiclo] ?? '').trim(),
+      canal: r[iCanal].trim(),
+      volumePedido: toNum(r[iPedido]),
+      volumeFaturado: toNum(r[iFaturado]),
+      giroPct: toPct(r[iGiro]),
+    }));
+}
+
+/** Números deste CSV vêm em formato en-US sem milhar ("3", "0.00%"); toNum (BR) leria "1.5" como 15 — por isso parseFloat direto. */
+function numEn(v: string | undefined): number {
+  const n = parseFloat(String(v ?? '').replace('%', '').trim());
+  return isNaN(n) ? 0 : n;
+}
+
+function rowsToPedidosColocacao(rows: string[][]): VDPedidosColocacaoRow[] {
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const col = (...n: string[]) => findCol(header, ...n);
+  const iCiclo = col('CICLO'), iLoja = col('LOJA', 'PDV'), iSku = col('SKU'), iProduto = col('PRODUTO');
+  const iUn = col('UN DO MATERIAL'), iCategoria = col('CATEGORIA'), iSub = col('SUB CATEGORIA');
+  const iCampanha = col('CAMPANHA'), iMarca = col('MARCA');
+  const iSugestao = col('VOLUME PEDIDO SUGESTÃO', 'VOLUME PEDIDO SUGESTAO');
+  const iColocado = col('VOLUME PEDIDO COLOCADO');
+  const iFaturado = col('VOLUME PEDIDO FATURADO');
+  const iGiro = col('GIRO (%)', 'GIRO');
+  const txt = (r: string[], i: number) => (i >= 0 ? (r[i] ?? '').trim() : '');
+  return rows.slice(1)
+    .filter(r => txt(r, iLoja) !== '')
+    .map(r => ({
+      ciclo: txt(r, iCiclo),
+      pdv: txt(r, iLoja),
+      sku: txt(r, iSku),
+      produto: txt(r, iProduto),
+      un: txt(r, iUn),
+      categoria: txt(r, iCategoria),
+      subcategoria: txt(r, iSub),
+      campanha: txt(r, iCampanha),
+      marca: txt(r, iMarca),
+      volumeSugestao: numEn(r[iSugestao]),
+      volumeColocado: numEn(r[iColocado]),
+      volumeFaturado: numEn(r[iFaturado]),
+      giroPct: iGiro >= 0 && txt(r, iGiro) !== '' ? numEn(r[iGiro]) : null,
+    }));
+}
+
 export async function parseVDCorporateFiles(files: File[]): Promise<VDCorporateParseResult> {
   const errors: string[] = [];
   const detected: VDCorporateParseResult['detected'] = {};
@@ -152,9 +259,18 @@ export async function parseVDCorporateFiles(files: File[]): Promise<VDCorporateP
         if (kind === 'sellInMeta') {
           dataset.sellInMeta = rowsToSellInMeta(rows);
           detected.sellInMeta = { fileName: file.name, rowCount: dataset.sellInMeta.length };
-        } else {
+        } else if (kind === 'sellInDetalheSku') {
           dataset.sellInDetalheSku = rowsToSellInDetalheSku(rows);
           detected.sellInDetalheSku = { fileName: file.name, rowCount: dataset.sellInDetalheSku.length };
+        } else if (kind === 'pedidosVisaoGeral') {
+          dataset.pedidosVisaoGeral = rowsToPedidosVisaoGeral(rows);
+          detected.pedidosVisaoGeral = { fileName: file.name, rowCount: dataset.pedidosVisaoGeral.length };
+        } else if (kind === 'pedidosGiro') {
+          dataset.pedidosGiro = rowsToPedidosGiro(rows);
+          detected.pedidosGiro = { fileName: file.name, rowCount: dataset.pedidosGiro.length };
+        } else {
+          dataset.pedidosColocacao = rowsToPedidosColocacao(rows);
+          detected.pedidosColocacao = { fileName: file.name, rowCount: dataset.pedidosColocacao.length };
         }
         fileNames[kind] = file.name;
         continue;
@@ -164,12 +280,90 @@ export async function parseVDCorporateFiles(files: File[]): Promise<VDCorporateP
       if (!kind) continue;
       const workbook = await readWorkbook(file);
       reportContexts[kind] = readReportContext(workbook);
-      fileNames[kind] = file.name;
+      // Aderência vem em 2 arquivos (por categoria + histórico) que se completam: guarda os dois nomes.
+      fileNames[kind] = kind === 'aderencia' && fileNames.aderencia ? `${fileNames.aderencia} + ${file.name}` : file.name;
 
       switch (kind) {
         case 'receitaCanalVDPdv': {
-          dataset.receitaCanalVDPdv = parseReceitaCanalVDPdvXlsx(workbook);
-          detected.receitaCanalVDPdv = { fileName: file.name, rowCount: dataset.receitaCanalVDPdv.length };
+          const { rows, layout } = parseReceitaCanalVDPdvXlsxComLayout(workbook);
+          dataset.receitaCanalVDPdv = rows;
+          dataset.receitaCanalVDPdvLayout = layout;
+          detected.receitaCanalVDPdv = { fileName: file.name, rowCount: rows.length };
+          break;
+        }
+        case 'receitaCanalVDCiclo': {
+          dataset.receitaCanalVDCiclo = parseReceitaCanalVDCicloXlsx(workbook);
+          detected.receitaCanalVDCiclo = { fileName: file.name, rowCount: dataset.receitaCanalVDCiclo.length };
+          break;
+        }
+        case 'vdReceitaCiclo': {
+          dataset.vdReceitaCiclo = parseVDReceitaCicloXlsx(workbook);
+          detected.vdReceitaCiclo = { fileName: file.name, rowCount: dataset.vdReceitaCiclo.length };
+          break;
+        }
+        case 'distribuicaoReceita': {
+          dataset.distribuicaoReceita = parseDistribuicaoReceitaXlsx(workbook);
+          detected.distribuicaoReceita = { fileName: file.name, rowCount: dataset.distribuicaoReceita.pdv.length };
+          break;
+        }
+        case 'receitaCategoriaMix': {
+          dataset.receitaCategoriaMix = parseReceitaCategoriaMixXlsx(workbook);
+          detected.receitaCategoriaMix = { fileName: file.name, rowCount: dataset.receitaCategoriaMix.pdv.length };
+          break;
+        }
+        case 'arvorePedidos': {
+          dataset.arvorePedidos = parseArvorePedidosXlsx(workbook);
+          detected.arvorePedidos = { fileName: file.name, rowCount: dataset.arvorePedidos.faixas.length };
+          break;
+        }
+        case 'performancePdvSupervisor': {
+          dataset.performancePdvSupervisor = parsePerformancePdvSupervisorXlsx(workbook);
+          detected.performancePdvSupervisor = { fileName: file.name, rowCount: dataset.performancePdvSupervisor.supervisor.length };
+          break;
+        }
+        case 'receitaUnGmv': {
+          dataset.receitaUnGmv = parseReceitaUnGmvXlsx(workbook);
+          detected.receitaUnGmv = { fileName: file.name, rowCount: dataset.receitaUnGmv.length };
+          break;
+        }
+        case 'ativasCanaisDigitais':
+        case 'ativasEspacoRevendedor': {
+          const r = parseAtivasUmaCompraXlsx(workbook);
+          if (r) {
+            dataset[kind] = r;
+            detected[kind] = { fileName: file.name, rowCount: 1 };
+          }
+          break;
+        }
+        case 'ferramentasDigitaisPdv': {
+          dataset.ferramentasDigitaisPdv = parseFerramentasDigitaisPdvXlsx(workbook);
+          detected.ferramentasDigitaisPdv = { fileName: file.name, rowCount: dataset.ferramentasDigitaisPdv.length };
+          break;
+        }
+        case 'optOutBase': {
+          const r = parseOptOutBaseXlsx(workbook);
+          if (r) {
+            dataset.optOutBase = r;
+            detected.optOutBase = { fileName: file.name, rowCount: 1 };
+          }
+          break;
+        }
+        case 'optOutDetalhe': {
+          const r = parseOptOutDetalheXlsx(workbook);
+          if (r) {
+            dataset.optOutDetalhe = r;
+            detected.optOutDetalhe = { fileName: file.name, rowCount: 1 };
+          }
+          break;
+        }
+        case 'optOutPdv': {
+          dataset.optOutPdv = parseOptOutPdvXlsx(workbook);
+          detected.optOutPdv = { fileName: file.name, rowCount: dataset.optOutPdv.length };
+          break;
+        }
+        case 'aderencia': {
+          dataset.aderencia = mergeAderencia(dataset.aderencia, parseAderenciaXlsx(workbook));
+          detected.aderencia = { fileName: fileNames.aderencia!, rowCount: dataset.aderencia.pdv.length };
           break;
         }
         case 'receitaCanalVDUn': {

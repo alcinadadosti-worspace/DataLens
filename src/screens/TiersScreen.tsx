@@ -83,7 +83,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
       color: getSupervisorColor(name)?.accent,
     })), [supervisorAgg]);
 
-  // Os cards do topo são só do canal VD (Online + Presencial), como os relatórios do BI. Os pedidos
+  // Os cards do topo são só do canal VD (Online + Presencial), como os relatórios da Extranet. Os pedidos
   // OMNI são de Consumidor Final: ficam fora da receita, dos pedidos, do ticket e dos revendedores
   // ativos do RPA, e aparecem à parte nos tooltips.
   const channel = useMemo(() => {
@@ -303,7 +303,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
         <KpiCard
           eyebrow="RPA*"
           value={fmtBRLshort(rpa)}
-          hint="RPA — Receita Por Ativo, como no Monitoramento do BI: receita do canal VD (Online + Presencial) dividida pelo número de revendedores com pedido VD no período, sem as estruturas FVC. No detalhe, o mesmo cálculo com as FVCs (revendedores contados uma vez só, mesmo quem compra dentro e fora delas) e só das FVCs. Os pedidos OMNI (Consumidor Final) ficam fora."
+          hint="RPA — Receita Por Ativo, como no Monitoramento da Extranet: receita do canal VD (Online + Presencial) dividida pelo número de revendedores com pedido VD no período, sem as estruturas FVC. No detalhe, o mesmo cálculo com as FVCs (revendedores contados uma vez só, mesmo quem compra dentro e fora delas) e só das FVCs. Os pedidos OMNI (Consumidor Final) ficam fora."
           tooltip={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {([
@@ -320,7 +320,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
               ))}
               {officialRPA !== null && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
-                  <span style={{ color: 'var(--vd-text-muted, #9B9287)' }}>Oficial do BI (com FVC)</span>
+                  <span style={{ color: 'var(--vd-text-muted, #9B9287)' }}>Oficial da Extranet (com FVC)</span>
                   <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(officialRPA)}</span>
                 </div>
               )}

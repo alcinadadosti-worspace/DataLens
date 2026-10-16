@@ -207,14 +207,14 @@ const FVCScreen: React.FC<FVCScreenProps> = ({ onNavigate }) => {
             <KpiCard
               eyebrow="Faturamento total VD*"
               value={fmtBRL(total.total)}
-              footnote={official !== null ? `Com FVC · oficial do BI: ${fmtBRL(official)}` : 'Com FVC · soma dos pedidos'}
-              hint="Receita (Valor Praticado) de todos os pedidos VD não cancelados do recorte, com as estruturas FVC. É a soma dos dois cards ao lado: FVC + sem FVC. O valor oficial do BI também inclui as FVCs e aparece abaixo como referência."
+              footnote={official !== null ? `Com FVC · oficial da Extranet: ${fmtBRL(official)}` : 'Com FVC · soma dos pedidos'}
+              hint="Receita (Valor Praticado) de todos os pedidos VD não cancelados do recorte, com as estruturas FVC. É a soma dos dois cards ao lado: FVC + sem FVC. O valor oficial da Extranet também inclui as FVCs e aparece abaixo como referência."
               tooltip={
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <Row label="Sem FVC (Visão geral)" value={fmtBRL(rest)} />
                   <Row label="FVC" value={fmtBRL(total.fvc)} />
                   <Row label="Total pelos pedidos" value={fmtBRL(total.total)} />
-                  {official !== null && <Row label="Oficial do BI" value={fmtBRL(official)} />}
+                  {official !== null && <Row label="Oficial da Extranet" value={fmtBRL(official)} />}
                 </div>
               }
             />
@@ -246,7 +246,7 @@ const FVCScreen: React.FC<FVCScreenProps> = ({ onNavigate }) => {
             ConsultaPedidos.
             {official !== null && (
               <>
-                {' '}O valor oficial do BI ({fmtBRL(official)}) também inclui as FVCs e fica{' '}
+                {' '}O valor oficial da Extranet ({fmtBRL(official)}) também inclui as FVCs e fica{' '}
                 {fmtBRL(Math.abs(official - total.total))} ({((Math.abs(official - total.total) / official) * 100).toFixed(2).replace('.', ',')}%){' '}
                 {official >= total.total ? 'acima' : 'abaixo'} da soma dos pedidos do extrato.
               </>

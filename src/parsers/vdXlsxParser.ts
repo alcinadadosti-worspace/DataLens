@@ -5,14 +5,17 @@ import {
   VDReceitaCategoriaDataset, VDReceitaCategoriaRow, RupturaResumoRow, RupturaItemRow,
   EvolucaoBaseRow, MonitoramentoBaseDataset, MonitoramentoBaseRow, PenetracaoBaseRow,
   PenetracaoAtivosDetalhadaRow, AtivasPorTierRow, SegmentacaoBaseDataset, PenetracaoCategoriaUnRow,
-  DetalhamentoCategoriasUnDataset,
+  DetalhamentoCategoriasUnDataset, ReceitaCanalVDCicloRow, VDAnteriorAtualRow, VDDistribuicaoReceitaDataset,
+  VDReceitaCategoriaMixDataset, VDReceitaCategoriaMixRow, ArvorePedidosDataset, ArvorePedidosRow,
+  PerformancePdvSupervisorDataset, PerformancePdvSupervisorRow, VDReceitaUnGmvRow, AtivasUmaCompraRow,
+  FerramentasDigitaisPdvRow, OptOutBaseRow, OptOutDetalheRow, OptOutPdvRow,
 } from '../types/vdCorporate';
 import { toNum, toPct, toPctOrNull } from './vdNumberUtils';
 import { canonicalizeUN } from '../design-system/unCanon';
 
 // --- Helpers genéricos de leitura de pivot (mirror de lojaXlsxParser.ts, duplicado para manter os
 // dois modos desacoplados — ver LEITURA_PLANILHAS_VD.md §4 para o porquê da estrutura em múltiplas
-// linhas de cabeçalho mescladas ser comum a esses relatórios de BI corporativo). ---
+// linhas de cabeçalho mescladas ser comum a esses relatórios da Extranet). ---
 
 function normalizeCell(v: unknown): string {
   // "%" vira "PCT" antes de remover os demais símbolos — senão "% Base Multimarcas" e "Base
@@ -91,10 +94,86 @@ export function readReportContext(workbook: XLSX.WorkBook): ReportContext {
 
 // --- Receita ---
 
-/** ReceitaCanalVD_Performance_por_PDV.xlsx — blocos VD / OMNI ENVIO ER / TOTAL por linha (PDV ou TOTAL da rede). */
-export function parseReceitaCanalVDPdvXlsx(workbook: XLSX.WorkBook): ReceitaCanalVDPdvRow[] {
+// "GAP ACORDADO (%)" e "REALIZADO (%)" já vêm como fração do Excel (0.9335 = 93,35%) — sem a
+// heurística de toPct (fração se |n|<=1), que erraria quando o realizado passa de 100% da meta.
+function fractionToPct(v: unknown): number | null {
+  if (typeof v === 'number') return v * 100;
+  const s = String(v ?? '').trim();
+  if (s === '' || s === '-' || s === '--') return null;
+  return toNum(v) * 100;
+}
+
+/** Primeira coluna cujo cabeçalho normalizado começa com o prefixo (ex. "PCT" pega "% COM OPT-OUT..."). */
+function colStartsWith(header: unknown[], prefix: string): number {
+  const target = normalizeCell(prefix);
+  return header.findIndex(h => normalizeCell(h).startsWith(target));
+}
+
+/**
+ * ReceitaCanalVD_Performance_por_PDV.xlsx. Dois layouts:
+ * - 'blocos' (Ciclo 13): cabeçalho em 2 linhas, blocos VD / OMNI ENVIO ER / TOTAL lado a lado;
+ * - 'simples' (Ciclo 14+): cabeçalho de 1 linha (UN | PDV | ... | RECEITA CICLO ANTERIOR | RECEITA CICLO
+ *   ATUAL | META PEF | GAP ACORDADO (R$) | GAP ACORDADO (%) | REALIZADO), uma receita só — a do canal
+ *   VD, sem Omni — e a linha TOTAL ANTES do cabeçalho. Nesse layout `vd` e `total` recebem os mesmos
+ *   valores e `omni` fica zerado (o arquivo não traz Omni; ele aparece em Receita_por_Canal_UN).
+ */
+export function parseReceitaCanalVDPdvXlsxComLayout(workbook: XLSX.WorkBook): { rows: ReceitaCanalVDPdvRow[]; layout: 'blocos' | 'simples' } {
   const sheet = findSheet(workbook, 'PERFORMANCE POR PDV') ?? findFirstDataSheet(workbook);
   const rows = sheetToRows(sheet);
+  const simplesIdx = rows.findIndex(r => r.some(c => normalizeCell(c) === 'RECEITACICLOATUAL'));
+  if (simplesIdx >= 0) return { rows: parseReceitaCanalVDPdvSimples(rows, simplesIdx), layout: 'simples' };
+  return { rows: parseReceitaCanalVDPdvBlocos(rows), layout: 'blocos' };
+}
+
+export function parseReceitaCanalVDPdvXlsx(workbook: XLSX.WorkBook): ReceitaCanalVDPdvRow[] {
+  return parseReceitaCanalVDPdvXlsxComLayout(workbook).rows;
+}
+
+function parseReceitaCanalVDPdvSimples(rows: unknown[][], headerIdx: number): ReceitaCanalVDPdvRow[] {
+  const header = rows[headerIdx];
+  const iUn = findColByName(header, 'UN');
+  const iPdv = findColByName(header, 'PDV');
+  const iCidade = findColByName(header, 'CIDADE');
+  const iLocal = findColByName(header, 'LOCAL DO PDV');
+  const iAnterior = findColByName(header, 'RECEITA CICLO ANTERIOR');
+  const iAtual = findColByName(header, 'RECEITA CICLO ATUAL');
+  const iMeta = findColByName(header, 'META PEF');
+  const iGapValor = findColByName(header, 'GAP ACORDADO (R$)');
+  const iGapPct = findColByName(header, 'GAP ACORDADO (%)');
+  const iRealizado = findColByName(header, 'REALIZADO');
+  const zero: ReceitaCanalVDBlock = { receitaAnterior: 0, receitaAtual: 0, metaPef: 0, gapAcordadoValor: 0, gapAcordadoPct: null, realizadoPct: null };
+  const cell = (r: unknown[], i: number) => (i >= 0 ? r[i] : '');
+
+  return rows
+    .filter((r, idx) => {
+      if (idx === headerIdx) return false;
+      const first = String(r[iUn >= 0 ? iUn : 0] ?? '').trim();
+      // A 1ª linha é o título da aba ("PERFORMANCE POR PDV"), com todas as outras células vazias.
+      return first !== '' && r.slice(1).some(c => String(c ?? '').trim() !== '');
+    })
+    .map(r => {
+      const block: ReceitaCanalVDBlock = {
+        receitaAnterior: toNum(cell(r, iAnterior)),
+        receitaAtual: toNum(cell(r, iAtual)),
+        metaPef: toNum(cell(r, iMeta)),
+        gapAcordadoValor: toNum(cell(r, iGapValor)),
+        gapAcordadoPct: iGapPct >= 0 ? fractionToPct(r[iGapPct]) : null,
+        realizadoPct: iRealizado >= 0 ? fractionToPct(r[iRealizado]) : null,
+      };
+      const un = String(r[iUn >= 0 ? iUn : 0] ?? '').trim();
+      return {
+        un: isTotalRow(un) ? 'TOTAL' : canonicalizeUN(un).label,
+        pdvCodigo: String(cell(r, iPdv) ?? '').trim() || null,
+        cidade: String(cell(r, iCidade) ?? '').trim(),
+        localPdv: String(cell(r, iLocal) ?? '').trim(),
+        vd: block,
+        omni: { ...zero },
+        total: { ...block },
+      };
+    });
+}
+
+function parseReceitaCanalVDPdvBlocos(rows: unknown[][]): ReceitaCanalVDPdvRow[] {
   if (rows.length < 4) return [];
   const groupRowIdx = findHeaderRowIndex(rows, 'VD', 'OMNI', 'TOTAL');
   const groupRow = rows[groupRowIdx];
@@ -117,14 +196,6 @@ export function parseReceitaCanalVDPdvXlsx(workbook: XLSX.WorkBook): ReceitaCana
     for (let i = start; i < end; i++) if (normalizeCell(labelRow[i]) === target) return i;
     for (let i = start; i < end; i++) if (normalizeCell(labelRow[i]).includes(target)) return i;
     return -1;
-  }
-  // "GAP ACORDADO (%)" e "REALIZADO (%)" já vêm como fração do Excel (0.9335 = 93,35%) — sem a
-  // heurística de toPct (fração se |n|<=1), que erraria quando o realizado passa de 100% da meta.
-  function fractionToPct(v: unknown): number | null {
-    if (typeof v === 'number') return v * 100;
-    const s = String(v ?? '').trim();
-    if (s === '' || s === '-' || s === '--') return null;
-    return toNum(v) * 100;
   }
   function readBlock(start: number, r: unknown[]): ReceitaCanalVDBlock {
     const iAnterior = colInBlock(start, 'RECEITA ANTERIOR (R$)');
@@ -285,7 +356,155 @@ export function parseReceitaPeriodoXlsx(workbook: XLSX.WorkBook): ReceitaPeriodo
   return {
     dia: parsePeriodoSheet(findSheet(workbook, 'DIA')),
     mes: parsePeriodoSheet(findSheet(workbook, 'MÊS', 'MES')),
+    ciclo: parsePeriodoSheet(findSheet(workbook, 'CICLO')),
   };
+}
+
+/** ReceitaCanalVD_por_Ciclo.xlsx — aba CICLO: título, cabeçalho e uma linha por ciclo, com a meta do ciclo atual e do anterior. */
+export function parseReceitaCanalVDCicloXlsx(workbook: XLSX.WorkBook): ReceitaCanalVDCicloRow[] {
+  const rows = sheetToRows(findSheet(workbook, 'CICLO') ?? findFirstDataSheet(workbook));
+  const headerIdx = rows.findIndex(r => r.some(c => normalizeCell(c) === 'CICLOATUAL'));
+  if (headerIdx < 0) return [];
+  const header = rows[headerIdx];
+  const iCiclo = findColByName(header, 'CICLO');
+  const iAnterior = findColByName(header, 'CICLO ANTERIOR');
+  const iAtual = findColByName(header, 'CICLO ATUAL');
+  const iMetaAtual = findColByName(header, 'META DO CICLO ATUAL');
+  const iMetaAnterior = findColByName(header, 'META DO CICLO ANTERIOR');
+  return rows.slice(headerIdx + 1)
+    .filter(r => String(r[iCiclo] ?? '').trim() !== '' && !isTotalRow(String(r[iCiclo])))
+    .map(r => ({
+      ciclo: String(r[iCiclo]).trim(),
+      receitaAnterior: toNum(r[iAnterior]),
+      receitaAtual: toNum(r[iAtual]),
+      metaAtual: iMetaAtual >= 0 ? toNum(r[iMetaAtual]) : 0,
+      metaAnterior: iMetaAnterior >= 0 ? toNum(r[iMetaAnterior]) : 0,
+    }));
+}
+
+function periodoToAnteriorAtual(rows: ReceitaPeriodoRow[]): VDAnteriorAtualRow[] {
+  return rows
+    .filter(r => !isTotalRow(r.label))
+    .map(r => ({ nome: r.label, anterior: r.receitaAnterior, atual: r.receitaAtual, variacaoPct: r.variacaoPct }));
+}
+
+/** VendaDireta_Receita_por_Ciclo.xlsx — mesma estrutura da aba CICLO de Receita_por_Ciclo, mas em base GMV. */
+export function parseVDReceitaCicloXlsx(workbook: XLSX.WorkBook): VDAnteriorAtualRow[] {
+  return periodoToAnteriorAtual(parsePeriodoSheet(findSheet(workbook, 'CICLO') ?? findFirstDataSheet(workbook)));
+}
+
+/** VendaDireta_Distribuicao_da_Receita.xlsx — abas CP e PDV, receita GMV anterior × atual (cabeçalho de grupo "RECEITA (R$)" + rótulos). */
+export function parseDistribuicaoReceitaXlsx(workbook: XLSX.WorkBook): VDDistribuicaoReceitaDataset {
+  return {
+    cp: periodoToAnteriorAtual(parsePeriodoSheet(findSheet(workbook, 'CP'))),
+    pdv: periodoToAnteriorAtual(parsePeriodoSheet(findSheet(workbook, 'PDV'))),
+  };
+}
+
+/**
+ * Uma aba de VendaDireta_Distribuicao_da_receita_por_categoria.xlsx: linha de grupo com o nome de cada
+ * categoria e, embaixo, "TOTAL RECEITA (R$)" + pares "RECEITA (R$)"/"PARTICIPAÇÃO (%)". O i-ésimo par é
+ * casado com a i-ésima categoria da linha de grupo, na ordem — na aba CONSULTOR (A) a linha de grupo vem
+ * deslocada uma coluna à direita da de rótulos, então casar pela posição exata erraria a categoria.
+ */
+function parseCategoriaMixSheet(sheet: XLSX.WorkSheet | null): VDReceitaCategoriaMixRow[] {
+  const rows = sheetToRows(sheet);
+  if (rows.length < 3) return [];
+  const groupRow = rows[0];
+  const labelRow = rows[1];
+  const categorias = groupRow.map(c => String(c ?? '').trim()).filter(c => c !== '');
+  const iTotal = findColByName(labelRow, 'TOTAL RECEITA (R$)');
+  const receitaCols = labelRow
+    .map((c, i) => ({ n: normalizeCell(c), i }))
+    .filter(x => x.n === normalizeCell('RECEITA (R$)'))
+    .map(x => x.i);
+  return rows.slice(2)
+    .filter(r => String(r[0] ?? '').trim() !== '' && !isTotalRow(String(r[0])))
+    .map(r => ({
+      nome: String(r[0]).trim(),
+      totalReceita: iTotal >= 0 ? toNum(r[iTotal]) : 0,
+      categorias: categorias.map((categoria, k) => {
+        const i = receitaCols[k];
+        return {
+          categoria,
+          receita: i != null ? toNum(r[i]) : 0,
+          participacaoPct: i != null ? toPct(r[i + 1]) : 0,
+        };
+      }),
+    }));
+}
+
+export function parseReceitaCategoriaMixXlsx(workbook: XLSX.WorkBook): VDReceitaCategoriaMixDataset {
+  return {
+    cp: parseCategoriaMixSheet(findSheet(workbook, 'CP')),
+    pdv: parseCategoriaMixSheet(findSheet(workbook, 'PDV')),
+    consultor: parseCategoriaMixSheet(findSheet(workbook, 'CONSULTOR (A)', 'CONSULTOR')),
+  };
+}
+
+/** VendaDireta_Arvore_De_Pedidos.xlsx — aba PEDIDOS: rótulo | CICLO ANTERIOR | CICLO ATUAL | VARIAÇÃO (%). */
+export function parseArvorePedidosXlsx(workbook: XLSX.WorkBook): ArvorePedidosDataset {
+  const rows = sheetToRows(findSheet(workbook, 'PEDIDOS') ?? findFirstDataSheet(workbook));
+  const headerIdx = findHeaderRowIndex(rows, 'CICLO ATUAL');
+  const header = rows[headerIdx] ?? [];
+  const iAnterior = findColByName(header, 'CICLO ANTERIOR');
+  const iAtual = findColByName(header, 'CICLO ATUAL');
+  const iVar = findColByName(header, 'VARIAÇÃO (%)', 'VARIAÇÃO');
+  const lidas: ArvorePedidosRow[] = rows.slice(headerIdx + 1)
+    .filter(r => String(r[0] ?? '').trim() !== '')
+    .map(r => ({
+      nome: String(r[0]).trim(),
+      anterior: toNum(r[iAnterior]),
+      atual: toNum(r[iAtual]),
+      variacaoPct: iVar >= 0 ? toPct(r[iVar]) : 0,
+    }));
+  const find = (re: RegExp) => lidas.find(r => re.test(r.nome)) ?? null;
+  return {
+    totalPedidos: find(/^total$/i),
+    pedidoMedio: find(/pedido m[eé]dio/i),
+    volumeItens: find(/volume de itens/i),
+    faixas: lidas.filter(r => /R\$/.test(r.nome)),
+  };
+}
+
+function parsePerformanceSheet(sheet: XLSX.WorkSheet | null): PerformancePdvSupervisorRow[] {
+  const rows = sheetToRows(sheet);
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iReceita = findColByName(header, 'RECEITA');
+  const iPedidos = findColByName(header, 'QTD PEDIDOS');
+  const iItens = findColByName(header, 'ITENS POR PEDIDO');
+  const iMedio = findColByName(header, 'PEDIDO MÉDIO', 'PEDIDO MEDIO');
+  const faixaCols = header.map((h, i) => ({ h: String(h ?? '').trim(), i })).filter(x => /R\$/.test(x.h));
+  return rows.slice(1)
+    .filter(r => String(r[0] ?? '').trim() !== '')
+    .map(r => ({
+      nome: String(r[0]).trim(),
+      receita: toNum(r[iReceita]),
+      qtdPedidos: toNum(r[iPedidos]),
+      itensPorPedidoArquivo: iItens >= 0 ? toNum(r[iItens]) : 0,
+      pedidoMedioArquivo: iMedio >= 0 ? toNum(r[iMedio]) : 0,
+      faixas: faixaCols.map(c => ({ faixa: c.h, quantidade: toNum(r[c.i]) })),
+    }));
+}
+
+/** VendaDireta_Performance_PDV_Supervisor.xlsx — abas PDV e SUPERVISOR, uma linha por PDV/supervisor + TOTAL. */
+export function parsePerformancePdvSupervisorXlsx(workbook: XLSX.WorkBook): PerformancePdvSupervisorDataset {
+  return {
+    pdv: parsePerformanceSheet(findSheet(workbook, 'PDV')),
+    supervisor: parsePerformanceSheet(findSheet(workbook, 'SUPERVISOR')),
+  };
+}
+
+/** VendaDireta_Receita_Por_UN.xlsx — UNIDADE DE NEGÓCIO | RECEITA, só o ciclo atual. */
+export function parseReceitaUnGmvXlsx(workbook: XLSX.WorkBook): VDReceitaUnGmvRow[] {
+  const rows = sheetToRows(findSheet(workbook, 'UNIDADE DE NEGÓCIO', 'UNIDADE') ?? findFirstDataSheet(workbook));
+  if (rows.length < 2) return [];
+  const iReceita = findColByName(rows[0], 'RECEITA');
+  return rows.slice(1)
+    .filter(r => String(r[0] ?? '').trim() !== '' && !isTotalRow(String(r[0])))
+    .map(r => ({ un: canonicalizeUN(String(r[0]).trim()).label, receita: toNum(r[iReceita]) }))
+    .sort((a, b) => b.receita - a.receita);
 }
 
 /** Receita_por_Canal_UN.xlsx (legado) — canal + sub-linhas de UN indentadas (prefixo de espaços no nome). */
@@ -446,6 +665,87 @@ export function parseRupturaPorItemXlsx(workbook: XLSX.WorkBook): RupturaItemRow
 
 // --- Base de revendedores ---
 
+/** ativas_uma_compra_canais_digitais.xlsx / ativas_uma_compra_er.xlsx — CICLO | ATIVAS | COM UMA COMPRA OU MAIS ... | % COM UMA COMPRA ... */
+export function parseAtivasUmaCompraXlsx(workbook: XLSX.WorkBook): AtivasUmaCompraRow | null {
+  const rows = sheetToRows(findFirstDataSheet(workbook));
+  if (rows.length < 2) return null;
+  const [header, data] = rows;
+  const iCiclo = findColByName(header, 'CICLO');
+  const iAtivas = findColByName(header, 'ATIVAS');
+  const iCom = colStartsWith(header, 'COM UMA COMPRA');
+  const iPct = colStartsWith(header, '%');
+  return {
+    ciclo: iCiclo >= 0 ? String(data[iCiclo] ?? '').trim() : '',
+    ativas: toNum(data[iAtivas]),
+    comCompra: toNum(data[iCom]),
+    pct: iPct >= 0 ? toPct(data[iPct]) : 0,
+  };
+}
+
+/** Monitoramento_base_com_penetracao_em_ferramentas_digitais_pdv.xlsx — PDV (+ TOTAL) | Base Ativa | compra no ER | compra nos canais digitais. */
+export function parseFerramentasDigitaisPdvXlsx(workbook: XLSX.WorkBook): FerramentasDigitaisPdvRow[] {
+  const rows = sheetToRows(findFirstDataSheet(workbook));
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iAtivas = findColByName(header, 'BASE ATIVA');
+  const iER = header.findIndex(h => normalizeCell(h).endsWith('NOER'));
+  const iDigitais = header.findIndex(h => normalizeCell(h).endsWith('CANAISDIGITAIS'));
+  return rows.slice(1)
+    .filter(r => String(r[0] ?? '').trim() !== '')
+    .map(r => ({
+      pdv: isTotalRow(String(r[0])) ? 'TOTAL' : String(r[0]).trim(),
+      ativas: toNum(r[iAtivas]),
+      comCompraER: toNum(r[iER]),
+      comCompraCanaisDigitais: toNum(r[iDigitais]),
+    }));
+}
+
+/** BaseComOptOutDeCatalogo_Base_Total_Com_E_Sem_Opt_Out.xlsx */
+export function parseOptOutBaseXlsx(workbook: XLSX.WorkBook): OptOutBaseRow | null {
+  const rows = sheetToRows(findFirstDataSheet(workbook));
+  if (rows.length < 2) return null;
+  const [header, data] = rows;
+  return {
+    ciclo: String(data[findColByName(header, 'CICLO')] ?? '').trim(),
+    baseTotal: toNum(data[findColByName(header, 'BASE TOTAL')]),
+    semOptOut: toNum(data[colStartsWith(header, 'BASE TOTAL SEM OPT')]),
+    comOptOut: toNum(data[colStartsWith(header, 'BASE TOTAL COM OPT')]),
+    pctOptOut: toPct(data[colStartsWith(header, '%')]),
+  };
+}
+
+/** BaseComOptOutDeCatalogo_Det_Base_Total_Com_Opt_Out.xlsx — CICLO | BASE TOTAL COM OPT OUT | A0-I6 | INICIOS | REINICIOS. */
+export function parseOptOutDetalheXlsx(workbook: XLSX.WorkBook): OptOutDetalheRow | null {
+  const rows = sheetToRows(findFirstDataSheet(workbook));
+  if (rows.length < 2) return null;
+  const [header, data] = rows;
+  return {
+    ciclo: String(data[findColByName(header, 'CICLO')] ?? '').trim(),
+    baseComOptOut: toNum(data[colStartsWith(header, 'BASE TOTAL COM OPT')]),
+    a0i6: toNum(data[findColByName(header, 'A0-I6')]),
+    inicios: toNum(data[findColByName(header, 'INICIOS', 'INÍCIOS')]),
+    reinicios: toNum(data[findColByName(header, 'REINICIOS', 'REINÍCIOS')]),
+  };
+}
+
+/** BaseComOptOutDeCatalogo_Opt_Out_de_Catalogos_BOT_por_PDV.xlsx — uma linha por PDV, sem TOTAL. */
+export function parseOptOutPdvXlsx(workbook: XLSX.WorkBook): OptOutPdvRow[] {
+  const rows = sheetToRows(findFirstDataSheet(workbook));
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const iRevendedoras = colStartsWith(header, 'QUANTIDADE DE REVENDEDORAS');
+  const iOptOut = colStartsWith(header, 'QUANTIDADE DE OPT');
+  const iPct = colStartsWith(header, '%');
+  return rows.slice(1)
+    .filter(r => String(r[0] ?? '').trim() !== '' && !isTotalRow(String(r[0])))
+    .map(r => ({
+      pdv: String(r[0]).trim(),
+      revendedoras: toNum(r[iRevendedoras]),
+      comOptOut: toNum(r[iOptOut]),
+      pctOptOut: toPct(r[iPct]),
+    }));
+}
+
 export function parseEvolucaoBaseXlsx(workbook: XLSX.WorkBook): EvolucaoBaseRow[] {
   const sheet = findSheet(workbook, 'EVOLUÇÃO DA BASE', 'EVOLUCAO DA BASE') ?? findFirstDataSheet(workbook);
   const rows = sheetToRows(sheet);
@@ -601,7 +901,7 @@ export function parseAtivasPorTierXlsx(workbook: XLSX.WorkBook): AtivasPorTierRo
     } as AtivasPorTierRow));
 }
 
-/** VendaDireta_Segmentacao_da_Base.xlsx — matriz recência (A0, I1-I6) × tier do BI, header mesclado por grupo de 2 colunas (Quantidade/Participação). */
+/** VendaDireta_Segmentacao_da_Base.xlsx — matriz recência (A0, I1-I6) × tier da Extranet, header mesclado por grupo de 2 colunas (Quantidade/Participação). */
 export function parseSegmentacaoBaseXlsx(workbook: XLSX.WorkBook): SegmentacaoBaseDataset | null {
   const sheet = findSheet(workbook, 'SEGMENTAÇÃO DA BASE') ?? findFirstDataSheet(workbook);
   const rows = sheetToRows(sheet);

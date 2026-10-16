@@ -20,6 +20,7 @@ import VDSellInScreen from '../screens/vd/VDSellInScreen';
 import VDRupturaScreen from '../screens/vd/VDRupturaScreen';
 import VDBaseScreen from '../screens/vd/VDBaseScreen';
 import VDProdutosScreen from '../screens/vd/VDProdutosScreen';
+import VDPedidosMixScreen from '../screens/vd/VDPedidosMixScreen';
 import FVCScreen from '../screens/FVCScreen';
 import { useOrderStore } from '../store/useOrderStore';
 
@@ -56,6 +57,8 @@ function VDApp() {
     screen = <FVCScreen onNavigate={navigate} />;
   } else if (route === 'vd-receita') {
     screen = <VDReceitaScreen onNavigate={navigate} />;
+  } else if (route === 'vd-pedidos-mix') {
+    screen = <VDPedidosMixScreen onNavigate={navigate} />;
   } else if (route === 'vd-sellin') {
     screen = <VDSellInScreen onNavigate={navigate} />;
   } else if (route === 'vd-ruptura') {

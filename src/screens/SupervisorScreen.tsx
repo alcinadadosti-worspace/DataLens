@@ -24,7 +24,7 @@ interface SupervisorRow {
   avgTicket: number;
   avgSLAMinutes: number;
   cancelledCount: number;
-  /** Cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome normalizado — `null` quando não há BI carregado ou o nome não bate com nenhuma linha do relatório. */
+  /** Cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome normalizado — `null` quando não há relatório da Extranet carregado ou o nome não bate com nenhuma linha do relatório. */
   rpa: number | null;
   churnPct: number | null;
 }
@@ -80,7 +80,7 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
       if (sla !== null && sla >= 0) map[key].slaTimes.push(sla);
     }
 
-    // Cruzamento com o BI: várias linhas do Monitoramento podem cair no mesmo nome normalizado (o
+    // Cruzamento com a Extranet: várias linhas do Monitoramento podem cair no mesmo nome normalizado (o
     // arquivo de origem repete o supervisor que atende os dois PDVs, uma linha por PDV) — agregamos em
     // vez de só pegar a primeira linha. Cada média é ponderada pelo seu próprio denominador: RPA é
     // receita ÷ ATIVOS (RPA × ativos reproduz a receita da linha), churn é perda ÷ BASE ATIVA.
@@ -120,7 +120,7 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
 
   const sorted = useMemo(() => {
     return [...supervisorData].sort((a, b) => {
-      // rpa/churnPct podem ser `null` (sem cruzamento com o BI) — tratamos como "menor que
+      // rpa/churnPct podem ser `null` (sem cruzamento com a Extranet) — tratamos como "menor que
       // qualquer número" pra não quebrar a ordenação nem cair na comparação de string.
       const av = a[sortKey] === null ? -Infinity : a[sortKey];
       const bv = b[sortKey] === null ? -Infinity : b[sortKey];
@@ -143,8 +143,8 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
     'Ticket Médio': s.avgTicket,
     'ANS Médio (min)': Math.round(s.avgSLAMinutes),
     'Cancelados': s.cancelledCount,
-    'RPA (BI)': s.rpa !== null ? s.rpa.toFixed(2) : '',
-    '% Churn (BI)': s.churnPct !== null ? s.churnPct.toFixed(2) : '',
+    'RPA (Extranet)': s.rpa !== null ? s.rpa.toFixed(2) : '',
+    '% Churn (Extranet)': s.churnPct !== null ? s.churnPct.toFixed(2) : '',
   }));
 
   const { exportCSV } = useExport(orders);
@@ -302,7 +302,7 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
                       <span style={{ display: 'inline-flex', alignItems: 'center' }}>
                         RPA {sortKey === 'rpa' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                         <span onClick={e => e.stopPropagation()}>
-                          <InfoHint direction="down" text="Receita Por Ativo — cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome de supervisor. '—' quando o nome não bate com nenhuma linha do relatório de BI." />
+                          <InfoHint direction="down" text="Receita Por Ativo — cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome de supervisor. '—' quando o nome não bate com nenhuma linha do relatório da Extranet." />
                         </span>
                       </span>
                     </th>
@@ -310,7 +310,7 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
                       <span style={{ display: 'inline-flex', alignItems: 'center' }}>
                         % Churn {sortKey === 'churnPct' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                         <span onClick={e => e.stopPropagation()}>
-                          <InfoHint direction="down" text="Perda de base dessa estrutura no ciclo, cruzada do mesmo relatório de BI (Monitoramento da Base)." />
+                          <InfoHint direction="down" text="Perda de base dessa estrutura no ciclo, cruzada do mesmo relatório da Extranet (Monitoramento da Base)." />
                         </span>
                       </span>
                     </th>

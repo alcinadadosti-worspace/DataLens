@@ -19,6 +19,20 @@ interface Props {
 const th: React.CSSProperties = { textAlign: 'left', padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--vd-text-secondary, #6B6258)', borderBottom: '1px solid var(--vd-border, #E8E2D6)' };
 const td: React.CSSProperties = { padding: '8px 12px', fontSize: 13, borderBottom: '1px solid var(--vd-border, #E8E2D6)' };
 const tdNum: React.CSSProperties = { ...td, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' };
+const pdvLink: React.CSSProperties = { color: 'var(--vd-accent, #B26A3C)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 };
+
+const fmtPctBR = (n: number) => `${n.toFixed(1).replace('.', ',')}%`;
+
+function MiniStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div style={{ background: 'var(--vd-bg-subtle, #F2EEE2)', borderRadius: 10, padding: '10px 12px' }}>
+      <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>{value}</div>
+      <div style={{ fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)' }}>{sub}</div>
+    </div>
+  );
+}
+
 const tdSmall: React.CSSProperties = { padding: '6px 10px', fontSize: 12, borderBottom: '1px solid var(--vd-border, #E8E2D6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' };
 
 const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
@@ -32,8 +46,18 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
   const detalhada = dataset?.penetracaoAtivosDetalhada;
   const ativasPorTier = dataset?.ativasPorTier ?? [];
   const segmentacao = dataset?.segmentacaoBase;
+  const digitaisPdv = dataset?.ferramentasDigitaisPdv ?? [];
+  const digitaisTotal = digitaisPdv.find(r => r.pdv === 'TOTAL') ?? null;
+  const digitaisPorPdv = digitaisPdv.filter(r => r.pdv !== 'TOTAL');
+  const canaisDigitais = dataset?.ativasCanaisDigitais ?? null;
+  const espacoRevendedor = dataset?.ativasEspacoRevendedor ?? null;
+  const optOutBase = dataset?.optOutBase ?? null;
+  const optOutDetalhe = dataset?.optOutDetalhe ?? null;
+  const optOutPdv = dataset?.optOutPdv ?? [];
+  const hasDigital = digitaisPdv.length > 0 || !!canaisDigitais || !!espacoRevendedor;
+  const hasOptOut = !!optOutBase || optOutPdv.length > 0;
 
-  const hasAnything = evolucao || monitoramento || penetracao.length > 0 || detalhada || ativasPorTier.length > 0 || segmentacao;
+  const hasAnything = evolucao || monitoramento || penetracao.length > 0 || detalhada || ativasPorTier.length > 0 || segmentacao || hasDigital || hasOptOut;
 
   if (!hasAnything) {
     return (
@@ -84,7 +108,7 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
           <KpiCard
             eyebrow="Base ativa"
             value={fmtNumber(evolucao.baseAtiva)}
-            hint="Coluna 'BASE ATIVA' de VendaDireta_Evolucao_da_base.xlsx (aba EVOLUÇÃO DA BASE, 1 linha só, ciclo atual) — revendedores com pelo menos 1 compra no ciclo."
+            hint="Coluna 'BASE ATIVA' de VendaDireta_Evolucao_da_base.xlsx (aba EVOLUÇÃO DA BASE, 1 linha só, ciclo atual) — na Extranet, base ativa = base total − inícios − reinícios (confere em todas as linhas do Monitoramento, por PDV e por supervisor, nos Ciclos 13 e 14). Não é o número de quem comprou no ciclo: esse é 'Ativos' (ver Penetração de base e Canais digitais, abaixo)."
           />
           <KpiCard
             eyebrow="Início de ciclo"
@@ -257,11 +281,106 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
         </div>
       )}
 
+      {(hasDigital || hasOptOut) && (
+        <div style={{ display: 'grid', gridTemplateColumns: hasDigital && hasOptOut ? '1fr 1fr' : '1fr', gap: 20, marginBottom: 20 }}>
+          {hasDigital && (
+            <ChartCard
+              title="Canais digitais e Espaço Revendedor"
+              subtitle="Das revendedoras que compraram no ciclo, quantas usaram cada ferramenta"
+              hint="ativas_uma_compra_canais_digitais.xlsx, ativas_uma_compra_er.xlsx e Monitoramento_base_com_penetracao_em_ferramentas_digitais_pdv.xlsx (este, por PDV). 'Ativas' são as revendedoras que compraram no ciclo — o arquivo por PDV chama a coluna de 'Base Ativa', mas o número é o de ativos, não a base ativa do card no topo. ER = Espaço Revendedor, o site/app de pedidos da revendedora. Canais digitais é um conjunto mais amplo de ferramentas digitais de compra; uma mesma revendedora pode ter usado os dois."
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                {canaisDigitais && (
+                  <MiniStat label="Canais digitais" value={fmtPctBR(canaisDigitais.pct)} sub={`${fmtNumber(canaisDigitais.comCompra)} de ${fmtNumber(canaisDigitais.ativas)} ativas`} />
+                )}
+                {espacoRevendedor && (
+                  <MiniStat label="Espaço Revendedor" value={fmtPctBR(espacoRevendedor.pct)} sub={`${fmtNumber(espacoRevendedor.comCompra)} de ${fmtNumber(espacoRevendedor.ativas)} ativas`} />
+                )}
+              </div>
+              {digitaisPorPdv.length > 0 && (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={th}>PDV</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Ativas</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Canais digitais</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Espaço Revendedor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...digitaisPorPdv, ...(digitaisTotal ? [digitaisTotal] : [])].map((r, i) => {
+                      const total = r.pdv === 'TOTAL';
+                      const p = (n: number) => (r.ativas > 0 ? fmtPctBR((n / r.ativas) * 100) : '—');
+                      return (
+                        <tr key={i} style={total ? { fontWeight: 600 } : undefined}>
+                          <td style={td}>
+                            {total ? 'Total' : (
+                              <span onClick={() => setOpenPdv(r.pdv)} title="Ver PDV 360" style={pdvLink}>{r.pdv}</span>
+                            )}
+                          </td>
+                          <td style={tdNum}>{fmtNumber(r.ativas)}</td>
+                          <td style={tdNum}>{p(r.comCompraCanaisDigitais)} <span style={{ color: 'var(--vd-text-muted, #9B9287)' }}>({fmtNumber(r.comCompraCanaisDigitais)})</span></td>
+                          <td style={tdNum}>{p(r.comCompraER)} <span style={{ color: 'var(--vd-text-muted, #9B9287)' }}>({fmtNumber(r.comCompraER)})</span></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </ChartCard>
+          )}
+
+          {hasOptOut && (
+            <ChartCard
+              title="Opt-out de catálogos (BOT)"
+              subtitle="Revendedoras que pediram para não receber o catálogo impresso de O Boticário"
+              hint="BaseComOptOutDeCatalogo_*.xlsx (3 arquivos): base total com e sem opt-out, o detalhe da base com opt-out (A0-I6 / inícios / reinícios) e o opt-out por PDV. Opt-out é a revendedora que optou por não receber o catálogo físico. A base total é a mesma do Monitoramento da base."
+            >
+              {optOutBase && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <MiniStat label="Com opt-out" value={fmtPctBR(optOutBase.pctOptOut)} sub={`${fmtNumber(optOutBase.comOptOut)} de ${fmtNumber(optOutBase.baseTotal)} na base total`} />
+                  <MiniStat label="Recebem catálogo" value={fmtNumber(optOutBase.semOptOut)} sub="sem opt-out" />
+                </div>
+              )}
+              {optOutDetalhe && (
+                <div style={{ fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 14 }}>
+                  Das {fmtNumber(optOutDetalhe.baseComOptOut)} com opt-out, {fmtNumber(optOutDetalhe.a0i6)} estão na base A0-I6;
+                  {' '}{fmtNumber(optOutDetalhe.inicios)} {optOutDetalhe.inicios === 1 ? 'é início' : 'são inícios'} e
+                  {' '}{fmtNumber(optOutDetalhe.reinicios)} {optOutDetalhe.reinicios === 1 ? 'é reinício' : 'são reinícios'} do ciclo.
+                </div>
+              )}
+              {optOutPdv.length > 0 && (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={th}>PDV</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Revendedoras</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Com opt-out</th>
+                      <th style={{ ...th, textAlign: 'right' }}>% opt-out</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {optOutPdv.map((r, i) => (
+                      <tr key={i}>
+                        <td style={td}><span onClick={() => setOpenPdv(r.pdv)} title="Ver PDV 360" style={pdvLink}>{r.pdv}</span></td>
+                        <td style={tdNum}>{fmtNumber(r.revendedoras)}</td>
+                        <td style={tdNum}>{fmtNumber(r.comOptOut)}</td>
+                        <td style={tdNum}>{fmtPctBR(r.pctOptOut)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </ChartCard>
+          )}
+        </div>
+      )}
+
       {segmentacao && (
         <ChartCard
           title="Segmentação da base (CGB)"
-          subtitle="Recência × tier — taxonomia própria do BI, separada dos 10 tiers visuais do app"
-          hint="VendaDireta_Segmentacao_da_Base.xlsx (aba 'SEGMENTAÇÃO DA BASE CGB') — matriz recência (linhas A0=ativo, I1-I6=inativo) × tier do BI (colunas, em pares Quantidade/Participação). BLUE e SEM CLASSIFICAÇÃO só existem neste relatório — não têm correspondência confirmada com Revendedor/Bronze/Prata/etc. usados no resto do app, por isso ficam com rótulo próprio aqui em vez de tentar mapear."
+          subtitle="Recência × tier — taxonomia própria da Extranet, separada dos 10 tiers visuais do app"
+          hint="VendaDireta_Segmentacao_da_Base.xlsx (aba 'SEGMENTAÇÃO DA BASE CGB') — matriz recência (linhas A0=ativo, I1-I6=inativo) × tier da Extranet (colunas, em pares Quantidade/Participação). BLUE e SEM CLASSIFICAÇÃO só existem neste relatório — não têm correspondência confirmada com Revendedor/Bronze/Prata/etc. usados no resto do app, por isso ficam com rótulo próprio aqui em vez de tentar mapear."
         >
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
@@ -294,7 +413,7 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
       )}
 
       <div style={{ marginTop: 20 }}>
-        <GlossarioPanel termos={['cgb', 'rpa']} />
+        <GlossarioPanel termos={['cgb', 'rpa', 'er', 'optout']} />
       </div>
 
       <PdvDetailModal pdvCodigo={openPdv} onClose={() => setOpenPdv(null)} />

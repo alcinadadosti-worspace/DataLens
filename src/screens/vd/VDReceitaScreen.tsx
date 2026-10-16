@@ -45,15 +45,21 @@ const CATEGORIA_TABS = [
 const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
   const dataset = useVDCorporateStore(s => s.dataset);
   const orders = useOrderStore(s => s.orders);
-  const [periodoTab, setPeriodoTab] = useState<'dia' | 'mes'>('dia');
+  const [periodoTabSel, setPeriodoTab] = useState<'dia' | 'mes' | 'ciclo' | null>(null);
   const [catTab, setCatTab] = useState<typeof CATEGORIA_TABS[number]['id']>('categoria');
   const [openPdv, setOpenPdv] = useState<string | null>(null);
 
   const pdvRows = dataset?.receitaCanalVDPdv ?? [];
   const totalRow = pdvRows.find(r => r.un.trim().toUpperCase() === 'TOTAL');
   const unRows = pdvRows.filter(r => r.un.trim().toUpperCase() !== 'TOTAL');
+  // Ciclo 14+: o arquivo traz uma receita só (canal VD), sem os blocos VD / Omni Envio ER / Total.
+  const semBlocos = dataset?.receitaCanalVDPdvLayout === 'simples';
+  const tipoReceita = dataset?.reportContexts.receitaCanalVDPdv?.tipoReceita ?? null;
+  // Meta zerada = a Extranet ainda não lançou a meta PEF do ciclo (Ciclo 14: zero em todos os arquivos).
+  const semMeta = !!totalRow && totalRow.total.metaPef === 0;
+  const omniCanalUn = dataset?.receitaCanalUn?.find(r => !r.indent && /^omnichannel vd$/i.test(r.canal.trim())) ?? null;
 
-  // Extrato inteiro, sem os filtros globais: o total do BI é o ciclo todo, então comparar com um
+  // Extrato inteiro, sem os filtros globais: o total da Extranet é o ciclo todo, então comparar com um
   // recorte (supervisor, cidade, tier...) mostraria uma divergência que não existe.
   const reconciliacao = useMemo(() => {
     if (orders.length === 0 || !totalRow) return null;
@@ -76,7 +82,10 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
     );
   }
 
+  const periodoTabs = (['dia', 'mes', 'ciclo'] as const).filter(t => (dataset.receitaPeriodo?.[t] ?? []).some(r => r.label.toUpperCase() !== 'TOTAL'));
+  const periodoTab = periodoTabSel && periodoTabs.includes(periodoTabSel) ? periodoTabSel : periodoTabs[0] ?? 'dia';
   const periodoRows: ReceitaPeriodoRow[] = dataset.receitaPeriodo?.[periodoTab] ?? [];
+  const periodoLabel = { dia: 'Dia', mes: 'Mês', ciclo: 'Ciclo' } as const;
   const catRows: VDReceitaCategoriaRow[] = dataset.receitaCategoria?.[catTab] ?? [];
 
   return (
@@ -89,39 +98,64 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
       {totalRow && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
           <KpiCard
-            eyebrow="Receita atual (VD+OMNI)"
+            eyebrow={semBlocos ? 'Receita atual (VD)' : 'Receita atual (VD+OMNI)'}
             value={fmtBRL(totalRow.total.receitaAtual)}
             delta={fmtPct(((totalRow.total.receitaAtual - totalRow.total.receitaAnterior) / (totalRow.total.receitaAnterior || 1)) * 100)}
             deltaDirection={totalRow.total.receitaAtual >= totalRow.total.receitaAnterior ? 'up' : 'down'}
-            meta="vs. ciclo anterior"
-            hint="Coluna 'RECEITA ATUAL (R$)' do bloco TOTAL, linha TOTAL de ReceitaCanalVD_Performance_por_PDV.xlsx — soma VD + Omni Envio ER de todos os PDVs. A variação compara com a coluna 'RECEITA ANTERIOR (R$)' do mesmo bloco."
+            meta={`vs. mesmo ciclo do ano anterior${tipoReceita ? ` · ${tipoReceita}` : ''}`}
+            hint={semBlocos
+              ? "Coluna 'RECEITA CICLO ATUAL' da linha TOTAL de ReceitaCanalVD_Performance_por_PDV.xlsx — receita do canal Venda Direta de todos os PDVs, na base declarada na aba FILTROS. A partir do Ciclo 14 o arquivo não separa mais VD de Omni Envio ER. A variação compara com 'RECEITA CICLO ANTERIOR', que é o mesmo ciclo do ano passado."
+              : "Coluna 'RECEITA ATUAL (R$)' do bloco TOTAL, linha TOTAL de ReceitaCanalVD_Performance_por_PDV.xlsx — soma VD + Omni Envio ER de todos os PDVs. A variação compara com a coluna 'RECEITA ANTERIOR (R$)' do mesmo bloco."}
           />
-          <KpiCard
-            eyebrow="Meta PEF"
-            value={fmtBRL(totalRow.total.metaPef)}
-            delta={totalRow.total.realizadoPct !== null ? fmtPct(totalRow.total.realizadoPct - 100) : undefined}
-            deltaDirection={(totalRow.total.realizadoPct ?? 0) >= 100 ? 'up' : 'down'}
-            meta={totalRow.total.realizadoPct !== null ? `da meta · ${totalRow.total.realizadoPct.toFixed(2).replace('.', ',')}% realizado` : undefined}
-            hint="Coluna 'META PEF (R$)' do bloco TOTAL, linha TOTAL. A variação é quanto falta (ou sobra) para a meta, e o % realizado vem direto da coluna 'REALIZADO (%)' do arquivo (já é fração do Excel, não recalculamos)."
-          />
+          {semMeta ? (
+            <KpiCard
+              eyebrow="Meta PEF"
+              value="Não lançada"
+              footnote="a Extranet exportou a meta zerada"
+              hint="A coluna 'META PEF' veio 0 em todos os PDVs e UNs (e 'META DO CICLO ATUAL' também em ReceitaCanalVD_por_Ciclo). Isso quer dizer que a meta do ciclo ainda não foi cadastrada na Extranet — não que a meta seja zero. Por isso o % realizado e o gap ficam sem valor até a meta ser lançada e os arquivos exportados de novo."
+            />
+          ) : (
+            <KpiCard
+              eyebrow="Meta PEF"
+              value={fmtBRL(totalRow.total.metaPef)}
+              delta={totalRow.total.realizadoPct !== null ? fmtPct(totalRow.total.realizadoPct - 100) : undefined}
+              deltaDirection={(totalRow.total.realizadoPct ?? 0) >= 100 ? 'up' : 'down'}
+              meta={totalRow.total.realizadoPct !== null ? `da meta · ${totalRow.total.realizadoPct.toFixed(2).replace('.', ',')}% realizado` : undefined}
+              hint="Coluna 'META PEF (R$)' do bloco TOTAL, linha TOTAL. A variação é quanto falta (ou sobra) para a meta, e o % realizado vem direto da coluna 'REALIZADO (%)' do arquivo (já é fração do Excel, não recalculamos)."
+            />
+          )}
           <KpiCard
             eyebrow="Gap acordado"
             // Sinal de menos tipográfico (U+2212): com o hífen comum o navegador quebrava a linha logo após o "-".
-            value={fmtBRL(totalRow.total.gapAcordadoValor).replace(/^-/, '\u2212')}
-            hint="Coluna 'GAP ACORDADO (R$)' do bloco TOTAL, linha TOTAL — diferença já calculada pelo próprio relatório entre receita atual e meta PEF acordada, não recalculada por nós."
+            value={semMeta ? '—' : fmtBRL(totalRow.total.gapAcordadoValor).replace(/^-/, '\u2212')}
+            footnote={semMeta ? 'sem meta, não há gap' : undefined}
+            hint={semMeta
+              ? "Sem meta lançada, o próprio arquivo preenche 'GAP ACORDADO (R$)' com a receita inteira (receita − 0), o que não diz nada — por isso não mostramos o valor."
+              : "Coluna 'GAP ACORDADO (R$)' do bloco TOTAL, linha TOTAL — diferença já calculada pelo próprio relatório entre receita atual e meta PEF acordada, não recalculada por nós."}
           />
-          <KpiCard
-            eyebrow="Canal Omni Envio ER"
-            value={fmtBRL(totalRow.omni.receitaAtual)}
-            hint="Coluna 'RECEITA ATUAL (R$)' do bloco OMNI ENVIO ER (não do VD), linha TOTAL — receita do canal de entrega remota, somada à parte para não misturar com o VD tradicional."
-          />
+          {semBlocos ? (
+            <KpiCard
+              eyebrow="Canal Omnichannel VD"
+              value={omniCanalUn ? fmtBRL(omniCanalUn.receitaAtual) : '—'}
+              delta={omniCanalUn && omniCanalUn.receitaAnterior > 0 ? fmtPct(omniCanalUn.variacaoPct) : undefined}
+              deltaDirection={(omniCanalUn?.variacaoPct ?? 0) >= 0 ? 'up' : 'down'}
+              footnote={omniCanalUn ? 'não somar à receita VD ao lado' : 'Receita_por_Canal_UN não importado'}
+              hint="A partir do Ciclo 14 ReceitaCanalVD_Performance_por_PDV não traz mais o bloco Omni Envio ER. Este valor vem da linha 'Omnichannel VD' de Receita_por_Canal_UN.xlsx — receita de pedidos Omni atribuídos à Venda Direta. Pode já estar dentro da receita VD do primeiro card (no Ciclo 13, a linha 'Venda Direta' desse arquivo incluía o Omni), por isso não some os dois."
+            />
+          ) : (
+            <KpiCard
+              eyebrow="Canal Omni Envio ER"
+              value={fmtBRL(totalRow.omni.receitaAtual)}
+              hint="Coluna 'RECEITA ATUAL (R$)' do bloco OMNI ENVIO ER (não do VD), linha TOTAL — receita do canal de entrega remota, somada à parte para não misturar com o VD tradicional."
+            />
+          )}
         </div>
       )}
 
       {reconciliacao && (
         <ChartCard
           title="Reconciliação"
-          subtitle="Soma de pedidos elegíveis (Order[], FVC incluído) vs. receita oficial do BI corporativo"
+          subtitle="Soma de pedidos elegíveis (Order[], FVC incluído) vs. receita oficial da Extranet"
           hint="Compara os dois datasets independentes que alimentam o Modo VD — se a diferença for grande, algo mudou na regra de elegibilidade ou no corte de datas entre os dois lotes."
         >
           <div style={{ display: 'flex', gap: 32, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -130,7 +164,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
               <div style={{ fontSize: 22, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRL(reconciliacao.ordersTotal)}</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BI corporativo</div>
+              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Extranet</div>
               <div style={{ fontSize: 22, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRL(reconciliacao.biTotal)}</div>
             </div>
             <div>
@@ -149,11 +183,17 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
       <div style={{ marginTop: 20 }}>
         <ChartCard
           title="Performance por PDV"
-          subtitle="Blocos VD / Omni Envio ER / Total"
-          hint="Uma linha por PDV do arquivo ReceitaCanalVD_Performance_por_PDV.xlsx (aba 'PERFORMANCE POR PDV'). Cada linha traz 3 blocos de colunas repetidos (VD, Omni Envio ER, Total), cada um com receita anterior/atual/meta PEF/gap — lidos pela posição do bloco, não pelo nome sozinho, porque o nome das colunas se repete nos 3 blocos. Clique num #PDV para abrir o PDV 360."
+          subtitle={semBlocos ? `UN × PDV · ${tipoReceita ?? 'receita'} do canal VD, ciclo atual vs. mesmo ciclo do ano anterior` : 'Blocos VD / Omni Envio ER / Total'}
+          hint={semBlocos
+            ? "Uma linha por UN × PDV do arquivo ReceitaCanalVD_Performance_por_PDV.xlsx (aba 'PERFORMANCE POR PDV'). No formato do Ciclo 14 o arquivo tem uma receita só (canal VD), com a linha TOTAL antes do cabeçalho. Meta e % realizado ficam '—' enquanto a meta PEF do ciclo não for lançada na Extranet. Clique num #PDV para abrir o PDV 360."
+            : "Uma linha por PDV do arquivo ReceitaCanalVD_Performance_por_PDV.xlsx (aba 'PERFORMANCE POR PDV'). Cada linha traz 3 blocos de colunas repetidos (VD, Omni Envio ER, Total), cada um com receita anterior/atual/meta PEF/gap — lidos pela posição do bloco, não pelo nome sozinho, porque o nome das colunas se repete nos 3 blocos. Clique num #PDV para abrir o PDV 360."}
           action={
             <Button variant="secondary" size="sm" icon={<i className="ph ph-file-csv" style={{ fontSize: 14 }} />} onClick={() => exportToCSV(
-              unRows.map(r => ({
+              unRows.map(r => semBlocos ? ({
+                UN: r.un, PDV: r.pdvCodigo, Cidade: r.cidade,
+                'Receita Anterior': r.total.receitaAnterior, 'Receita Atual': r.total.receitaAtual,
+                'Meta PEF': semMeta ? '' : r.total.metaPef, '% Realizado': r.total.realizadoPct ?? '',
+              }) : ({
                 UN: r.un, PDV: r.pdvCodigo, Cidade: r.cidade,
                 'VD Atual': r.vd.receitaAtual, 'Omni Atual': r.omni.receitaAtual, 'Total Atual': r.total.receitaAtual,
                 'Meta PEF': r.total.metaPef, '% Realizado': r.total.realizadoPct ?? '',
@@ -170,9 +210,19 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
                 <tr>
                   <th style={th}>UN / PDV</th>
                   <th style={th}>Cidade</th>
-                  <th style={{ ...th, textAlign: 'right' }}>VD atual</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Omni atual</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Total atual</th>
+                  {semBlocos ? (
+                    <>
+                      <th style={{ ...th, textAlign: 'right' }}>Ano anterior</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Atual</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Variação</th>
+                    </>
+                  ) : (
+                    <>
+                      <th style={{ ...th, textAlign: 'right' }}>VD atual</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Omni atual</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Total atual</th>
+                    </>
+                  )}
                   <th style={{ ...th, textAlign: 'right' }}>Meta PEF</th>
                   <th style={{ ...th, textAlign: 'right' }}>% realizado</th>
                 </tr>
@@ -193,10 +243,20 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
                       )}
                     </td>
                     <td style={td}>{r.cidade}</td>
-                    <td style={tdNum}>{fmtBRL(r.vd.receitaAtual)}</td>
-                    <td style={tdNum}>{fmtBRL(r.omni.receitaAtual)}</td>
-                    <td style={tdNum}>{fmtBRL(r.total.receitaAtual)}</td>
-                    <td style={tdNum}>{fmtBRL(r.total.metaPef)}</td>
+                    {semBlocos ? (
+                      <>
+                        <td style={tdNum}>{fmtBRL(r.total.receitaAnterior)}</td>
+                        <td style={tdNum}>{fmtBRL(r.total.receitaAtual)}</td>
+                        <td style={tdNum}>{r.total.receitaAnterior > 0 ? <VarBadge pct={(r.total.receitaAtual / r.total.receitaAnterior - 1) * 100} /> : '—'}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={tdNum}>{fmtBRL(r.vd.receitaAtual)}</td>
+                        <td style={tdNum}>{fmtBRL(r.omni.receitaAtual)}</td>
+                        <td style={tdNum}>{fmtBRL(r.total.receitaAtual)}</td>
+                      </>
+                    )}
+                    <td style={tdNum}>{semMeta ? '—' : fmtBRL(r.total.metaPef)}</td>
                     <td style={tdNum}>{r.total.realizadoPct !== null ? `${r.total.realizadoPct.toFixed(1).replace('.', ',')}%` : '—'}</td>
                   </tr>
                 ))}
@@ -210,7 +270,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
         <div style={{ marginTop: 20 }}>
           <ChartCard
             title="Meta por UN"
-            subtitle="Composição Venda Direta x Omni Envio ER, por unidade de negócio"
+            subtitle={dataset.receitaCanalVDUn.composicaoTotal.length > 0 ? 'Composição Venda Direta x Omni Envio ER, por unidade de negócio' : `Realizado vs. mesmo ciclo do ano anterior, por unidade de negócio${semMeta ? ' · meta ainda não lançada' : ''}`}
             hint="ReceitaCanalVD_por_UN.xlsx (aba 'META POR UN') traz um bloco Meta/Realizado/Anterior por UN, seguido de um sub-bloco 'Composição Receita:' com a mesma UN quebrada em Venda Direta x Omni Envio ER — a tabela usa só a linha de totais de cada UN; a composição de cada uma fica disponível mas não é exibida aqui em detalhe."
           >
             <div style={{ overflowX: 'auto' }}>
@@ -228,7 +288,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
                   {dataset.receitaCanalVDUn.porUn.map((r, i) => (
                     <tr key={i}>
                       <td style={td}>{r.un}</td>
-                      <td style={tdNum}>{fmtBRL(r.meta)}</td>
+                      <td style={tdNum}>{r.meta > 0 ? fmtBRL(r.meta) : '—'}</td>
                       <td style={tdNum}>{fmtBRL(r.realizado)}</td>
                       <td style={tdNum}>{fmtBRL(r.anterior)}</td>
                       <td style={tdNum}><VarBadge pct={r.variacaoPct} /></td>
@@ -244,24 +304,24 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
       {periodoRows.length > 0 && (
         <div style={{ marginTop: 20 }}>
           <ChartCard
-            title="Receita por período"
-            subtitle="Ciclo atual vs. anterior"
-            hint="Receita_por_Periodo.xlsx, abas 'DIA' e 'MÊS' — receita por dia/mês do ciclo atual comparada ao mesmo período do ciclo anterior. A linha 'TOTAL' do arquivo é omitida da tabela (já aparece nos KPIs do topo)."
-            action={
+            title={periodoTabs.length === 1 && periodoTab === 'ciclo' ? 'Receita por ciclo' : 'Receita por período'}
+            subtitle={`Atual vs. mesmo período do ano anterior${dataset.reportContexts.receitaPeriodo?.tipoReceita ? ` · ${dataset.reportContexts.receitaPeriodo.tipoReceita}` : ''}`}
+            hint="Receita_por_Periodo.xlsx (abas 'DIA' e 'MÊS', formato do Ciclo 13) ou Receita_por_Ciclo.xlsx (aba 'CICLO', formato do Ciclo 14 em diante, que não traz mais a quebra por dia). Compara com o mesmo período do ano anterior. A linha 'TOTAL' do arquivo é omitida da tabela (já aparece nos KPIs do topo)."
+            action={periodoTabs.length > 1 ? (
               <div style={{ display: 'flex', gap: 6 }}>
-                {(['dia', 'mes'] as const).map(t => (
+                {periodoTabs.map(t => (
                   <button key={t} onClick={() => setPeriodoTab(t)} className={`glossy-btn${periodoTab === t ? ' glossy-active' : ''}`} style={pillBtn(periodoTab === t)}>
-                    <GlossyContent compact>{t === 'dia' ? 'Dia' : 'Mês'}</GlossyContent>
+                    <GlossyContent compact>{periodoLabel[t]}</GlossyContent>
                   </button>
                 ))}
               </div>
-            }
+            ) : undefined}
           >
             <div style={{ overflowX: 'auto', maxHeight: 340, overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={th}>{periodoTab === 'dia' ? 'Dia' : 'Mês'}</th>
+                    <th style={th}>{periodoLabel[periodoTab]}</th>
                     <th style={{ ...th, textAlign: 'right' }}>Anterior</th>
                     <th style={{ ...th, textAlign: 'right' }}>Atual</th>
                     <th style={{ ...th, textAlign: 'right' }}>Variação</th>

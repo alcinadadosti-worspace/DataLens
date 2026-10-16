@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Order, ParseResult } from '../types/order';
 import { papelToTierId } from '../design-system/tierStyles';
-// Informativo apenas: FVC continua no dataset (os totais oficiais do BI só batem incluindo FVC).
+// Informativo apenas: FVC continua no dataset (os totais oficiais da Extranet só batem incluindo FVC).
 import { isFVCOrder } from '../analytics/fvc';
 
 // Column name mapping from spreadsheet to Order interface

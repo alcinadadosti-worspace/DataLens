@@ -8,7 +8,7 @@ export function isRevenueEligible(order: Order): boolean {
   );
 }
 
-/** Soma de `ValorPraticado` dos pedidos não cancelados — a receita que se compara com o BI. */
+/** Soma de `ValorPraticado` dos pedidos não cancelados — a receita que se compara com a Extranet. */
 export function calcEligibleRevenue(orders: Order[]): number {
   return orders.filter(isRevenueEligible).reduce((s, o) => s + o.ValorPraticado, 0);
 }

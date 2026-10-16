@@ -22,7 +22,8 @@ const navItems = [
 
 const corporateNavItems = [
   { id: 'vd-receita',  label: 'Receita & Metas', icon: 'ph-chart-bar' },
-  { id: 'vd-sellin',   label: 'Sell-In',         icon: 'ph-package' },
+  { id: 'vd-pedidos-mix', label: 'Pedidos & Mix', icon: 'ph-receipt' },
+  { id: 'vd-sellin',   label: 'Sell-In & Reposição', icon: 'ph-package' },
   { id: 'vd-ruptura',  label: 'Ruptura',         icon: 'ph-warning-octagon' },
   { id: 'vd-base',     label: 'Base & Segmentação', icon: 'ph-users-three' },
   { id: 'vd-produtos', label: 'Produtos',        icon: 'ph-shopping-bag' },

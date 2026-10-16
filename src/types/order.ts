@@ -59,7 +59,7 @@ export interface ParseResult {
   orders: Order[];
   errors: string[];
   rowCount: number;
-  /** Pedidos de estrutura FVC no lote — informativo. FVC não é mais excluído do dataset (decisão: os totais oficiais do BI corporativo só batem incluindo FVC). */
+  /** Pedidos de estrutura FVC no lote — informativo. FVC não é mais excluído do dataset (decisão: os totais oficiais da Extranet só batem incluindo FVC). */
   fvcCount: number;
   detectedColumns: string[];
 }

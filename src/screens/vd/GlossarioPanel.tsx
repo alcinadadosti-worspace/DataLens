@@ -33,6 +33,26 @@ const GLOSSARIO: Record<string, Term> = {
     significado: 'Meta acordada com o franqueado para o ciclo (aparece em vários relatórios de receita: "META PEF (R$)"). Origem exata da sigla não confirmada.',
     confirmado: false,
   },
+  er: {
+    sigla: 'ER',
+    significado: 'Espaço Revendedor — aparece em "ativas_uma_compra_er" e "Ativas com pelo menos uma compra no ER". Leitura pelo contexto (ferramenta digital de pedido da revendedora), não confirmada com quem gera o relatório.',
+    confirmado: false,
+  },
+  optout: {
+    sigla: 'Opt-out de catálogo',
+    significado: 'Revendedora que optou por não receber o catálogo impresso. Os relatórios BaseComOptOutDeCatalogo trazem só o opt-out "BOT" (O Boticário).',
+    confirmado: true,
+  },
+  giro: {
+    sigla: 'Giro',
+    significado: 'Venda real ÷ pedido faturado, em unidades — quanto do estoque reposto no ciclo já foi vendido às revendedoras. Confirmado pela conta: os números da Visão geral de pedidos reproduzem o % do arquivo.',
+    confirmado: true,
+  },
+  aderencia: {
+    sigla: 'Aderência por curva',
+    significado: 'Quanto do pedido sugerido foi seguido em cada curva de produtos (A = os que mais vendem; E = os de menor giro). A fórmula exata não vem no arquivo.',
+    confirmado: false,
+  },
 };
 
 interface Props {
