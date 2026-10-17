@@ -496,6 +496,12 @@ reparadas por quebra de linha no nome do produto, ver §2.2).
   e "META DO CICLO ANTERIOR" = 0. Ou seja: a meta do Ciclo 14 ainda não foi lançada na Extranet. Sem meta, o
   arquivo preenche `GAP ACORDADO (R$)` com a receita inteira e `REALIZADO` com "-". O app mostra "Não
   lançada" e esconde gap e % realizado (Receita & Metas, PDV 360) em vez de exibir R$ 0,00 como meta.
+  **Atualização (17/10/2026):** o time informou a meta PEF do canal VD no Ciclo 14 — R$ 4.314.059,88,
+  sendo R$ 4.306.411,00 de Venda Direta e R$ 7.648,88 de Omni Envio ER. Ela fica em
+  `src/analytics/metaPefCanalVD.ts` (casada pelo CP e pelo "CICLO ATUAL" da aba FILTROS) e só é usada
+  quando o arquivo traz meta 0. Como existe só o total do canal, PDVs e UNs continuam sem meta; o %
+  realizado e o gap em Receita & Metas comparam a receita VD com a meta VD, e o card Omnichannel VD
+  compara com a meta Omni.
 - **`ReceitaCanalVD_por_UN`** não traz mais o sub-bloco "Composição Receita:" (VD × Omni) de cada UN —
   `composicao` e `composicaoTotal` ficam vazios.
 - **`ReceitaCanalVD_por_Periodo` → `ReceitaCanalVD_por_Ciclo`.** No Ciclo 13 o arquivo só tinha a aba

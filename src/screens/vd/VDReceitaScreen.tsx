@@ -6,6 +6,7 @@ import GlossyContent from '../../components/ui/GlossyContent';
 import { useVDCorporateStore } from '../../store/useVDCorporateStore';
 import { useOrderStore } from '../../store/useOrderStore';
 import { calcEligibleRevenue } from '../../analytics/financialMetrics';
+import { metaPefCanalVD } from '../../analytics/metaPefCanalVD';
 import { fmtBRL, fmtPct, fmtNumber } from '../../utils/formatters';
 import { ReceitaPeriodoRow, VDReceitaCategoriaRow } from '../../types/vdCorporate';
 import { pillBtn } from './pillBtn';
@@ -55,8 +56,13 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
   // Ciclo 14+: o arquivo traz uma receita só (canal VD), sem os blocos VD / Omni Envio ER / Total.
   const semBlocos = dataset?.receitaCanalVDPdvLayout === 'simples';
   const tipoReceita = dataset?.reportContexts.receitaCanalVDPdv?.tipoReceita ?? null;
-  // Meta zerada = a Extranet ainda não lançou a meta PEF do ciclo (Ciclo 14: zero em todos os arquivos).
-  const semMeta = !!totalRow && totalRow.total.metaPef === 0;
+  // Meta zerada = a Extranet ainda não lançou a meta PEF do ciclo. Se ela foi informada à mão
+  // (metaPefCanalVD.ts), só existe o total do canal: PDVs e UNs continuam sem meta.
+  const metaCanal = metaPefCanalVD(dataset);
+  const metaManual = metaCanal?.origem === 'manual' ? metaCanal : null;
+  const semMeta = !!totalRow && !metaCanal;
+  // Receita VD ÷ meta VD — no layout do Ciclo 14 a receita do arquivo é só a do canal VD, sem Omni.
+  const realizadoVDManual = metaManual && totalRow && metaManual.vd > 0 ? (totalRow.vd.receitaAtual / metaManual.vd) * 100 : null;
   const omniCanalUn = dataset?.receitaCanalUn?.find(r => !r.indent && /^omnichannel vd$/i.test(r.canal.trim())) ?? null;
 
   // Extrato inteiro, sem os filtros globais: o total da Extranet é o ciclo todo, então comparar com um
@@ -107,7 +113,17 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
               ? "Coluna 'RECEITA CICLO ATUAL' da linha TOTAL de ReceitaCanalVD_Performance_por_PDV.xlsx — receita do canal Venda Direta de todos os PDVs, na base declarada na aba FILTROS. A partir do Ciclo 14 o arquivo não separa mais VD de Omni Envio ER. A variação compara com 'RECEITA CICLO ANTERIOR', que é o mesmo ciclo do ano passado."
               : "Coluna 'RECEITA ATUAL (R$)' do bloco TOTAL, linha TOTAL de ReceitaCanalVD_Performance_por_PDV.xlsx — soma VD + Omni Envio ER de todos os PDVs. A variação compara com a coluna 'RECEITA ANTERIOR (R$)' do mesmo bloco."}
           />
-          {semMeta ? (
+          {metaManual ? (
+            <KpiCard
+              eyebrow="Meta PEF"
+              value={fmtBRL(metaManual.total)}
+              delta={realizadoVDManual !== null ? fmtPct(realizadoVDManual - 100) : undefined}
+              deltaDirection={(realizadoVDManual ?? 0) >= 100 ? 'up' : 'down'}
+              meta={realizadoVDManual !== null ? `da meta VD · ${realizadoVDManual.toFixed(2).replace('.', ',')}% realizado` : undefined}
+              footnote={`VD ${fmtBRL(metaManual.vd)} + Omni Envio ER ${fmtBRL(metaManual.omni)}`}
+              hint="Meta PEF do canal VD informada manualmente: a Extranet exportou a coluna 'META PEF' zerada neste ciclo. O total soma a meta de Venda Direta e a de Omni Envio ER. O % realizado compara a receita VD do card ao lado só com a meta VD, porque o arquivo não traz mais o Omni junto. A meta existe só no total do canal, não por PDV nem por UN."
+            />
+          ) : semMeta ? (
             <KpiCard
               eyebrow="Meta PEF"
               value="Não lançada"
@@ -127,9 +143,11 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
           <KpiCard
             eyebrow="Gap acordado"
             // Sinal de menos tipográfico (U+2212): com o hífen comum o navegador quebrava a linha logo após o "-".
-            value={semMeta ? '—' : fmtBRL(totalRow.total.gapAcordadoValor).replace(/^-/, '\u2212')}
-            footnote={semMeta ? 'sem meta, não há gap' : undefined}
-            hint={semMeta
+            value={semMeta ? '—' : fmtBRL(metaManual ? totalRow.vd.receitaAtual - metaManual.vd : totalRow.total.gapAcordadoValor).replace(/^-/, '\u2212')}
+            footnote={semMeta ? 'sem meta, não há gap' : metaManual ? 'receita VD − meta VD' : undefined}
+            hint={metaManual
+              ? "Receita VD do ciclo (linha TOTAL de ReceitaCanalVD_Performance_por_PDV) menos a meta PEF de Venda Direta informada manualmente. O arquivo traz 'GAP ACORDADO (R$)' calculado com meta 0, por isso calculamos aqui."
+              : semMeta
               ? "Sem meta lançada, o próprio arquivo preenche 'GAP ACORDADO (R$)' com a receita inteira (receita − 0), o que não diz nada — por isso não mostramos o valor."
               : "Coluna 'GAP ACORDADO (R$)' do bloco TOTAL, linha TOTAL — diferença já calculada pelo próprio relatório entre receita atual e meta PEF acordada, não recalculada por nós."}
           />
@@ -139,6 +157,9 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
               value={omniCanalUn ? fmtBRL(omniCanalUn.receitaAtual) : '—'}
               delta={omniCanalUn && omniCanalUn.receitaAnterior > 0 ? fmtPct(omniCanalUn.variacaoPct) : undefined}
               deltaDirection={(omniCanalUn?.variacaoPct ?? 0) >= 0 ? 'up' : 'down'}
+              meta={omniCanalUn && metaManual && metaManual.omni > 0
+                ? `meta ${fmtBRL(metaManual.omni)} · ${((omniCanalUn.receitaAtual / metaManual.omni) * 100).toFixed(2).replace('.', ',')}% realizado`
+                : undefined}
               footnote={omniCanalUn ? 'não somar à receita VD ao lado' : 'Receita_por_Canal_UN não importado'}
               hint="A partir do Ciclo 14 ReceitaCanalVD_Performance_por_PDV não traz mais o bloco Omni Envio ER. Este valor vem da linha 'Omnichannel VD' de Receita_por_Canal_UN.xlsx — receita de pedidos Omni atribuídos à Venda Direta. Pode já estar dentro da receita VD do primeiro card (no Ciclo 13, a linha 'Venda Direta' desse arquivo incluía o Omni), por isso não some os dois."
             />
@@ -185,14 +206,14 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
           title="Performance por PDV"
           subtitle={semBlocos ? `UN × PDV · ${tipoReceita ?? 'receita'} do canal VD, ciclo atual vs. mesmo ciclo do ano anterior` : 'Blocos VD / Omni Envio ER / Total'}
           hint={semBlocos
-            ? "Uma linha por UN × PDV do arquivo ReceitaCanalVD_Performance_por_PDV.xlsx (aba 'PERFORMANCE POR PDV'). No formato do Ciclo 14 o arquivo tem uma receita só (canal VD), com a linha TOTAL antes do cabeçalho. Meta e % realizado ficam '—' enquanto a meta PEF do ciclo não for lançada na Extranet. Clique num #PDV para abrir o PDV 360."
+            ? "Uma linha por UN × PDV do arquivo ReceitaCanalVD_Performance_por_PDV.xlsx (aba 'PERFORMANCE POR PDV'). No formato do Ciclo 14 o arquivo tem uma receita só (canal VD), com a linha TOTAL antes do cabeçalho. Meta e % realizado ficam '—' quando a meta PEF não vem por PDV (a meta do Ciclo 14 só existe no total do canal). Clique num #PDV para abrir o PDV 360."
             : "Uma linha por PDV do arquivo ReceitaCanalVD_Performance_por_PDV.xlsx (aba 'PERFORMANCE POR PDV'). Cada linha traz 3 blocos de colunas repetidos (VD, Omni Envio ER, Total), cada um com receita anterior/atual/meta PEF/gap — lidos pela posição do bloco, não pelo nome sozinho, porque o nome das colunas se repete nos 3 blocos. Clique num #PDV para abrir o PDV 360."}
           action={
             <Button variant="secondary" size="sm" icon={<i className="ph ph-file-csv" style={{ fontSize: 14 }} />} onClick={() => exportToCSV(
               unRows.map(r => semBlocos ? ({
                 UN: r.un, PDV: r.pdvCodigo, Cidade: r.cidade,
                 'Receita Anterior': r.total.receitaAnterior, 'Receita Atual': r.total.receitaAtual,
-                'Meta PEF': semMeta ? '' : r.total.metaPef, '% Realizado': r.total.realizadoPct ?? '',
+                'Meta PEF': r.total.metaPef > 0 ? r.total.metaPef : '', '% Realizado': r.total.realizadoPct ?? '',
               }) : ({
                 UN: r.un, PDV: r.pdvCodigo, Cidade: r.cidade,
                 'VD Atual': r.vd.receitaAtual, 'Omni Atual': r.omni.receitaAtual, 'Total Atual': r.total.receitaAtual,
@@ -256,7 +277,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
                         <td style={tdNum}>{fmtBRL(r.total.receitaAtual)}</td>
                       </>
                     )}
-                    <td style={tdNum}>{semMeta ? '—' : fmtBRL(r.total.metaPef)}</td>
+                    <td style={tdNum}>{r.total.metaPef > 0 ? fmtBRL(r.total.metaPef) : '—'}</td>
                     <td style={tdNum}>{r.total.realizadoPct !== null ? `${r.total.realizadoPct.toFixed(1).replace('.', ',')}%` : '—'}</td>
                   </tr>
                 ))}
@@ -270,7 +291,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
         <div style={{ marginTop: 20 }}>
           <ChartCard
             title="Meta por UN"
-            subtitle={dataset.receitaCanalVDUn.composicaoTotal.length > 0 ? 'Composição Venda Direta x Omni Envio ER, por unidade de negócio' : `Realizado vs. mesmo ciclo do ano anterior, por unidade de negócio${semMeta ? ' · meta ainda não lançada' : ''}`}
+            subtitle={dataset.receitaCanalVDUn.composicaoTotal.length > 0 ? 'Composição Venda Direta x Omni Envio ER, por unidade de negócio' : `Realizado vs. mesmo ciclo do ano anterior, por unidade de negócio${semMeta ? ' · meta ainda não lançada' : metaManual ? ' · meta só no total do canal' : ''}`}
             hint="ReceitaCanalVD_por_UN.xlsx (aba 'META POR UN') traz um bloco Meta/Realizado/Anterior por UN, seguido de um sub-bloco 'Composição Receita:' com a mesma UN quebrada em Venda Direta x Omni Envio ER — a tabela usa só a linha de totais de cada UN; a composição de cada uma fica disponível mas não é exibida aqui em detalhe."
           >
             <div style={{ overflowX: 'auto' }}>

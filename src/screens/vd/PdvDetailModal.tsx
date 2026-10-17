@@ -3,6 +3,7 @@ import { useVDCorporateStore } from '../../store/useVDCorporateStore';
 import { useOrderStore } from '../../store/useOrderStore';
 import { pdvForOrder } from '../../analytics/pdvMapping';
 import { isRevenueEligible } from '../../analytics/financialMetrics';
+import { metaPefCanalVD } from '../../analytics/metaPefCanalVD';
 import { fmtBRL, fmtNumber } from '../../utils/formatters';
 
 interface Props {
@@ -119,7 +120,7 @@ const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
               <div style={stat}><span style={statLabel}>Receita VD</span><span style={statValue}>{fmtBRL(info.receitaVD)}</span></div>
             </>
           )}
-          <div style={stat}><span style={statLabel}>Meta PEF</span><span style={statValue}>{info.metaPef > 0 ? fmtBRL(info.metaPef) : 'Não lançada'}</span></div>
+          <div style={stat}><span style={statLabel}>Meta PEF</span><span style={statValue}>{info.metaPef > 0 ? fmtBRL(info.metaPef) : metaPefCanalVD(dataset) ? 'Só no total do canal' : 'Não lançada'}</span></div>
         </div>
 
         {(info.gmv || info.perf) && (

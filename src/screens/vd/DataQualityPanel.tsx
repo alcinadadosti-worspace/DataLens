@@ -5,6 +5,7 @@ import { useVDCorporateStore } from '../../store/useVDCorporateStore';
 import { calcEligibleRevenue } from '../../analytics/financialMetrics';
 import { fmtBRL } from '../../utils/formatters';
 import { isFVCOrder } from '../../analytics/fvc';
+import { metaPefCanalVD } from '../../analytics/metaPefCanalVD';
 import { ReportContext, VDCorporateFile, VD_CORPORATE_FILE_LABELS } from '../../types/vdCorporate';
 
 /**
@@ -164,7 +165,16 @@ const DataQualityPanel: React.FC = () => {
     }
 
     // 6) Meta PEF zerada — a Extranet exporta 0 quando a meta do ciclo ainda não foi cadastrada.
-    if (totalRow && totalRow.total.metaPef === 0 && totalRow.total.receitaAtual > 0) {
+    // Se a meta foi informada à mão (metaPefCanalVD.ts), vira informação em vez de alerta.
+    const metaCanal = metaPefCanalVD(dataset);
+    if (totalRow && totalRow.total.metaPef === 0 && metaCanal?.origem === 'manual') {
+      list.push({
+        id: 'meta-zerada',
+        label: 'Meta PEF zerada no arquivo, usando a meta informada',
+        status: 'info',
+        detail: `A Extranet exportou META PEF = 0. O app usa a meta do canal VD informada manualmente: ${fmtBRL(metaCanal.total)} (Venda Direta ${fmtBRL(metaCanal.vd)} + Omni Envio ER ${fmtBRL(metaCanal.omni)}). Ela existe só no total do canal; PDVs e UNs seguem sem meta.`,
+      });
+    } else if (totalRow && totalRow.total.metaPef === 0 && totalRow.total.receitaAtual > 0) {
       list.push({
         id: 'meta-zerada',
         label: 'Meta PEF do ciclo veio zerada',
