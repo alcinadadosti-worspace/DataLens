@@ -8,11 +8,6 @@ interface Term {
 }
 
 const GLOSSARIO: Record<string, Term> = {
-  iaf: {
-    sigla: 'IAF',
-    significado: 'Aparece em "% RUPTURA CF (IAF)" — provavelmente "Item(ns) de Alta Frequência", mas não confirmado com quem gera o relatório.',
-    confirmado: false,
-  },
   cgb: {
     sigla: 'CGB',
     significado: 'Aparece no nome da aba "SEGMENTAÇÃO DA BASE CGB" — significado não confirmado.',

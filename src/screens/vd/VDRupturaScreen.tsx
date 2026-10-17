@@ -7,7 +7,6 @@ import { useVDCorporateStore } from '../../store/useVDCorporateStore';
 import { fmtNumber } from '../../utils/formatters';
 import { exportToCSV } from '../../services/exportService';
 import { pdvForOrder } from '../../analytics/pdvMapping';
-import GlossarioPanel from './GlossarioPanel';
 
 /** Normaliza nome de produto pra cruzar RupturaVD_detalhamento_ruptura_por_item (coluna SKU, na
  * verdade uma descrição de texto) com ConsultaRankingVendas (NomeProduto) — os dois arquivos não
@@ -186,10 +185,6 @@ const VDRupturaScreen: React.FC<Props> = ({ onNavigate }) => {
           </div>
         </ChartCard>
       )}
-
-      <div style={{ marginTop: 20 }}>
-        <GlossarioPanel termos={['iaf']} />
-      </div>
     </div>
   );
 };
