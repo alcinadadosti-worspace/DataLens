@@ -641,3 +641,28 @@ extrato 312 / R$ 1.731.005,49).
 4. **"Canais digitais"** — confirmar o que entra nesse conjunto ("ER" já confirmado: Espaço do Revendedor).
 5. **Aderência** — pedir à Extranet a versão filtrada só para o canal VD, se existir; hoje a linha do CP e a
    evolução semanal misturam lojas e VD.
+
+---
+
+## 11. Histórico de pedidos e inatividade revendedor a revendedor (19/10/2026)
+
+A Extranet só manda a **contagem** de inativos por faixa (`VendaDireta_Ativas_por_tier`, Segmentação, Monitoramento).
+Nenhum dos 37 arquivos do lote traz quem são essas revendedoras. Para listar nome, código e segmentação de quem
+está em I1–I6, o app lê os **ConsultaPedidos dos ciclos anteriores**, no mesmo layout de 89 colunas, salvos como
+`Ciclo 01.xlsx` … `Ciclo 13.xlsx` (no lote padrão, em `public/dados-padrao-vd/historico-pedidos/`).
+
+- **Regra:** a faixa é o tempo desde o último pedido que conta como compra: não cancelado e fora do
+  `Modelo - OMNIChannel`, em que quem compra é o Consumidor Final. Pedido no ciclo atual = A0; último pedido há k
+  ciclos = Ik; mais de 6 = fora da base. Código em `src/analytics/vdInatividade.ts`.
+- **Leitura:** em segundo plano (Web Worker), depois que a análise já abriu. Só os 6 ciclos antes do atual são
+  lidos por inteiro; os outros arquivos são espiados (2 linhas) e ficam de fora. Leva ~8 s no navegador.
+- **Validação no Ciclo 14** (histórico × Extranet): A0 2.117 × 2.125 · I1 1.237 × 1.239 · I2 758 × 752 ·
+  I3 625 × 621 · I4 401 × 452 · I5 220 × 241 · I6 224 × 224. A sobra da Extranet em I4/I5 bate com os
+  Consumidores Finais dos pedidos OMNI dos ciclos 10 (44) e 09 (19), que a Extranet parece contar nessas faixas.
+  Com eles, I4/I5 batem (−7/−3), mas o I6 passa a sobrar 34. Como a lista é de revendedoras, eles ficam de fora.
+- **Arquivo de ciclo incompleto:** o primeiro `Ciclo 11.xlsx` foi exportado em 03/08, antes do fim do ciclo (o 12 só
+  começou em 10/08), e jogava ~280 revendedoras do I3 para faixas mais antigas. O app agora avisa quando um ciclo
+  termina mais de 3 dias antes do seguinte começar (painel Inatividade e Verificações de qualidade). Entre ciclos
+  completos a folga é de 1 a 2 dias.
+- **Segmentação** mostrada é a do pedido mais recente da revendedora (Papel na última compra), não a classificação
+  atual da Extranet.

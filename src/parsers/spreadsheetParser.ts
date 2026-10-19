@@ -136,7 +136,7 @@ function parseDate(v: unknown): string {
   return String(v).trim();
 }
 
-function mapRow(raw: Record<string, unknown>): Order {
+export function mapRow(raw: Record<string, unknown>): Order {
   const mapped: Partial<Record<keyof Order, unknown>> = {};
 
   for (const [rawKey, value] of Object.entries(raw)) {

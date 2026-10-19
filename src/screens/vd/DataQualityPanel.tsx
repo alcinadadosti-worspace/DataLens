@@ -6,6 +6,8 @@ import { calcEligibleRevenue } from '../../analytics/financialMetrics';
 import { fmtBRL } from '../../utils/formatters';
 import { isFVCOrder } from '../../analytics/fvc';
 import { metaPefCanalVD } from '../../analytics/metaPefCanalVD';
+import { useVDPedidosHistoricoStore } from '../../store/useVDPedidosHistoricoStore';
+import { calcularInatividade, resumirCiclo, SEGMENTOS_INATIVIDADE } from '../../analytics/vdInatividade';
 import { ReportContext, VDCorporateFile, VD_CORPORATE_FILE_LABELS } from '../../types/vdCorporate';
 
 /**
@@ -47,6 +49,7 @@ const STATUS_META: Record<CheckStatus, { icon: string; color: string }> = {
 const DataQualityPanel: React.FC = () => {
   const orders = useOrderStore(s => s.orders);
   const dataset = useVDCorporateStore(s => s.dataset);
+  const historicoCiclos = useVDPedidosHistoricoStore(s => s.ciclos);
 
   const checks = useMemo<QualityCheck[]>(() => {
     const list: QualityCheck[] = [];
@@ -294,8 +297,20 @@ const DataQualityPanel: React.FC = () => {
       });
     }
 
+    // 15) Histórico de pedidos (inatividade) — ciclo faltando ou exportado antes de terminar
+    if (orders.length > 0 && historicoCiclos.length > 0) {
+      const r = calcularInatividade(resumirCiclo(orders, 'ConsultaPedidos'), historicoCiclos);
+      const contagem = SEGMENTOS_INATIVIDADE.map(seg => `${seg} ${r.porSegmento[seg].length}`).join(' · ');
+      list.push({
+        id: 'historico-inatividade',
+        label: r.avisos.length > 0 ? 'Histórico de pedidos com ciclo faltando ou incompleto' : 'Histórico de pedidos cobre os 6 ciclos da inatividade',
+        status: r.avisos.length > 0 ? 'warn' : 'ok',
+        detail: r.avisos.length > 0 ? `${r.avisos.join(' ')} Contagem atual: ${contagem}.` : `Revendedores por faixa: ${contagem}.`,
+      });
+    }
+
     return list;
-  }, [orders, dataset]);
+  }, [orders, dataset, historicoCiclos]);
 
   if (checks.length === 0) return null;
 

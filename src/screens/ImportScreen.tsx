@@ -7,6 +7,8 @@ import { useVDHistoryStore } from '../store/useVDHistoryStore';
 import { useFilterStore } from '../store/useFilterStore';
 import { VDCorporateFile, VD_CORPORATE_FILE_LABELS } from '../types/vdCorporate';
 import { buildVDSnapshot, dominantCiclo } from '../analytics/vdSnapshot';
+import { useVDPedidosHistoricoStore } from '../store/useVDPedidosHistoricoStore';
+import { janelaAnterior, parseCiclo, SEGMENTOS_INATIVIDADE } from '../analytics/vdInatividade';
 
 interface ImportScreenProps {
   onComplete: () => void;
@@ -94,6 +96,45 @@ const DEFAULT_FILE_NAMES = [
   '20261016_ativas_uma_compra_er_667be7987584.xlsx',
 ];
 
+/** ConsultaPedidos de ciclos anteriores do lote padrão (public/dados-padrao-vd/historico-pedidos) — alimentam a Inatividade (I1–I6). */
+const DEFAULT_HISTORICO = [
+  'Ciclo 01.xlsx', 'Ciclo 02.xlsx', 'Ciclo 03.xlsx', 'Ciclo 04.xlsx', 'Ciclo 05.xlsx', 'Ciclo 06.xlsx', 'Ciclo 07.xlsx',
+  'Ciclo 8.xlsx', 'Ciclo 09.xlsx', 'Ciclo 10.xlsx', 'Ciclo 11.xlsx', 'Ciclo 12.xlsx', 'Ciclo 13.xlsx',
+];
+
+/** Conta os imports começados nesta sessão — o histórico padrão chega depois e é descartado se outro import começou nesse meio-tempo. */
+let geracaoImport = 0;
+
+/**
+ * Busca o histórico padrão depois que a análise já foi liberada (são ~20 MB) e só os ciclos que entram
+ * na inatividade, pelo número no nome do arquivo. Fica fora do componente: a tela de importação é
+ * desmontada assim que o lote padrão termina, e o histórico tem que chegar mesmo assim.
+ */
+function carregarHistoricoPadrao(cicloAtual: string) {
+  const geracao = geracaoImport;
+  const atual = parseCiclo(cicloAtual);
+  const janela = new Set(janelaAnterior(cicloAtual, SEGMENTOS_INATIVIDADE.length, {}));
+  const nomes = DEFAULT_HISTORICO.filter(name => {
+    const num = /(\d+)/.exec(name)?.[1];
+    // Na virada do ano a janela atravessa ciclos de outro ano: sem saber qual é o último, busca todos.
+    return !atual || janela.has(null) || (num && janela.has(`${num.padStart(2, '0')}/${atual.ano}`));
+  });
+  Promise.all(
+    nomes.map(name =>
+      fetch(`/dados-padrao-vd/historico-pedidos/${encodeURIComponent(name)}`)
+        .then(r => (r.ok ? r.blob() : null))
+        .then(blob => (blob ? new File([blob], name, { type: blob.type }) : null))
+        .catch(() => null)
+    )
+  ).then(loaded => {
+    if (geracao !== geracaoImport) return;
+    const hist = loaded.filter((f): f is File => f !== null);
+    if (hist.length === 0) return;
+    if (ultimoLote) ultimoLote = { ...ultimoLote, files: [...ultimoLote.files, ...hist] };
+    useVDPedidosHistoricoStore.getState().carregar(hist, cicloAtual);
+  });
+}
+
 /**
  * Último lote importado nesta sessão. A tela é desmontada ao navegar para outra rota; sem isso, voltar
  * em "Importar" começava do zero, buscava de novo os dados padrão e, ao terminar, chamava `onComplete`
@@ -115,12 +156,19 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
   const clearCorporateDataset = useVDCorporateStore(s => s.clearDataset);
   const clearFilters = useFilterStore(s => s.clearFilters);
   const addSnapshot = useVDHistoryStore(s => s.addSnapshot);
+  const historico = useVDPedidosHistoricoStore();
+  const carregarHistorico = historico.carregar;
+  const limparHistorico = historico.limpar;
 
   async function runParse(fileList: File[]) {
+    geracaoImport++;
     setPhase('loading');
     const r = await parseVDFiles(fileList);
     setResult(r);
     ultimoLote = { files: fileList, result: r };
+    const ciclo = r.orders ? dominantCiclo(r.orders) : null;
+    if (ciclo && r.historicoFiles.length > 0) carregarHistorico(r.historicoFiles, ciclo);
+    else limparHistorico();
     if (r.orders) {
       clearFilters();
       setOrders(r.orders, r.pedidosFileName ?? 'pedidos');
@@ -171,6 +219,8 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
       }
       if (r.corporate) setCorporateDataset(r.corporate.dataset);
       if (r.orders && r.orders.length > 0) {
+        const ciclo = dominantCiclo(r.orders);
+        if (ciclo) carregarHistoricoPadrao(ciclo);
         setPhase('done');
         onComplete();
       } else {
@@ -186,7 +236,8 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
   function addFiles(incoming: FileList | File[]) {
     userInteractedRef.current = true;
     const accepted = Array.from(incoming).filter(f => /\.(csv|xlsx|xls)$/i.test(f.name));
-    const merged = [...files];
+    // `ultimoLote` também tem o histórico padrão que chegou depois; o estado `files` não.
+    const merged = [...(ultimoLote?.files ?? files)];
     for (const f of accepted) {
       const idx = merged.findIndex(m => m.name === f.name);
       if (idx >= 0) merged[idx] = f; else merged.push(f);
@@ -207,11 +258,13 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
 
   function handleClear() {
     userInteractedRef.current = true;
+    geracaoImport++;
     ultimoLote = null;
     setFiles([]);
     setResult(null);
     clearOrders();
     clearCorporateDataset();
+    limparHistorico();
     setPhase('idle');
     if (fileRef.current) fileRef.current.value = '';
   }
@@ -233,7 +286,9 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
       <p style={{ color: 'var(--vd-text-secondary, #6B6258)', fontSize: 15, marginTop: 0, marginBottom: 28 }}>
         Arraste o arquivo <strong>Consulta Pedidos</strong> (obrigatório) e, se tiver, os demais arquivos
         do lote — ranking de vendas, meta de sell-in e os relatórios da Extranet (receita, ruptura,
-        base de revendedores). Todos os dados são processados localmente no navegador.
+        base de revendedores). Para ver quem está inativo (I1 a I6), inclua também os Consulta Pedidos dos
+        ciclos anteriores, salvos como <strong>Ciclo 13.xlsx</strong>, <strong>Ciclo 12.xlsx</strong>… Todos os
+        dados são processados localmente no navegador.
       </p>
 
       <input
@@ -295,6 +350,41 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onComplete }) => {
                 {result.pedidosResult && result.pedidosResult.fvcCount > 0 && ` (${result.pedidosResult.fvcCount.toLocaleString('pt-BR')} FVC incluídos)`}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14,
+        padding: 20, marginBottom: 20,
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--vd-text-secondary, #6B6258)', marginBottom: 14 }}>
+          Histórico de pedidos (inatividade)
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+            background: historico.status === 'pronto' && historico.ciclos.length > 0 ? 'var(--vd-success-bg, #E0F2E8)' : 'var(--vd-bg-subtle, #F2EEE2)',
+            color: historico.status === 'pronto' && historico.ciclos.length > 0 ? 'var(--vd-success, #2E7D5B)' : 'var(--vd-text-muted, #9B9287)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
+          }}>
+            <i className={historico.status === 'carregando' ? 'ph ph-spinner' : historico.status === 'pronto' && historico.ciclos.length > 0 ? 'ph-bold ph-check' : 'ph ph-circle-dashed'} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>
+              {historico.status === 'vazio' && 'Nenhum ciclo anterior importado'}
+              {historico.status === 'carregando' && `Lendo ciclos anteriores… ${historico.total > 0 ? `${historico.feitos}/${historico.total}` : ''}`}
+              {historico.status === 'pronto' && `${historico.ciclos.length} ciclo${historico.ciclos.length === 1 ? '' : 's'} na janela de inatividade`}
+            </div>
+            {historico.status === 'pronto' && historico.ciclos.length > 0 && (
+              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', fontFamily: 'JetBrains Mono, monospace' }}>
+                {[...historico.ciclos].sort((a, b) => a.ciclo.localeCompare(b.ciclo)).map(c => c.ciclo).join(' · ')}
+                {historico.foraDaJanela.length > 0 && ` · ${historico.foraDaJanela.length} fora da janela (mais de 6 ciclos atrás)`}
+              </div>
+            )}
+            {historico.erros.map((e, i) => (
+              <div key={i} style={{ fontSize: 11, color: 'var(--vd-warning-text, #5C4500)', marginTop: 4 }}>{e}</div>
+            ))}
           </div>
         </div>
       </div>

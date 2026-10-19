@@ -14,11 +14,18 @@ export interface VDImportResult {
   rankingErrors: string[];
   rankingRepairedCount: number;
   corporate: VDCorporateParseResult | null;
+  /** ConsultaPedidos de ciclos anteriores ("Ciclo 13.xlsx"...) — lidos depois, em segundo plano, por `useVDPedidosHistoricoStore`. */
+  historicoFiles: File[];
   errors: string[];
 }
 
 function normalizeName(fileName: string): string {
   return fileName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/** ConsultaPedidos de um ciclo anterior, salvo como "Ciclo 13.xlsx" / "Ciclo 8.xlsx". */
+export function isHistoricoPedidos(f: File): boolean {
+  return /^CICLO\d/.test(normalizeName(f.name));
 }
 
 /**
@@ -31,7 +38,8 @@ export async function parseVDFiles(files: File[]): Promise<VDImportResult> {
 
   const pedidosFile = files.find(f => normalizeName(f.name).includes('CONSULTAPEDIDOS'));
   const rankingFile = files.find(f => normalizeName(f.name).includes('CONSULTARANKINGVENDAS'));
-  const restFiles = files.filter(f => f !== pedidosFile && f !== rankingFile);
+  const historicoFiles = files.filter(isHistoricoPedidos);
+  const restFiles = files.filter(f => f !== pedidosFile && f !== rankingFile && !historicoFiles.includes(f));
 
   let pedidosResult: ParseResult | null = null;
   if (pedidosFile) {
@@ -71,6 +79,7 @@ export async function parseVDFiles(files: File[]): Promise<VDImportResult> {
     rankingErrors,
     rankingRepairedCount,
     corporate,
+    historicoFiles,
     errors,
   };
 }

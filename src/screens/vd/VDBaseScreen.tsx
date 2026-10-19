@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import KpiCard from '../../components/ui/KpiCard';
 import ChartCard from '../../components/charts/ChartCard';
 import Button from '../../components/ui/Button';
 import GlossyContent from '../../components/ui/GlossyContent';
-import RankingChart from '../../components/charts/RankingChart';
-import { RankingItem } from '../../components/charts/RankingList';
+import RankingChart, { DetailView, ExtraStat } from '../../components/charts/RankingChart';
+import { BreakdownRow, RankingItem } from '../../components/charts/RankingList';
 import { useVDCorporateStore } from '../../store/useVDCorporateStore';
-import { fmtNumber, fmtBRL } from '../../utils/formatters';
+import { useOrderStore } from '../../store/useOrderStore';
+import { useVDPedidosHistoricoStore } from '../../store/useVDPedidosHistoricoStore';
+import { calcularInatividade, resumirCiclo, RevendedorInativo, SegmentoInatividade, SEGMENTOS_INATIVIDADE } from '../../analytics/vdInatividade';
+import { TIER_DEFINITIONS } from '../../design-system/tierStyles';
+import { fmtNumber, fmtBRL, fmtBRLshort } from '../../utils/formatters';
 import { pillBtn } from './pillBtn';
 import { exportToCSV } from '../../services/exportService';
 import GlossarioPanel from './GlossarioPanel';
@@ -33,6 +37,19 @@ function MiniStat({ label, value, sub }: { label: string; value: string; sub: st
   );
 }
 
+const fmtCiclo = (c: string) => `Ciclo ${c.replace('/', ' - ')}`;
+const nomeSegmentacao = (r: RevendedorInativo) => TIER_DEFINITIONS.find(t => t.id === r.tierId)?.name ?? (r.papel || 'Sem segmentação');
+const isSegmento = (s: string): s is SegmentoInatividade => (SEGMENTOS_INATIVIDADE as readonly string[]).includes(s);
+
+/** Contagem por chave, do maior pro menor, como quebra do painel de detalhe. */
+function contagem(lista: RevendedorInativo[], chave: (r: RevendedorInativo) => string): BreakdownRow[] {
+  const porChave: Record<string, number> = {};
+  for (const r of lista) porChave[chave(r)] = (porChave[chave(r)] ?? 0) + 1;
+  return Object.entries(porChave)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, n]) => ({ label, value: n, valueLabel: fmtNumber(n), pct: (n / lista.length) * 100, meta: `${fmtPctBR((n / lista.length) * 100)} da faixa` }));
+}
+
 const tdSmall: React.CSSProperties = { padding: '6px 10px', fontSize: 12, borderBottom: '1px solid var(--vd-border, #E8E2D6)', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' };
 
 const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
@@ -55,9 +72,17 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
   const optOutDetalhe = dataset?.optOutDetalhe ?? null;
   const optOutPdv = dataset?.optOutPdv ?? [];
   const hasDigital = digitaisPdv.length > 0 || !!canaisDigitais || !!espacoRevendedor;
+
+  // Inatividade revendedor a revendedor — só existe quando os ConsultaPedidos de ciclos anteriores foram importados.
+  const orders = useOrderStore(s => s.orders);
+  const historico = useVDPedidosHistoricoStore();
+  const inatividade = useMemo(() => {
+    if (historico.status !== 'pronto' || historico.ciclos.length === 0 || orders.length === 0) return null;
+    return calcularInatividade(resumirCiclo(orders, 'ConsultaPedidos'), historico.ciclos);
+  }, [orders, historico.status, historico.ciclos]);
   const hasOptOut = !!optOutBase || optOutPdv.length > 0;
 
-  const hasAnything = evolucao || monitoramento || penetracao.length > 0 || detalhada || ativasPorTier.length > 0 || segmentacao || hasDigital || hasOptOut;
+  const hasAnything = evolucao || monitoramento || penetracao.length > 0 || detalhada || ativasPorTier.length > 0 || !!inatividade || segmentacao || hasDigital || hasOptOut;
 
   if (!hasAnything) {
     return (
@@ -88,13 +113,76 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
     );
   }
 
-  const recenciaItems: RankingItem[] = ativasPorTier.map(r => ({
-    id: r.segmentoRecencia,
-    label: r.segmentoRecencia,
-    value: r.cicloAtual,
-    valueLabel: fmtNumber(r.cicloAtual),
-    meta: `${r.participacaoAtualPct.toFixed(1).replace('.', ',')}%`,
-  }));
+  const sublabelSegmento = (s: string) => {
+    const k = Number(s.slice(1));
+    return k === 6 ? 'Sem comprar há 6 ciclos — sai da base no próximo' : `Sem comprar há ${k} ciclo${k === 1 ? '' : 's'}`;
+  };
+  // Contagem oficial da Extranet quando o arquivo veio; sem ele, a do histórico de pedidos.
+  const recenciaItems: RankingItem[] = ativasPorTier.length > 0
+    ? ativasPorTier.map(r => ({
+      id: r.segmentoRecencia,
+      label: r.segmentoRecencia,
+      sublabel: isSegmento(r.segmentoRecencia) ? sublabelSegmento(r.segmentoRecencia) : undefined,
+      value: r.cicloAtual,
+      valueLabel: fmtNumber(r.cicloAtual),
+      meta: `${r.participacaoAtualPct.toFixed(1).replace('.', ',')}%`,
+    }))
+    : SEGMENTOS_INATIVIDADE.map(s => ({
+      id: s,
+      label: s,
+      sublabel: sublabelSegmento(s),
+      value: inatividade?.porSegmento[s].length ?? 0,
+      valueLabel: fmtNumber(inatividade?.porSegmento[s].length ?? 0),
+      meta: 'pelo histórico de pedidos',
+    }));
+
+  const inativosDe = (item: RankingItem) => (inatividade && item.id && isSegmento(item.id) ? inatividade.porSegmento[item.id] : null);
+
+  const inatividadeViews: DetailView[] = [
+    {
+      key: 'revendedores', icon: 'ph-users-three', label: 'Revendedores — maior compra no último ciclo ativo primeiro',
+      getBreakdown: item => {
+        const lista = inativosDe(item);
+        if (!lista || lista.length === 0) return null;
+        const max = lista[0].valorUltimoCiclo || 1;
+        return lista.map(r => ({
+          label: r.nome,
+          value: r.valorUltimoCiclo,
+          valueLabel: fmtBRLshort(r.valorUltimoCiclo),
+          pct: (r.valorUltimoCiclo / max) * 100,
+          meta: `Cód. ${r.codigo} · ${nomeSegmentacao(r)} · última compra ${r.ultimaCompra} (${fmtCiclo(r.ultimoCiclo)})${r.supervisor ? ` · ${r.supervisor}` : ''}`,
+        }));
+      },
+    },
+    { key: 'segmentacao', icon: 'ph-medal', label: 'Por segmentação (na última compra)', getBreakdown: item => { const l = inativosDe(item); return l && l.length ? contagem(l, nomeSegmentacao) : null; } },
+    { key: 'supervisor', icon: 'ph-identification-badge', label: 'Por supervisor', getBreakdown: item => { const l = inativosDe(item); return l && l.length ? contagem(l, r => r.supervisor || 'Sem supervisor') : null; } },
+  ];
+
+  function getInatividadeExtraStats(item: RankingItem): ExtraStat[] | null {
+    if (historico.status === 'carregando') {
+      return [{ label: 'Lista de revendedores', value: 'carregando…', sub: `ciclos anteriores ${historico.feitos}/${historico.total || '…'}` }];
+    }
+    const lista = inativosDe(item);
+    if (!lista) return [{ label: 'Lista de revendedores', value: '—', sub: 'importe os Consulta Pedidos dos ciclos anteriores (Ciclo 13.xlsx…)' }];
+    const extranet = ativasPorTier.find(r => r.segmentoRecencia === item.id);
+    const stats: ExtraStat[] = [
+      { label: 'No histórico de pedidos', value: fmtNumber(lista.length), sub: extranet ? `Extranet: ${fmtNumber(extranet.cicloAtual)}` : undefined },
+      { label: 'Último ciclo ativo', value: fmtBRLshort(lista.reduce((s, r) => s + r.valorUltimoCiclo, 0)), sub: lista[0] ? `quanto compraram no ${fmtCiclo(lista[0].ultimoCiclo)}` : undefined },
+    ];
+    return stats;
+  }
+
+  function exportInativos() {
+    if (!inatividade) return;
+    exportToCSV(
+      SEGMENTOS_INATIVIDADE.flatMap(s => inatividade.porSegmento[s]).map(r => ({
+        Faixa: r.segmento, Código: r.codigo, Nome: r.nome, Segmentação: nomeSegmentacao(r),
+        'Último ciclo com compra': r.ultimoCiclo, 'Última compra': r.ultimaCompra, 'Valor no último ciclo': r.valorUltimoCiclo,
+        Supervisor: r.supervisor, Estrutura: r.estrutura, PDV: r.pdv ?? '',
+      })),
+      `datalens-inativos-${inatividade.cicloAtual.replace('/', '-')}-${new Date().toISOString().slice(0, 10)}`
+    );
+  }
 
   return (
     <div style={{ padding: '40px 32px', maxWidth: 1240, margin: '0 auto' }}>
@@ -231,32 +319,65 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
           </ChartCard>
         )}
 
-        {ativasPorTier.length > 0 && (
+        {(ativasPorTier.length > 0 || inatividade) && (
           <ChartCard
-            title="Ativas por segmento de recência"
-            subtitle="I1 (inativo há 1 ciclo) a I6 (inativo há 6+ ciclos / churned)"
-            hint="VendaDireta_Ativas_por_tier.xlsx (aba 'ATIVAS POR TIER') — apesar do nome do arquivo original, I1-I6 é tempo de inatividade em ciclos consecutivos sem comprar (I1 = 1 ciclo, I6 = 6+ ciclos/churned), não o tier comercial (Bronze/Prata/Ouro...). Confirmado batendo com os totais de 'INATIVOS I1 a I3'/'I4 a I6' do Monitoramento. Use os botões do gráfico pra ver como funil (abra em tela cheia → 'mais' → funil) e visualizar a perda de base ciclo a ciclo."
+            title="Inatividade"
+            subtitle="I1 (sem comprar há 1 ciclo) a I6 (há 6 ciclos — sai da base no próximo)"
+            hint="Contagem: VendaDireta_Ativas_por_tier.xlsx (aba 'ATIVAS POR TIER') — apesar do nome do arquivo, I1-I6 é tempo sem comprar em ciclos, não o tier comercial (Bronze/Prata/Ouro...); bate com 'INATIVOS I1 a I3'/'I4 a I6' do Monitoramento. Lista de revendedores (tela cheia → clique numa faixa): calculada pelos Consulta Pedidos dos 6 ciclos anteriores — a faixa é o tempo desde o último pedido não cancelado; pedidos OMNI ficam de fora porque quem compra é o consumidor final. A coluna 'Histórico' mostra quantos revendedores caíram em cada faixa por esse cálculo; a diferença pra Extranet nas faixas I4/I5 vem desses consumidores finais, que a Extranet parece contar."
           >
-            <RankingChart items={recenciaItems} mode="vd" medals={false} initialCategory="bar" emptyMessage="Sem dados" />
+            <RankingChart
+              items={recenciaItems}
+              mode="vd"
+              medals={false}
+              initialCategory="bar"
+              emptyMessage="Sem dados"
+              detailViews={inatividadeViews}
+              getExtraStats={getInatividadeExtraStats}
+            />
             <div style={{ height: 14 }} />
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
                   <th style={th}>Segmento</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Ciclo atual</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Participação</th>
+                  {ativasPorTier.length > 0 && <th style={{ ...th, textAlign: 'right' }}>Extranet</th>}
+                  {ativasPorTier.length > 0 && <th style={{ ...th, textAlign: 'right' }}>Participação</th>}
+                  {inatividade && <th style={{ ...th, textAlign: 'right' }}>Histórico</th>}
                 </tr>
               </thead>
               <tbody>
-                {ativasPorTier.map((r, i) => (
-                  <tr key={i}>
-                    <td style={td}>{r.segmentoRecencia}</td>
-                    <td style={tdNum}>{fmtNumber(r.cicloAtual)}</td>
-                    <td style={tdNum}>{r.participacaoAtualPct.toFixed(1).replace('.', ',')}%</td>
-                  </tr>
-                ))}
+                {recenciaItems.map(item => {
+                  const extranet = ativasPorTier.find(r => r.segmentoRecencia === item.id);
+                  const lista = inativosDe(item);
+                  return (
+                    <tr key={item.label}>
+                      <td style={td}>{item.label}</td>
+                      {ativasPorTier.length > 0 && <td style={tdNum}>{extranet ? fmtNumber(extranet.cicloAtual) : '—'}</td>}
+                      {ativasPorTier.length > 0 && <td style={tdNum}>{extranet ? `${extranet.participacaoAtualPct.toFixed(1).replace('.', ',')}%` : '—'}</td>}
+                      {inatividade && <td style={tdNum}>{lista ? fmtNumber(lista.length) : '—'}</td>}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 12, color: 'var(--vd-text-secondary, #6B6258)' }}>
+                {historico.status === 'carregando' && `Lendo os pedidos dos ciclos anteriores (${historico.feitos}/${historico.total || '…'})…`}
+                {historico.status === 'vazio' && 'Para ver quem está em cada faixa, importe os Consulta Pedidos dos ciclos anteriores.'}
+                {inatividade && `Abra em tela cheia e clique numa faixa para ver os revendedores. Histórico: ${inatividade.janela.filter((c): c is string => !!c && !inatividade.ciclosFaltando.includes(c)).reverse().map(c => c.split('/')[0]).join(', ')} de ${inatividade.cicloAtual.split('/')[1]}.`}
+              </div>
+              {inatividade && (
+                <Button variant="secondary" size="sm" icon={<i className="ph ph-file-csv" style={{ fontSize: 14 }} />} onClick={exportInativos}>
+                  Exportar inativos
+                </Button>
+              )}
+            </div>
+            {inatividade && inatividade.avisos.length > 0 && (
+              <div style={{ background: 'var(--vd-warning-bg, #FBF3D0)', border: '1px solid var(--vd-warning-border, #E8C547)', borderRadius: 10, padding: '10px 14px', marginTop: 12 }}>
+                {inatividade.avisos.map((a, i) => (
+                  <div key={i} style={{ fontSize: 12, color: 'var(--vd-warning-text, #5C4500)' }}>{a}</div>
+                ))}
+              </div>
+            )}
           </ChartCard>
         )}
       </div>

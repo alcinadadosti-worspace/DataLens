@@ -456,7 +456,7 @@ export const VD_CORPORATE_FILE_LABELS: Record<VDCorporateFile, string> = {
   monitoramentoBase: 'Monitoramento da base por PDV/Supervisor',
   penetracaoBase: 'Penetração de base',
   penetracaoAtivosDetalhada: 'Penetração de ativos detalhada',
-  ativasPorTier: 'Ativas por segmento de recência (I1-I6)',
+  ativasPorTier: 'Inatividade (I1-I6)',
   segmentacaoBase: 'Segmentação da base (CGB)',
   detalhamentoCategoriasUn: 'Detalhamento de categorias e UN',
   receitaCanalVDCiclo: 'Receita por canal — VD por ciclo (com meta)',
