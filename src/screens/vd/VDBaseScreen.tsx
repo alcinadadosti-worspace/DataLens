@@ -136,7 +136,7 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
           <ChartCard
             title="Monitoramento da base"
             subtitle="RPA, churn, início/reinício — por PDV ou por supervisor"
-            hint="VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx, abas 'MONITORAMENTO POR PDV' e 'MONITORAMENTO POR SUPERVISOR' — mesmas colunas nas duas, só muda a chave da linha. RPA = Receita Por Ativo (coluna 'RPA (REAIS POR ATIVO)'). % Churn = coluna '% CHURN', perda de base no ciclo. A linha 'TOTAL' do arquivo vira os 4 números de resumo acima da tabela."
+            hint="VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx, abas 'MONITORAMENTO POR PDV' e 'MONITORAMENTO POR SUPERVISOR' — mesmas colunas nas duas, só muda a chave da linha. RPA = Real por Ativo (coluna 'RPA (REAIS POR ATIVO)'). % Churn = coluna '% CHURN', perda de base no ciclo. A linha 'TOTAL' do arquivo vira os 4 números de resumo acima da tabela."
             action={
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -285,16 +285,16 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
         <div style={{ display: 'grid', gridTemplateColumns: hasDigital && hasOptOut ? '1fr 1fr' : '1fr', gap: 20, marginBottom: 20 }}>
           {hasDigital && (
             <ChartCard
-              title="Canais digitais e Espaço Revendedor"
+              title="Canais digitais e Espaço do Revendedor"
               subtitle="Das revendedoras que compraram no ciclo, quantas usaram cada ferramenta"
-              hint="ativas_uma_compra_canais_digitais.xlsx, ativas_uma_compra_er.xlsx e Monitoramento_base_com_penetracao_em_ferramentas_digitais_pdv.xlsx (este, por PDV). 'Ativas' são as revendedoras que compraram no ciclo — o arquivo por PDV chama a coluna de 'Base Ativa', mas o número é o de ativos, não a base ativa do card no topo. ER = Espaço Revendedor, o site/app de pedidos da revendedora. Canais digitais é um conjunto mais amplo de ferramentas digitais de compra; uma mesma revendedora pode ter usado os dois."
+              hint="ativas_uma_compra_canais_digitais.xlsx, ativas_uma_compra_er.xlsx e Monitoramento_base_com_penetracao_em_ferramentas_digitais_pdv.xlsx (este, por PDV). 'Ativas' são as revendedoras que compraram no ciclo — o arquivo por PDV chama a coluna de 'Base Ativa', mas o número é o de ativos, não a base ativa do card no topo. ER = Espaço do Revendedor, o site/app de pedidos da revendedora. Canais digitais é um conjunto mais amplo de ferramentas digitais de compra; uma mesma revendedora pode ter usado os dois."
             >
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 {canaisDigitais && (
                   <MiniStat label="Canais digitais" value={fmtPctBR(canaisDigitais.pct)} sub={`${fmtNumber(canaisDigitais.comCompra)} de ${fmtNumber(canaisDigitais.ativas)} ativas`} />
                 )}
                 {espacoRevendedor && (
-                  <MiniStat label="Espaço Revendedor" value={fmtPctBR(espacoRevendedor.pct)} sub={`${fmtNumber(espacoRevendedor.comCompra)} de ${fmtNumber(espacoRevendedor.ativas)} ativas`} />
+                  <MiniStat label="Espaço do Revendedor" value={fmtPctBR(espacoRevendedor.pct)} sub={`${fmtNumber(espacoRevendedor.comCompra)} de ${fmtNumber(espacoRevendedor.ativas)} ativas`} />
                 )}
               </div>
               {digitaisPorPdv.length > 0 && (
@@ -304,7 +304,7 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
                       <th style={th}>PDV</th>
                       <th style={{ ...th, textAlign: 'right' }}>Ativas</th>
                       <th style={{ ...th, textAlign: 'right' }}>Canais digitais</th>
-                      <th style={{ ...th, textAlign: 'right' }}>Espaço Revendedor</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Espaço do Revendedor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -413,7 +413,7 @@ const VDBaseScreen: React.FC<Props> = ({ onNavigate }) => {
       )}
 
       <div style={{ marginTop: 20 }}>
-        <GlossarioPanel termos={['cgb', 'rpa', 'er', 'optout']} />
+        <GlossarioPanel termos={['rpa', 'er', 'optout']} />
       </div>
 
       <PdvDetailModal pdvCodigo={openPdv} onClose={() => setOpenPdv(null)} />

@@ -303,7 +303,7 @@ const TiersScreen: React.FC<TiersScreenProps> = ({ onTierClick, onNavigate }) =>
         <KpiCard
           eyebrow="RPA*"
           value={fmtBRLshort(rpa)}
-          hint="RPA — Receita Por Ativo, como no Monitoramento da Extranet: receita do canal VD (Online + Presencial) dividida pelo número de revendedores com pedido VD no período, sem as estruturas FVC. No detalhe, o mesmo cálculo com as FVCs (revendedores contados uma vez só, mesmo quem compra dentro e fora delas) e só das FVCs. Os pedidos OMNI (Consumidor Final) ficam fora."
+          hint="RPA — Real por Ativo, como no Monitoramento da Extranet: receita do canal VD (Online + Presencial) dividida pelo número de revendedores com pedido VD no período, sem as estruturas FVC. No detalhe, o mesmo cálculo com as FVCs (revendedores contados uma vez só, mesmo quem compra dentro e fora delas) e só das FVCs. Os pedidos OMNI (Consumidor Final) ficam fora."
           tooltip={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {([

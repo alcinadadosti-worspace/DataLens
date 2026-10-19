@@ -70,9 +70,9 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
   const reconciliacao = useMemo(() => {
     if (orders.length === 0 || !totalRow) return null;
     const ordersTotal = calcEligibleRevenue(orders);
-    const biTotal = totalRow.total.receitaAtual;
-    const diffPct = biTotal > 0 ? ((ordersTotal - biTotal) / biTotal) * 100 : 0;
-    return { ordersTotal, biTotal, diffPct };
+    const extranetTotal = totalRow.total.receitaAtual;
+    const diffPct = extranetTotal > 0 ? ((ordersTotal - extranetTotal) / extranetTotal) * 100 : 0;
+    return { ordersTotal, extranetTotal, diffPct };
   }, [orders, totalRow]);
 
   if (!dataset || pdvRows.length === 0) {
@@ -176,17 +176,17 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
       {reconciliacao && (
         <ChartCard
           title="Reconciliação"
-          subtitle="Soma de pedidos elegíveis (Order[], FVC incluído) vs. receita oficial da Extranet"
-          hint="Compara os dois datasets independentes que alimentam o Modo VD — se a diferença for grande, algo mudou na regra de elegibilidade ou no corte de datas entre os dois lotes."
+          subtitle="Soma dos pedidos elegíveis da VD+ (FVC incluído) vs. receita oficial da Extranet"
+          hint="Compara as duas plataformas que alimentam o Modo VD: as planilhas de pedidos da VD+ e os relatórios da Extranet. Se a diferença for grande, algo mudou na regra de elegibilidade ou no corte de datas entre os dois lotes."
         >
           <div style={{ display: 'flex', gap: 32, alignItems: 'baseline', flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pedidos (Order[])</div>
+              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pedidos (VD+)</div>
               <div style={{ fontSize: 22, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRL(reconciliacao.ordersTotal)}</div>
             </div>
             <div>
               <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Extranet</div>
-              <div style={{ fontSize: 22, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRL(reconciliacao.biTotal)}</div>
+              <div style={{ fontSize: 22, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>{fmtBRL(reconciliacao.extranetTotal)}</div>
             </div>
             <div>
               <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Diferença</div>

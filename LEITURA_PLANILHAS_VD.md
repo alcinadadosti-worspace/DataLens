@@ -47,6 +47,11 @@ maior novidade: 14 planilhas exportadas da Extranet, já pré-agregadas (pivots)
 respondendo a **uma pergunta de negócio específica**, sempre comparando **ciclo atual vs. ciclo/período
 anterior**.
 
+**Plataforma de origem pelo nome do arquivo:** arquivo que começa com timestamp (`20261016_...`) vem
+da **Extranet**; arquivo que começa com texto (`ConsultaPedidos`, `ConsultaRankingVendas`) vem da
+**VD+**. Ou seja, a Família A é VD+, e as Famílias B e C são Extranet (os `GestaoPedidos_*` também
+chegam com timestamp).
+
 ---
 
 ## 2. Família A — Dados transacionais brutos
@@ -173,7 +178,7 @@ funciona como **metadado de contexto do relatório**, não como dado a ser lido 
 | `TIPO DE RECEITA` | `Receita GMV + Omni` ou `Receita Bruta` | Define qual métrica de receita o relatório usa — **varia entre relatórios** (ver §6.1). |
 | `CICLO ATUAL` / `PERÍODO ATUAL` | `31/08/2026 - 20/09/2026` | Janela do "atual". |
 | `CICLO ANTERIOR` / `PERÍODO ANTERIOR` | `01/09/2025 - 21/09/2025` | Janela de comparação — **note que é o ciclo homólogo do ano anterior**, não o ciclo imediatamente anterior. |
-| `CP` | `10258` | Código do ponto/franquia — constante em todos os arquivos deste lote. |
+| `CP` | `10258` | Código Pai (franquia) — constante em todos os arquivos deste lote. |
 | `PDV` / `CANAL` / `UN. DE NEGÓCIO` | `-` (sem filtro aplicado) | Nestes 18 arquivos vêm sempre "todos" — mas o campo existe para relatórios filtrados. |
 
 Um parser deveria extrair esse bloco como um `ReportContext` único por arquivo e usá-lo para
@@ -228,7 +233,7 @@ atenção redobrada ao nomear os conceitos no código:
 - **`VendaDireta_Evolucao_da_base.xlsx`**: base ativa 5.228, 168 inícios, 136 reinícios, base
   multimarca 4.549 (87,01%). Só 1 linha, só ciclo atual (não tem "anterior" aqui).
 - **`VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx`** (abas `POR PDV` e `POR SUPERVISOR`):
-  base total, base ativa, ativos, base multimarca, **RPA (receita por ativo)**, inativos I1-a-I3 /
+  base total, base ativa, ativos, base multimarca, **RPA (real por ativo)**, inativos I1-a-I3 /
   I4-a-I6, % atividade, % churn, inícios, reinícios, "I6 recuperados", perda da base — tudo por PDV
   (2 linhas) e por supervisor (13 supervisores, nomes = mesmo campo `ResponsavelEstrutura` de
   `ConsultaPedidos`, cruzamento direto e confiável).
@@ -318,9 +323,10 @@ resolver só olhando os dados:
    dados de UN entre relatórios diferentes.
 6. **`RupturaVD_detalhamento_ruptura_por_item` não é exaustivo** (57 SKUs vs. milhares no catálogo
    real) — tratar como amostra/watchlist, não como base completa de ruptura por item.
-7. **Siglas não documentadas**: `IAF` (ruptura), `CGB` (segmentação da base), `CP` (código do
-   ponto). Recomenda-se glossário confirmado com a área de negócio antes de expor esses termos em
-   UI.
+7. **Siglas não documentadas**: `IAF` (ruptura) e `CGB` (segmentação da base) — fora do glossário
+   da UI até alguém da área de negócio confirmar. Confirmadas pelo time (19/10/2026): `CP` = Código
+   Pai, `PEF` = Ponto de Equilíbrio Financeiro, `RPA` = Real por Ativo, `ER` = Espaço do Revendedor;
+   na aderência por curva, a curva A é a de maior giro e a E a de menor.
 
 ---
 
@@ -538,12 +544,12 @@ Bruta" (mas só contam revendedoras); opt-out e gestão de pedidos não declaram
 | `VendaDireta_Distribuicao_da_receita_por_categoria` | CP, PDV, CONSULTOR (A) | 6 macrocategorias (Cabelos, Cuidados da pele, Gifts, Maquiagem, Perfumaria, Outros), cada uma com RECEITA (R$) e PARTICIPAÇÃO (%), mais TOTAL RECEITA. Cabeçalho em 2 linhas; na aba CONSULTOR (A) a linha de categorias vem deslocada 1 coluna, então o parser casa o i-ésimo "RECEITA (R$)" com a i-ésima categoria, pela ordem. A aba CONSULTOR veio sem linhas. |
 | `VendaDireta_Performance_PDV_Supervisor` | PDV, SUPERVISOR | RECEITA, QTD PEDIDOS, ITENS POR PEDIDO, PEDIDO MÉDIO e 6 colunas de faixa (ATÉ R$200 … MAIOR QUE R$1.000), com linha TOTAL. Ver §10.4. |
 
-**Base digital** (tela *Base & Segmentação*, card "Canais digitais e Espaço Revendedor"):
+**Base digital** (tela *Base & Segmentação*, card "Canais digitais e Espaço do Revendedor"):
 
 - `ativas_uma_compra_canais_digitais`: 1 linha — 2.125 ativas, 1.185 com uma compra ou mais nos canais
   digitais (55,76%).
 - `ativas_uma_compra_er`: 1 linha — 2.125 ativas, 574 com compra no ER (27,01%). "ER" lido como
-  Espaço Revendedor pelo contexto, não confirmado.
+  Espaço do Revendedor (confirmado pelo time em 19/10/2026).
 - `Monitoramento_base_com_penetracao_em_ferramentas_digitais_pdv`: TOTAL + 1 linha por PDV (13707:
   1.401 / 320 ER / 860 digitais; 13706: 724 / 254 / 325). **A coluna se chama "Base Ativa", mas o número
   é o de ativos** (quem comprou no ciclo, 2.125 = `ATIVOS BASE TOTAL` do Monitoramento), não a base
@@ -632,6 +638,6 @@ extrato 312 / R$ 1.731.005,49).
 1. **Meta PEF do Ciclo 14** — reexportar os 3 relatórios `ReceitaCanalVD_*` depois que a meta for lançada.
 2. **Mix de categorias** — confirmar com quem gera o relatório por que o total passa da receita GMV em 1,75%.
 3. **Faixas da Performance PDV/Supervisor** — confirmar o que cada faixa conta (§10.4).
-4. **"ER"** — confirmar que é Espaço Revendedor e o que entra em "canais digitais".
+4. **"Canais digitais"** — confirmar o que entra nesse conjunto ("ER" já confirmado: Espaço do Revendedor).
 5. **Aderência** — pedir à Extranet a versão filtrada só para o canal VD, se existir; hoje a linha do CP e a
    evolução semanal misturam lojas e VD.

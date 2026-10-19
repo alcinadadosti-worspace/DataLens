@@ -231,7 +231,7 @@ export interface MonitoramentoBaseRow {
   baseAtiva: number;
   ativosBaseTotal: number;
   baseMultimarca: number;
-  rpa: number; // receita por ativo
+  rpa: number; // real por ativo
   inativosI1I3: number;
   inativosI4I6: number;
   atividadePct: number;
@@ -467,7 +467,7 @@ export const VD_CORPORATE_FILE_LABELS: Record<VDCorporateFile, string> = {
   performancePdvSupervisor: 'Venda Direta — performance por PDV/supervisor',
   receitaUnGmv: 'Venda Direta — receita por UN (GMV)',
   ativasCanaisDigitais: 'Ativas com compra nos canais digitais',
-  ativasEspacoRevendedor: 'Ativas com compra no Espaço Revendedor',
+  ativasEspacoRevendedor: 'Ativas com compra no Espaço do Revendedor',
   ferramentasDigitaisPdv: 'Penetração em ferramentas digitais por PDV',
   optOutBase: 'Opt-out de catálogos — base total',
   optOutDetalhe: 'Opt-out de catálogos — detalhe da base',

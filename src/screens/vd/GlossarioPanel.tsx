@@ -8,30 +8,25 @@ interface Term {
 }
 
 const GLOSSARIO: Record<string, Term> = {
-  cgb: {
-    sigla: 'CGB',
-    significado: 'Aparece no nome da aba "SEGMENTAÇÃO DA BASE CGB" — significado não confirmado.',
-    confirmado: false,
-  },
   cp: {
     sigla: 'CP',
-    significado: 'Código do Ponto — identifica a franquia/CP dona dos relatórios (constante em todos os arquivos deste lote). Confirmado pela aba FILTROS de cada arquivo.',
+    significado: 'Código Pai — identifica a franquia dona dos relatórios (constante em todos os arquivos deste lote). Aparece na aba FILTROS de cada arquivo.',
     confirmado: true,
   },
   rpa: {
     sigla: 'RPA',
-    significado: 'Receita Por Ativo — receita total dividida pelo número de revendedores ativos. Confirmado pelo próprio cabeçalho da coluna ("RPA (REAIS POR ATIVO)").',
+    significado: 'Real por Ativo — receita total dividida pelo número de revendedores ativos (no relatório, a coluna "RPA (REAIS POR ATIVO)").',
     confirmado: true,
   },
   pef: {
     sigla: 'Meta PEF',
-    significado: 'Meta acordada com o franqueado para o ciclo (aparece em vários relatórios de receita: "META PEF (R$)"). Origem exata da sigla não confirmada.',
-    confirmado: false,
+    significado: 'PEF = Ponto de Equilíbrio Financeiro. A Meta PEF é a receita que o ciclo precisa atingir para chegar a esse ponto de equilíbrio (aparece nos relatórios de receita como "META PEF (R$)").',
+    confirmado: true,
   },
   er: {
     sigla: 'ER',
-    significado: 'Espaço Revendedor — aparece em "ativas_uma_compra_er" e "Ativas com pelo menos uma compra no ER". Leitura pelo contexto (ferramenta digital de pedido da revendedora), não confirmada com quem gera o relatório.',
-    confirmado: false,
+    significado: 'Espaço do Revendedor — o site/app de pedidos da revendedora. Aparece em "ativas_uma_compra_er" e "Ativas com pelo menos uma compra no ER".',
+    confirmado: true,
   },
   optout: {
     sigla: 'Opt-out de catálogo',
@@ -45,8 +40,8 @@ const GLOSSARIO: Record<string, Term> = {
   },
   aderencia: {
     sigla: 'Aderência por curva',
-    significado: 'Quanto do pedido sugerido foi seguido em cada curva de produtos (A = os que mais vendem; E = os de menor giro). A fórmula exata não vem no arquivo.',
-    confirmado: false,
+    significado: 'Quanto do pedido sugerido foi seguido em cada curva de produtos: curva A = produtos de maior giro, curva E = produtos de menor giro. O percentual já vem calculado no arquivo.',
+    confirmado: true,
   },
 };
 

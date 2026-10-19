@@ -51,7 +51,7 @@ const DataQualityPanel: React.FC = () => {
   const checks = useMemo<QualityCheck[]>(() => {
     const list: QualityCheck[] = [];
 
-    // 1) Reconciliação receita Order[] vs Extranet — sobre o extrato inteiro, sem os filtros globais (o total
+    // 1) Reconciliação receita VD+ (Order[]) vs Extranet — sobre o extrato inteiro, sem os filtros globais (o total
     // da Extranet é o ciclo todo; um recorte mostraria divergência falsa).
     const totalRow = dataset?.receitaCanalVDPdv?.find(r => r.un.trim().toUpperCase() === 'TOTAL');
     if (orders.length > 0 && totalRow) {
@@ -64,9 +64,9 @@ const DataQualityPanel: React.FC = () => {
       const valorTxt = (diffValor >= 0 ? '+' : '−') + fmtBRL(Math.abs(diffValor));
       list.push({
         id: 'reconciliacao',
-        label: bate ? 'Receita de pedidos bate com a Extranet' : 'Receita de pedidos não bate com a Extranet',
+        label: bate ? 'Receita da VD+ bate com a Extranet' : 'Receita da VD+ não bate com a Extranet',
         status: bate ? 'ok' : 'warn',
-        detail: `Pedidos (FVC incluído) ${fmtBRL(ordersRevenue)} × Extranet ${fmtBRL(totalRow.total.receitaAtual)} (ReceitaCanalVD_Performance_por_PDV.xlsx): diferença de ${pctTxt} (${valorTxt}). Tolerância: ±1%.`,
+        detail: `Pedidos VD+ (FVC incluído) ${fmtBRL(ordersRevenue)} × Extranet ${fmtBRL(totalRow.total.receitaAtual)} (ReceitaCanalVD_Performance_por_PDV.xlsx): diferença de ${pctTxt} (${valorTxt}). Tolerância: ±1%.`,
       });
     }
 
@@ -190,7 +190,7 @@ const DataQualityPanel: React.FC = () => {
       monitorTotal ? { nome: 'Monitoramento da base', v: monitorTotal.ativosBaseTotal } : null,
       digitaisTotal ? { nome: 'Ferramentas digitais por PDV', v: digitaisTotal.ativas } : null,
       dataset?.ativasCanaisDigitais ? { nome: 'Ativas — canais digitais', v: dataset.ativasCanaisDigitais.ativas } : null,
-      dataset?.ativasEspacoRevendedor ? { nome: 'Ativas — Espaço Revendedor', v: dataset.ativasEspacoRevendedor.ativas } : null,
+      dataset?.ativasEspacoRevendedor ? { nome: 'Ativas — Espaço do Revendedor', v: dataset.ativasEspacoRevendedor.ativas } : null,
     ].filter((x): x is { nome: string; v: number } => !!x);
     if (ativosFontes.length >= 2) {
       const bate = ativosFontes.every(f => f.v === ativosFontes[0].v);
