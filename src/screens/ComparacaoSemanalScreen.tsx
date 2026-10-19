@@ -58,7 +58,7 @@ const METRICS: { key: MetricKey; label: string; fmt: (v: number) => string; colo
   { key: 'pedidos',      label: 'Pedidos',        fmt: fmtNumber,                                 color: 'var(--vd-success, #2E7D5B)', hint: 'Total de pedidos registrados na semana.' },
   { key: 'ticketMedio',  label: 'Ticket Médio',   fmt: fmtBRLshort,                               color: '#C07A2B',                    hint: 'Receita total dividida pelo número de pedidos elegíveis (não cancelados) da semana.' },
   { key: 'ansRate',      label: 'ANS %',          fmt: v => v.toFixed(1).replace('.', ',') + '%', color: '#8B3A8F',                    hint: 'ANS — Acordo de Nível de Serviço: % de pedidos da semana atendidos dentro do prazo esperado entre aprovação e autorização de faturamento.' },
-  { key: 'rpa',          label: 'RPA',            fmt: fmtBRLshort,                               color: 'var(--vd-danger, #B83A3A)',  hint: 'RPA — Receita Por Ativo: faturamento da semana dividido pelo número de revendedores ativos.' },
+  { key: 'rpa',          label: 'RPA',            fmt: fmtBRLshort,                               color: 'var(--vd-danger, #B83A3A)',  hint: 'RPA — Real por Ativo: faturamento da semana dividido pelo número de revendedores ativos.' },
   { key: 'cancelados',   label: 'Cancelamentos',  fmt: fmtNumber,                                 color: '#D97B3A',                    hint: 'Total de pedidos cancelados na semana.' },
 ];
 
@@ -826,7 +826,9 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
       {/* ══════════════════════════════════════════════════════
           SEÇÃO: COMPARAÇÃO X vs Y
       ═══════════════════════════════════════════════════════ */}
-      {sectionLabel('Comparação de Períodos — X vs Y')}
+      {/* Só faz sentido comparar ciclos quando há mais de um importado */}
+      {availableCycles.length > 1 && (<>
+      {sectionLabel('Comparação de Ciclos — X vs Y')}
 
       {/* Period selector panel */}
       <div style={{
@@ -901,7 +903,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
 
       {hasPeriodB ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-          <ChartCard title={`${compMetricDef.label} — semana a semana`} subtitle="Períodos alinhados relativamente">
+          <ChartCard title={`${compMetricDef.label} — semana a semana`} subtitle="Ciclos alinhados semana a semana">
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={compLineData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--vd-bg-track, #F2EEE6)" />
@@ -910,10 +912,10 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                   tickFormatter={v => yFmt(v, compMetric === 'ansRate')} width={52} />
                 <Tooltip content={ttCompLine} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                <Line type="monotone" dataKey="periodoA" name={`Período A`}
+                <Line type="monotone" dataKey="periodoA" name="Ciclo A"
                   stroke={COLOR_A} strokeWidth={2.5} dot={{ r: 4, fill: COLOR_A, stroke: 'var(--vd-surface, #FFFFFF)', strokeWidth: 2 }}
                   connectNulls activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="periodoB" name={`Período B`}
+                <Line type="monotone" dataKey="periodoB" name="Ciclo B"
                   stroke={COLOR_B} strokeWidth={2.5} strokeDasharray="5 3"
                   dot={{ r: 4, fill: COLOR_B, stroke: 'var(--vd-surface, #FFFFFF)', strokeWidth: 2 }}
                   connectNulls activeDot={{ r: 5 }} />
@@ -926,16 +928,16 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
               background: 'var(--vd-surface, #FFFFFF)', border: '1px solid var(--vd-border, #E8E2D6)', borderRadius: 14,
               padding: '14px 18px 10px', boxShadow: '0 1px 4px rgba(28,24,20,0.05)',
             }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--vd-ink, #1C1814)', marginBottom: 2 }}>Totais agregados por período</div>
-              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', marginBottom: 14 }}>Soma / média das métricas em cada período</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--vd-ink, #1C1814)', marginBottom: 2 }}>Totais agregados por ciclo</div>
+              <div style={{ fontSize: 11, color: 'var(--vd-text-muted, #9B9287)', marginBottom: 14 }}>Soma / média das métricas em cada ciclo</div>
               <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_A }} />
-                  <span style={{ fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>Período A</span>
+                  <span style={{ fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>Ciclo A</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: COLOR_B }} />
-                  <span style={{ fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>Período B</span>
+                  <span style={{ fontSize: 11, color: 'var(--vd-text-secondary, #6B6258)' }}>Ciclo B</span>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
@@ -956,7 +958,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
                       ].map(p => (
                         <div key={p.lbl} style={{ marginBottom: 6 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 2 }}>
-                            <span style={{ color: p.color, fontWeight: 600 }}>Período {p.lbl}</span>
+                            <span style={{ color: p.color, fontWeight: 600 }}>Ciclo {p.lbl}</span>
                             <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'var(--vd-ink, #1C1814)' }}>{row.fmt(p.val)}</span>
                           </div>
                           <div style={{ height: 5, background: 'var(--vd-border, #E8E2D6)', borderRadius: 3, overflow: 'hidden' }}>
@@ -989,6 +991,7 @@ const ComparacaoSemanalScreen: React.FC<ComparacaoSemanalScreenProps> = ({ onNav
           {cicloB ? `Nenhum dado encontrado para o Ciclo B (${cicloB}).` : 'Selecione um Ciclo B para habilitar a comparação.'}
         </div>
       )}
+      </>)}
 
       {/* ══════════════════════════════════════════════════════
           SEÇÃO: RANKINGS / DESTAQUES
