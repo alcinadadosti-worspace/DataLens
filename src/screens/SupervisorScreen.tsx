@@ -4,14 +4,15 @@ import { isRevenueEligible } from '../analytics/financialMetrics';
 import { parseBRDate, diffInMinutes } from '../utils/dateUtils';
 import { fmtBRLshort, fmtBRL, fmtMinutes, fmtNumber } from '../utils/formatters';
 import ChartCard from '../components/charts/ChartCard';
-import RankingChart from '../components/charts/RankingChart';
-import { RankingItem } from '../components/charts/RankingList';
+import RankingChart, { DetailView, ExtraStat } from '../components/charts/RankingChart';
+import { RankingItem, BreakdownRow } from '../components/charts/RankingList';
 import InfoHint from '../components/ui/InfoHint';
 import Button from '../components/ui/Button';
 import { useExport } from '../hooks/useExport';
 import { useFilterStore } from '../store/useFilterStore';
 import { useVDCorporateStore } from '../store/useVDCorporateStore';
 import { getSupervisorColor } from '../design-system/supervisorColors';
+import { TIER_DEFINITIONS } from '../design-system/tierStyles';
 import { Order } from '../types/order';
 
 interface SupervisorRow {
@@ -27,6 +28,35 @@ interface SupervisorRow {
   /** Cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome normalizado — `null` quando não há relatório da Extranet carregado ou o nome não bate com nenhuma linha do relatório. */
   rpa: number | null;
   churnPct: number | null;
+}
+
+/** Agregados de um supervisor usados só no painel de detalhe (tela cheia) do gráfico de participação. */
+interface SupervisorDetail {
+  revenue: number;
+  eligibleCount: number;
+  itens: number;
+  resellers: Record<string, { name: string; value: number; orders: number }>;
+  meios: Record<string, number>;
+  /** Pedidos por forma de pagamento, com a contagem de cada plano (ex. "BOLETO 3X") dentro dela. */
+  pagamentos: Record<string, { count: number; planos: Record<string, number> }>;
+  tiers: Record<string, number>;
+  produtos: Record<string, { nome: string; valor: number; qtd: number }>;
+}
+
+const pctBR = (n: number) => n.toFixed(1).replace('.', ',') + '%';
+
+/** Agrupa o PlanoPagamento da VD+ (que traz parcelas e prazos, ex. "Parcele com Pix 3x (30/60/90 dias)") na forma de pagamento. */
+function formaPagamento(plano: string): string {
+  const p = plano.trim();
+  if (!p) return 'Não informado';
+  if (/parcele com pix/i.test(p)) return 'Pix parcelado';
+  if (/pix/i.test(p)) return 'Pix à vista';
+  if (/boleto/i.test(p)) return 'Boleto';
+  if (/cart[aã]o de d[eé]bito/i.test(p)) return 'Cartão de débito';
+  if (/cart[aã]o/i.test(p)) return 'Cartão de crédito';
+  if (/dinheiro/i.test(p)) return 'Dinheiro';
+  if (/a definir/i.test(p)) return 'A definir na retirada';
+  return p;
 }
 
 function normalizeSupervisorName(s: string): string {
@@ -118,6 +148,48 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
     });
   }, [orders, monitorPorSupervisor]);
 
+  // Detalhe de cada supervisor no painel em tela cheia: revendedores, itens, meio de captação e
+  // segmentação — tudo sobre os pedidos elegíveis (não cancelados), como a receita do gráfico.
+  const rankingVendas = corporateDataset?.rankingVendas;
+  const supervisorDetail = useMemo<Record<string, SupervisorDetail>>(() => {
+    const map: Record<string, SupervisorDetail> = {};
+    const supervisorByReseller: Record<string, string> = {};
+    for (const o of orders) {
+      const key = o.ResponsavelEstrutura || 'Sem supervisor';
+      if (!map[key]) map[key] = { revenue: 0, eligibleCount: 0, itens: 0, resellers: {}, meios: {}, pagamentos: {}, tiers: {}, produtos: {} };
+      if (o.Pessoa && !supervisorByReseller[o.Pessoa]) supervisorByReseller[o.Pessoa] = key;
+      if (!isRevenueEligible(o)) continue;
+      const d = map[key];
+      d.revenue += o.ValorPraticado;
+      d.eligibleCount++;
+      d.itens += o.QtdeMateriais;
+      if (o.Pessoa) {
+        if (!d.resellers[o.Pessoa]) d.resellers[o.Pessoa] = { name: o.NomePessoa || o.Pessoa, value: 0, orders: 0 };
+        d.resellers[o.Pessoa].value += o.ValorPraticado;
+        d.resellers[o.Pessoa].orders++;
+      }
+      const meio = o.MeioCaptacao || 'Não informado';
+      d.meios[meio] = (d.meios[meio] ?? 0) + 1;
+      const forma = formaPagamento(o.PlanoPagamento);
+      if (!d.pagamentos[forma]) d.pagamentos[forma] = { count: 0, planos: {} };
+      d.pagamentos[forma].count++;
+      if (o.PlanoPagamento) d.pagamentos[forma].planos[o.PlanoPagamento] = (d.pagamentos[forma].planos[o.PlanoPagamento] ?? 0) + 1;
+      d.tiers[o.tierId] = (d.tiers[o.tierId] ?? 0) + o.ValorPraticado;
+    }
+    // ConsultaRankingVendas (grão item) não traz o supervisor: cada linha vai pro supervisor do
+    // revendedor (CodigoRevendedora = Pessoa) nos pedidos já filtrados. Revendedor fora do filtro fica de fora.
+    for (const r of rankingVendas ?? []) {
+      if (r.tipo !== 'Venda') continue;
+      const key = supervisorByReseller[r.codigoRevendedora];
+      if (!key) continue;
+      const produtos = map[key].produtos;
+      if (!produtos[r.codigoProduto]) produtos[r.codigoProduto] = { nome: r.nomeProduto, valor: 0, qtd: 0 };
+      produtos[r.codigoProduto].valor += r.valorPraticado;
+      produtos[r.codigoProduto].qtd += r.quantidadeItens;
+    }
+    return map;
+  }, [orders, rankingVendas]);
+
   const sorted = useMemo(() => {
     return [...supervisorData].sort((a, b) => {
       // rpa/churnPct podem ser `null` (sem cruzamento com a Extranet) — tratamos como "menor que
@@ -189,12 +261,131 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
   const participationItems: RankingItem[] = [...sorted]
     .sort((a, b) => b.totalRevenue - a.totalRevenue)
     .map(row => ({
+      id: row.name,
       label: row.name,
       value: row.totalRevenue,
       valueLabel: fmtBRLshort(row.totalRevenue),
       meta: totalRevenue > 0 ? `${((row.totalRevenue / totalRevenue) * 100).toFixed(1).replace('.', ',')}%` : '0,0%',
       color: getSupervisorColor(row.name)?.accent,
     }));
+
+  const detailFor = (item: RankingItem) => supervisorDetail[item.id ?? item.label];
+
+  function getTopResellers(item: RankingItem): BreakdownRow[] | null {
+    const d = detailFor(item);
+    if (!d) return null;
+    return Object.values(d.resellers)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10)
+      .map(r => {
+        const pct = d.revenue > 0 ? (r.value / d.revenue) * 100 : 0;
+        return {
+          label: r.name,
+          value: r.value,
+          valueLabel: fmtBRLshort(r.value),
+          pct,
+          meta: `${r.orders} pedido${r.orders === 1 ? '' : 's'} · ${pctBR(pct)} da receita do supervisor`,
+        };
+      });
+  }
+
+  function getTopProdutos(item: RankingItem): BreakdownRow[] | null {
+    const d = detailFor(item);
+    if (!d) return null;
+    const produtos = Object.values(d.produtos);
+    const total = produtos.reduce((s, p) => s + p.valor, 0);
+    return produtos
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 10)
+      .map(p => {
+        const pct = total > 0 ? (p.valor / total) * 100 : 0;
+        return {
+          label: p.nome,
+          value: p.valor,
+          valueLabel: fmtBRLshort(p.valor),
+          pct,
+          meta: `${fmtNumber(p.qtd)} un. · ${pctBR(pct)} do faturamento em itens`,
+        };
+      });
+  }
+
+  function getMeiosCaptacao(item: RankingItem): BreakdownRow[] | null {
+    const d = detailFor(item);
+    if (!d) return null;
+    return Object.entries(d.meios)
+      .sort((a, b) => b[1] - a[1])
+      .map(([meio, count]) => {
+        const pct = d.eligibleCount > 0 ? (count / d.eligibleCount) * 100 : 0;
+        return { label: meio, value: count, valueLabel: fmtNumber(count), pct, meta: `${pctBR(pct)} dos pedidos` };
+      });
+  }
+
+  function getFormasPagamento(item: RankingItem): BreakdownRow[] | null {
+    const d = detailFor(item);
+    if (!d) return null;
+    return Object.entries(d.pagamentos)
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([forma, { count, planos }]) => {
+        const pct = d.eligibleCount > 0 ? (count / d.eligibleCount) * 100 : 0;
+        const planosOrdenados = Object.entries(planos).sort((a, b) => b[1] - a[1]);
+        // Só vale citar o plano mais usado quando a forma tem mais de um (Boleto 2X/3X/4X…).
+        const planoTop = planosOrdenados.length > 1 ? ` · mais usado: ${planosOrdenados[0][0]}` : '';
+        return { label: forma, value: count, valueLabel: fmtNumber(count), pct, meta: `${pctBR(pct)} dos pedidos${planoTop}` };
+      });
+  }
+
+  function getReceitaPorTier(item: RankingItem): BreakdownRow[] | null {
+    const d = detailFor(item);
+    if (!d) return null;
+    return Object.entries(d.tiers)
+      .sort((a, b) => b[1] - a[1])
+      .map(([tierId, value]) => {
+        const pct = d.revenue > 0 ? (value / d.revenue) * 100 : 0;
+        return {
+          label: TIER_DEFINITIONS.find(t => t.id === tierId)?.name ?? tierId,
+          value,
+          valueLabel: fmtBRLshort(value),
+          pct,
+          meta: `${pctBR(pct)} da receita do supervisor`,
+        };
+      });
+  }
+
+  // Páginas do painel de detalhe — clicar de novo no nome do supervisor (ou nos ícones) alterna entre elas.
+  const supervisorDetailViews: DetailView[] = [
+    { key: 'revendedores', icon: 'ph-users-three', label: 'Revendedores que mais faturaram', getBreakdown: getTopResellers },
+    { key: 'itens', icon: 'ph-package', label: 'Itens mais vendidos', getBreakdown: getTopProdutos },
+    { key: 'captacao', icon: 'ph-device-mobile', label: 'Pedidos por meio de captação', getBreakdown: getMeiosCaptacao },
+    { key: 'pagamento', icon: 'ph-credit-card', label: 'Pedidos por forma de pagamento', getBreakdown: getFormasPagamento },
+    { key: 'tiers', icon: 'ph-medal', label: 'Receita por segmentação', getBreakdown: getReceitaPorTier },
+  ];
+
+  function getSupervisorExtraStats(item: RankingItem): ExtraStat[] | null {
+    const row = supervisorData.find(r => r.name === (item.id ?? item.label));
+    const d = detailFor(item);
+    if (!row || !d) return null;
+    const ativos = Object.keys(d.resellers).length;
+    const stats: ExtraStat[] = [
+      { label: 'Revendedores ativos', value: fmtNumber(ativos), sub: 'com pedido no período' },
+      // Mesmo número da coluna Pedidos da tabela (cancelados inclusos) — os cancelados vêm logo abaixo.
+      { label: 'Pedidos', value: fmtNumber(row.orderCount) },
+      { label: 'Cancelados', value: fmtNumber(row.cancelledCount), sub: `${pctBR(row.orderCount > 0 ? (row.cancelledCount / row.orderCount) * 100 : 0)} dos pedidos` },
+      { label: 'Ticket médio', value: fmtBRL(Math.round(row.avgTicket)) },
+      { label: 'RPA', value: fmtBRL(Math.round(ativos > 0 ? d.revenue / ativos : 0)), sub: 'receita ÷ ativos' },
+    ];
+    if (row.rpa !== null) stats.push({ label: 'RPA (Extranet)', value: fmtBRL(Math.round(row.rpa)), sub: 'Monitoramento da base' });
+    const pagamentoTop = Object.entries(d.pagamentos).sort((a, b) => b[1].count - a[1].count)[0];
+    if (pagamentoTop) {
+      const pct = d.eligibleCount > 0 ? (pagamentoTop[1].count / d.eligibleCount) * 100 : 0;
+      stats.push({ label: 'Pagamento mais usado', value: pagamentoTop[0], sub: `${pctBR(pct)} dos pedidos` });
+    }
+    stats.push(
+      { label: 'Itens por pedido', value: (d.eligibleCount > 0 ? d.itens / d.eligibleCount : 0).toFixed(1).replace('.', ',') },
+      { label: 'ANS médio', value: fmtMinutes(row.avgSLAMinutes), sub: 'aprovação → faturamento' },
+    );
+    if (row.churnPct !== null) stats.push({ label: '% Churn (Extranet)', value: row.churnPct.toFixed(2).replace('.', ',') + '%' });
+    return stats;
+  }
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -245,13 +436,15 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
       <ChartCard
         title="Participação dos supervisores na receita"
         subtitle="Receita total por estrutura, no período filtrado"
-        hint="Quanto cada supervisor/estrutura contribui para a receita total do grupo. Use os botões acima do gráfico para alternar entre barras, pizza e outras visualizações, ou abra em tela cheia para clicar num supervisor e ver mais detalhes."
+        hint="Quanto cada supervisor/estrutura contribui para a receita total do grupo. Use os botões acima do gráfico para alternar entre barras, pizza e outras visualizações, ou abra em tela cheia e clique num supervisor para ver ticket médio, RPA (Real por Ativo = receita ÷ revendedores ativos), cancelamentos e ANS. Clicando de novo no nome dele, o painel alterna entre os revendedores que mais faturaram, os itens mais vendidos (exige o ConsultaRankingVendas.csv), os meios de captação, as formas de pagamento e a receita por segmentação."
       >
         <RankingChart
           items={participationItems}
           mode="vd"
           initialCategory="bar"
           emptyMessage="Sem dados"
+          detailViews={supervisorDetailViews}
+          getExtraStats={getSupervisorExtraStats}
         />
       </ChartCard>
       <div style={{ height: 20 }} />
@@ -302,7 +495,7 @@ const SupervisorScreen: React.FC<SupervisorScreenProps> = ({ onNavigate }) => {
                       <span style={{ display: 'inline-flex', alignItems: 'center' }}>
                         RPA {sortKey === 'rpa' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                         <span onClick={e => e.stopPropagation()}>
-                          <InfoHint direction="down" text="Receita Por Ativo — cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome de supervisor. '—' quando o nome não bate com nenhuma linha do relatório da Extranet." />
+                          <InfoHint direction="down" text="Real por Ativo — cruzamento com VendaDireta_Monitoramento_base_PDV_Supervisor.xlsx por nome de supervisor. '—' quando o nome não bate com nenhuma linha do relatório da Extranet." />
                         </span>
                       </span>
                     </th>

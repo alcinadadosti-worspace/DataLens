@@ -80,6 +80,8 @@ export interface DetailView {
 export interface ExtraStat {
   label: string;
   value: string;
+  /** Linha de apoio opcional abaixo do valor (ex. "53,6% dos pedidos"). */
+  sub?: string;
 }
 
 interface RankingChartProps {
@@ -518,16 +520,35 @@ const DetailPanel: React.FC<{
   detailViews?: DetailView[];
   activeViewKey?: string;
   onCycle?: () => void;
-}> = ({ item, breakdown, breakdownLabel, extraStats, detailViews, activeViewKey, onCycle }) => {
+  onSelectView?: (key: string) => void;
+}> = ({ item, breakdown, breakdownLabel, extraStats, detailViews, activeViewKey, onCycle, onSelectView }) => {
   // Só mostra no seletor as views que de fato têm dado pra essa unidade — uma loja sem xlsx de
   // Fidelidade importado, por exemplo, nunca teria o que exibir nesse ícone.
   const visibleViews = item && detailViews ? detailViews.filter(v => {
     const bd = v.getBreakdown(item);
     return bd && bd.length > 0;
   }) : [];
+  // Muitas estatísticas em linhas empurram a quebra pra fora da tela — acima de 6, viram blocos em 2 colunas num painel um pouco mais largo.
+  const compactStats = !!extraStats && extraStats.length > 6;
+
+  // Ao trocar de página (ícone ou clique no nome), rola até a lista — com muitas estatísticas ela fica
+  // abaixo da dobra e a troca parecia não ter feito nada. Trocar de item mantendo a página não rola.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const breakdownRef = useRef<HTMLDivElement>(null);
+  const prevViewKey = useRef(activeViewKey);
+  useEffect(() => {
+    const panel = panelRef.current;
+    const list = breakdownRef.current;
+    if (panel && list && prevViewKey.current !== undefined && activeViewKey !== undefined && prevViewKey.current !== activeViewKey) {
+      // Deixa ~56px acima do título da lista pra os ícones das páginas continuarem visíveis.
+      const top = list.getBoundingClientRect().top - panel.getBoundingClientRect().top - 56;
+      if (top > 0) panel.scrollBy({ top, behavior: 'smooth' });
+    }
+    prevViewKey.current = activeViewKey;
+  }, [activeViewKey]);
 
   return (
-  <div style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--chart-border, #E8E2D6)', padding: 24, overflowY: 'auto' }}>
+  <div ref={panelRef} style={{ width: compactStats ? 380 : 320, flexShrink: 0, borderLeft: '1px solid var(--chart-border, #E8E2D6)', padding: 24, overflowY: 'auto' }}>
     <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--chart-text-muted, #9B9287)', marginBottom: 14 }}>
       Detalhe
     </div>
@@ -563,7 +584,22 @@ const DetailPanel: React.FC<{
           </div>
         )}
 
-        {extraStats && extraStats.length > 0 && (
+        {compactStats && (
+          <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {extraStats!.map((s, i) => (
+              <div key={i} style={{
+                background: 'var(--chart-surface, #FFFFFF)', border: '1px solid var(--chart-border, #E8E2D6)', borderRadius: 12,
+                padding: '10px 12px', boxShadow: '0 2px 6px rgba(28,24,20,0.05)', minWidth: 0,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--chart-text-secondary, #6B6258)' }}>{s.label}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', marginTop: 4, overflowWrap: 'anywhere' }}>{s.value}</div>
+                {s.sub && <div style={{ fontSize: 11, color: 'var(--chart-text-muted, #9B9287)', marginTop: 2 }}>{s.sub}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!compactStats && extraStats && extraStats.length > 0 && (
           <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {extraStats.map((s, i) => (
               <div key={i} style={{
@@ -571,7 +607,10 @@ const DetailPanel: React.FC<{
                 background: 'var(--chart-surface, #FFFFFF)', border: '1px solid var(--chart-border, #E8E2D6)', borderRadius: 12,
                 padding: '11px 14px', boxShadow: '0 2px 6px rgba(28,24,20,0.05)',
               }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--chart-text-secondary, #6B6258)', minWidth: 0 }}>{s.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--chart-text-secondary, #6B6258)', minWidth: 0 }}>
+                  {s.label}
+                  {s.sub && <span style={{ display: 'block', fontSize: 11, fontWeight: 400, color: 'var(--chart-text-muted, #9B9287)', marginTop: 2 }}>{s.sub}</span>}
+                </span>
                 <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap', flexShrink: 0 }}>{s.value}</span>
               </div>
             ))}
@@ -584,7 +623,9 @@ const DetailPanel: React.FC<{
               <div
                 key={v.key}
                 title={v.label}
+                onClick={onSelectView ? () => onSelectView(v.key) : undefined}
                 style={{
+                  cursor: onSelectView ? 'pointer' : 'default',
                   width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: v.key === activeViewKey ? 'var(--chart-ink, #1C1814)' : 'var(--chart-bg-subtle, #F2EEE2)',
                   color: v.key === activeViewKey ? 'var(--chart-surface, #FFFFFF)' : 'var(--chart-text-muted, #9B9287)',
@@ -597,7 +638,7 @@ const DetailPanel: React.FC<{
         )}
 
         {breakdown && breakdown.length > 0 && (
-          <div style={{ marginTop: 16 }}>
+          <div ref={breakdownRef} style={{ marginTop: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--chart-text-muted, #9B9287)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               {breakdownLabel ?? 'Colaboradores dessa unidade'}
               {visibleViews.length > 1 && <i className="ph ph-arrow-clockwise" style={{ fontSize: 12 }} title="Clique no nome da unidade acima para alternar" />}
@@ -606,7 +647,8 @@ const DetailPanel: React.FC<{
               {breakdown.map((b, i) => (
                 <div key={i}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.label}</span>
+                    {/* Até 2 linhas: nomes de produto costumam começar igual ("KIT PRESENTE FLORATTA…") e cortados numa linha ficavam indistinguíveis. */}
+                    <span title={b.label} style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minWidth: 0 }}>{b.label}</span>
                     <span style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{b.valueLabel}</span>
                   </div>
                   <div style={{ height: 6, borderRadius: 3, background: 'var(--chart-bg-track, #F2EEE6)', overflow: 'hidden', marginTop: 5 }}>
@@ -853,6 +895,10 @@ const RankingChart: React.FC<RankingChartProps> = ({ items, medals = true, empty
                     detailViews={detailViews}
                     activeViewKey={activeView?.key}
                     onCycle={selected ? () => handleSelect(selected) : undefined}
+                    onSelectView={key => {
+                      const idx = detailViews ? detailViews.findIndex(v => v.key === key) : -1;
+                      if (idx >= 0) setViewIndex(idx);
+                    }}
                   />
                 );
               })()}
