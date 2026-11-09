@@ -53,6 +53,10 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
 
   const topCanal = canais[0];
   const topForma = formas[0];
+  const sistemas = dataset.sistemaVenda ? aggregateByName(dataset.sistemaVenda, true, lojaFiltro || null).filter(s => s.gmv > 0) : [];
+  const caixas = (dataset.caixas ?? []).filter(c => c.gmv > 0 && (!lojaFiltro || c.lojaCodigo === lojaFiltro)).sort((a, b) => b.gmv - a.gmv);
+  const mobshopRede = dataset.mobshop?.cp[0];
+  const mobshopLinhas = [...(dataset.mobshop?.pdv ?? [])].filter(m => !lojaFiltro || m.nome === lojaFiltro).sort((a, b) => b.aderenciaPct - a.aderenciaPct);
 
   return (
     <div style={{ padding: '32px 32px 64px' }}>
@@ -96,8 +100,8 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
         <div style={{ marginTop: 20 }}>
           <ChartCard glow
             title="Receita por canal / UN — ciclo atual vs. anterior"
-            hint="UN — Unidade de Negócio: agrupamento de canais/marcas usado pelo sistema de origem (Receita_por_Canal_UN.xlsx). Compara a receita do ciclo atual com a do ciclo anterior, canal a canal."
-            subtitle={lojaFiltro ? 'Receita_por_Canal_UN.xlsx — sempre rede toda, esse arquivo não abre por loja' : 'Receita_por_Canal_UN.xlsx (GMV + Omni)'}
+            hint="UN — Unidade de Negócio: agrupamento de canais/marcas usado pelo sistema de origem (Receita_por_Canal_UN.xlsx). Compara a receita do ciclo atual com a do ciclo anterior, canal a canal. Desde o Ciclo 15 o arquivo vem em Receita Líquida, então não é a mesma base do GMV dos outros cards."
+            subtitle={lojaFiltro ? 'Receita_por_Canal_UN.xlsx — sempre rede toda, esse arquivo não abre por loja' : 'Receita_por_Canal_UN.xlsx · Receita Líquida'}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {dataset.receitaCanal.map((c, i) => (
@@ -134,7 +138,7 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
                     .sort((a, b) => b.realizadoPct - a.realizadoPct)
                     .map(r => ({
                       label: resolveLojaNome(r.pdvCodigo, r.pdvCodigo),
-                      value: r.receita,
+                      value: r.realizadoPct,
                       valueLabel: fmtBRLshort(r.receita),
                       meta: `${r.realizadoPct.toFixed(0)}% da meta PEF`,
                     }))}
@@ -195,7 +199,7 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
                       .sort((a, b) => (b.total.realizadoPct ?? 0) - (a.total.realizadoPct ?? 0))
                       .map(r => ({
                         label: resolveLojaNome(r.pdvCodigo ?? r.localPdv, `${r.localPdv} (${r.cidade})`),
-                        value: r.total.receitaAtual,
+                        value: r.total.realizadoPct ?? 0,
                         valueLabel: fmtBRLshort(r.total.receitaAtual),
                         meta: r.total.realizadoPct != null ? `${r.total.realizadoPct.toFixed(0)}% da meta PEF` : undefined,
                       }))}
@@ -243,6 +247,40 @@ const LojaCanaisFormasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({
               ))}
             </div>
           </ChartCard>
+        </div>
+      )}
+
+      {(sistemas.length > 0 || caixas.length > 0 || mobshopLinhas.length > 0) && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
+          {(sistemas.length > 0 || mobshopLinhas.length > 0) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {sistemas.length > 0 && (
+            <ChartCard glow title="Sistema de venda" subtitle="Participação no GMV" hint="GerencialVendas com quebra por sistema de venda: por qual frente de caixa a venda passou.">
+              <RankingChart medals={false} items={toItems(sistemas)} />
+            </ChartCard>
+          )}
+          {mobshopLinhas.length > 0 && (
+            <ChartCard glow title="Receita transacionada no Mobshop" subtitle={mobshopRede ? `Rede: ${mobshopRede.aderenciaPct.toFixed(2).replace('.', ',')}%` : 'Por loja'}
+              hint="Loja_Distribuicao_Receita_Transacionada_Mobshop.xlsx. O arquivo traz as colunas 'Receita transacionada' e 'Aderência' com o mesmo valor; aqui aparece uma só, em % da receita.">
+              <RankingChart medals={false} items={mobshopLinhas.map(m => ({
+                label: resolveLojaNome(m.nome, m.nome),
+                value: m.aderenciaPct,
+                valueLabel: `${m.aderenciaPct.toFixed(2).replace('.', ',')}%`,
+              }))} />
+            </ChartCard>
+          )}
+            </div>
+          )}
+          {caixas.length > 0 && (
+            <ChartCard glow title="Venda por caixa" subtitle={lojaFiltro ? 'Caixas desta loja' : 'Maiores caixas da rede'} hint="GerencialVendas com quebra por caixas. O número do caixa só tem sentido dentro de cada loja.">
+              <RankingChart medals={false} items={caixas.slice(0, 12).map(c => ({
+                label: `${resolveLojaNome(c.lojaCodigo ?? '', c.lojaNome)} · caixa ${c.quebraNome}`,
+                value: c.gmv,
+                valueLabel: fmtBRLshort(c.gmv),
+                meta: `${fmtNumber(c.qtdBoletos)} bol.`,
+              }))} />
+            </ChartCard>
+          )}
         </div>
       )}
 

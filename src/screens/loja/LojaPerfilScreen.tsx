@@ -10,6 +10,8 @@ import {
 } from '../../analytics/lojaMetrics';
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { fmtBRL, fmtBRLshort, fmtNumber, fmtPct } from '../../utils/formatters';
+import { pct } from '../../components/loja/lojaUi';
+import { chaveMetrica } from '../../parsers/lojaExtranetParser';
 
 function StatRow({ label, value, meta }: { label: string; value: string; meta?: string }) {
   return (
@@ -92,6 +94,8 @@ const LojaPerfilScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNav
     // ponderada por boletos — não a média simples dos boletos médios das lojas.
     const gmvRede = dataset.lojas.reduce((s, r) => s + r.gmv, 0);
     const boletosRede = dataset.lojas.reduce((s, r) => s + r.qtdBoletos, 0);
+    const rupturaLoja = dataset.ruptura?.itens.filter(i => i.pdvCodigo === codigo) ?? [];
+
     const boletoMedio = {
       valor: lojaRow && lojaRow.qtdBoletos > 0 ? lojaRow.gmv / lojaRow.qtdBoletos : lojaRow?.boletoMedio ?? 0,
       rede: boletosRede > 0 ? gmvRede / boletosRede : null,
@@ -101,6 +105,14 @@ const LojaPerfilScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNav
     return {
       nome, lojaRow, boletoMedio, canais, formas, categorias, topProdutos, pedidosPorCategoria, sellInResumo,
       fidelidade, servicos, lojaDigital, cuidados, logistica, resumoRow, receitaCanalRow, metaPef, aderencia,
+      alavancas: {
+        promocional: dataset.boletoPromocional?.pdv.find(r => r.nome === codigo) ?? null,
+        turbinado: dataset.boletoTurbinado?.pdv.find(r => r.nome === codigo) ?? null,
+        mobshop: dataset.mobshop?.pdv.find(r => r.nome === codigo) ?? null,
+        idValidosPct: dataset.idCliente?.pdv.find(r => r.pdv === codigo)?.metricas[chaveMetrica('% BOLETOS ID CLIENTE VÁLIDOS (IAF)')]?.atual ?? null,
+        ruptura: rupturaLoja.length > 0 ? { total: rupturaLoja.length, emRuptura: rupturaLoja.filter(i => i.rupturaPct > 0).length } : null,
+        bsoGerado: dataset.bso ? dataset.bso.linhas.filter(l => l.pdv === codigo).reduce((s, l) => s + l.gerado, 0) : null,
+      },
     };
   }, [dataset, codigo]);
 
@@ -290,6 +302,22 @@ const LojaPerfilScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNav
               {receitaCanalRow && (
                 <StatRow label="Realizado vs. Meta PEF (canal Loja)" value={receitaCanalRow.loja.realizadoPct != null ? `${receitaCanalRow.loja.realizadoPct.toFixed(0)}%` : '—'} meta={fmtBRL(receitaCanalRow.loja.receitaAtual)} />
               )}
+            </div>
+          </ChartCard>
+        </div>
+      )}
+
+      {perfil.alavancas && (perfil.alavancas.promocional || perfil.alavancas.turbinado || perfil.alavancas.idValidosPct != null || perfil.alavancas.ruptura) && (
+        <div style={{ marginTop: 20 }}>
+          <ChartCard glow title="Alavancas, ID Cliente e ruptura" subtitle="Resumo desta loja · cada linha tem tela própria no menu"
+            hint="Boleto Promocional = convertidos ÷ elegíveis. Boleto Turbinado = oficiais ÷ total de boletos. ID Cliente = % de boletos válidos. Ruptura = SKUs monitorados com ruptura no ciclo, não o catálogo inteiro.">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {perfil.alavancas.promocional && <StatRow label="Boleto Promocional" value={pct(perfil.alavancas.promocional.convertidosPct)} meta={`${fmtNumber(perfil.alavancas.promocional.convertidos)} de ${fmtNumber(perfil.alavancas.promocional.elegiveis)} elegíveis`} />}
+              {perfil.alavancas.turbinado && <StatRow label="Boleto Turbinado" value={pct(perfil.alavancas.turbinado.oficiaisPct)} meta={`${fmtNumber(perfil.alavancas.turbinado.oficiais)} de ${fmtNumber(perfil.alavancas.turbinado.totalBoletos)} boletos`} />}
+              {perfil.alavancas.mobshop && <StatRow label="Receita transacionada no Mobshop" value={pct(perfil.alavancas.mobshop.aderenciaPct)} />}
+              {perfil.alavancas.idValidosPct != null && <StatRow label="Boletos com ID Cliente válido" value={pct(perfil.alavancas.idValidosPct * 100)} />}
+              {perfil.alavancas.ruptura && <StatRow label="SKUs monitorados em ruptura" value={fmtNumber(perfil.alavancas.ruptura.emRuptura)} meta={`de ${fmtNumber(perfil.alavancas.ruptura.total)} monitorados`} />}
+              {perfil.alavancas.bsoGerado != null && <StatRow label="Valor gerado em campanhas BSO" value={fmtBRL(perfil.alavancas.bsoGerado)} />}
             </div>
           </ChartCard>
         </div>

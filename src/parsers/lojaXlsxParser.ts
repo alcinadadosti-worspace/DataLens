@@ -295,6 +295,7 @@ function parseEntitySheet(sheet: XLSX.WorkSheet | null, hasPdvCol: boolean): Res
 
   return entityRows.map(r => ({
     nome: String(r[iNome] ?? '').trim(),
+    pdv: hasPdvCol ? String(r[iNome + 1] ?? '').trim() || undefined : undefined,
     receita: iReceita >= 0 ? toNum(r[iReceita]) : 0,
     boletos: iBoletos >= 0 ? toNum(r[iBoletos]) : null,
     ticketMedio: iTicket >= 0 ? toNum(r[iTicket]) : null,
@@ -994,6 +995,12 @@ function readFiltro(workbook: XLSX.WorkBook, nome: string, match: (v: string) =>
   return null;
 }
 
+/** A aba Semanal não vem em ordem (43, 44, 42, 45 no Ciclo 15). */
+function ordenarSemanas(linhas: AderenciaPeriodoRow[]): AderenciaPeriodoRow[] {
+  const numero = (r: AderenciaPeriodoRow) => Number(r.periodo.match(/\d+/)?.[0] ?? 0);
+  return [...linhas].sort((a, b) => numero(a) - numero(b));
+}
+
 export function parseAderenciaXlsx(workbook: XLSX.WorkBook): AderenciaDataset {
   return {
     periodo: readFiltro(workbook, 'CICLO ATUAL', v => /\d{2}\/\d{2}\/\d{4}/.test(v)),
@@ -1001,7 +1008,7 @@ export function parseAderenciaXlsx(workbook: XLSX.WorkBook): AderenciaDataset {
     cp: parseAderenciaCurvaSheet(findSheet(workbook, 'CP')),
     pdv: parseAderenciaCurvaSheet(findSheet(workbook, 'PDV')),
     categorias: parseAderenciaCurvaSheet(findSheet(workbook, 'Categorias')),
-    semanal: parseAderenciaPeriodoSheet(findSheet(workbook, 'Semanal')),
+    semanal: ordenarSemanas(parseAderenciaPeriodoSheet(findSheet(workbook, 'Semanal'))),
     mensal: parseAderenciaPeriodoSheet(findSheet(workbook, 'Mensal')),
     anual: parseAderenciaPeriodoSheet(findSheet(workbook, 'Anual')),
   };

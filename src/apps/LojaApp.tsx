@@ -18,6 +18,11 @@ import LojaFidelidadeServicosScreen from '../screens/loja/LojaFidelidadeServicos
 import LojaScorecardScreen from '../screens/loja/LojaScorecardScreen';
 import LojaPerfilScreen from '../screens/loja/LojaPerfilScreen';
 import LojaLogisticaScreen from '../screens/loja/LojaLogisticaScreen';
+import LojaComparativoScreen from '../screens/loja/LojaComparativoScreen';
+import LojaBoletosScreen from '../screens/loja/LojaBoletosScreen';
+import LojaIdClienteScreen from '../screens/loja/LojaIdClienteScreen';
+import LojaRupturaScreen from '../screens/loja/LojaRupturaScreen';
+import LojaBsoScreen from '../screens/loja/LojaBsoScreen';
 import { useLojaStore } from '../store/useLojaStore';
 import { useLojaThemeStore } from '../store/useLojaThemeStore';
 
@@ -57,6 +62,16 @@ function LojaApp() {
     screen = <LojaPerfilScreen onNavigate={navigate} />;
   } else if (route === 'loja-logistica') {
     screen = <LojaLogisticaScreen onNavigate={navigate} />;
+  } else if (route === 'loja-comparativo') {
+    screen = <LojaComparativoScreen onNavigate={navigate} />;
+  } else if (route === 'loja-boletos') {
+    screen = <LojaBoletosScreen onNavigate={navigate} />;
+  } else if (route === 'loja-id-cliente') {
+    screen = <LojaIdClienteScreen onNavigate={navigate} />;
+  } else if (route === 'loja-ruptura') {
+    screen = <LojaRupturaScreen onNavigate={navigate} />;
+  } else if (route === 'loja-bso') {
+    screen = <LojaBsoScreen onNavigate={navigate} />;
   }
 
   return (

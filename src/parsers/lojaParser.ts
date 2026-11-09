@@ -1,4 +1,6 @@
 import Papa from 'papaparse';
+import { aplicarRelatorioExtranet, detectarRelatorioExtranet } from './lojaExtranetParser';
+import { LojaExtranetCampos } from '../types/lojaExtranet';
 import * as XLSX from 'xlsx';
 import {
   LojaDimension, LojaDataset, LojaMetricRow, LojaParseResult, LOJA_DIMENSIONS, LOJA_DIMENSION_LABELS,
@@ -129,6 +131,16 @@ function detectOptionalXlsx(fileName: string): LojaXlsxKind | null {
   for (const [key, hint] of Object.entries(XLSX_FILENAME_HINTS)) {
     if (upperName.includes(normalizeName(hint))) return key as LojaXlsxKind;
   }
+  return null;
+}
+
+/** Quebras opcionais do GerencialVendas, identificadas pelo cabeçalho. */
+function detectQuebraOpcional(headerCol1: string | undefined): 'caixas' | 'sistemaVenda' | 'redundante' | null {
+  const h = (headerCol1 ?? '').toUpperCase();
+  if (h.includes('QUEBRAR POR CAIXAS')) return 'caixas';
+  if (h.includes('QUEBRAR POR SISTEMA')) return 'sistemaVenda';
+  // "Por CP (geral)" e o relatório sem quebra repetem LOJAS, linha a linha.
+  if (h.includes('QUEBRAR POR CP') || h.startsWith('GMV-')) return 'redundante';
   return null;
 }
 
@@ -405,13 +417,25 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
     'resumoPerformance' | 'receitaCanal' | 'receitaCategoria' |
     'receitaCanalLojaPdv' | 'receitaCanalLojaUn' | 'receitaCanalLojaPeriodo' |
     'servicos' | 'fidelidade' | 'lojaDigital' | 'cuidadosFaciais' |
-    'logisticaAdesaoResumo' | 'logisticaAdesaoDetalhe' | 'aderencia'>> = {};
+    'logisticaAdesaoResumo' | 'logisticaAdesaoDetalhe' | 'aderencia' | 'caixas' | 'sistemaVenda'>> = {};
+  const extranet: LojaExtranetCampos = {};
 
   for (const file of files) {
     const isXlsx = /\.xlsx?$/i.test(file.name);
 
     try {
       if (isXlsx) {
+        const relatorio = detectarRelatorioExtranet(file.name);
+        if (relatorio === 'ignorado') continue;
+        if (relatorio) {
+          const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false });
+          const { campo, linhas } = aplicarRelatorioExtranet(relatorio, workbook, extranet);
+          const anterior = detectedOptional[campo]?.fileName;
+          // Vários relatórios são divididos em arquivos: lista todos na tela de importação.
+          detectedOptional[campo] = { fileName: anterior ? `${anterior} + ${file.name}` : file.name, rowCount: linhas };
+          optionalFileNames![campo] = detectedOptional[campo]!.fileName;
+          continue;
+        }
         const xlsxKind = detectOptionalXlsx(file.name);
         if (!xlsxKind) {
           errors.push(`${file.name}: arquivo xlsx não reconhecido (esperado Resumo de Performance, Receita por Canal, Receita por Categoria, Receita por Canal (PDV/UN/Período), Serviços em Loja, Programa Fidelidade, Loja Digital, Cuidados Faciais, Logística de Adesão ou Aderência por curva)`);
@@ -525,6 +549,14 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
       }
 
       const headerCol1 = rows[0]?.[1];
+      const quebraOpcional = detectQuebraOpcional(headerCol1);
+      if (quebraOpcional === 'redundante') continue;
+      if (quebraOpcional) {
+        optional[quebraOpcional] = rowsToLojaMetrics(rows);
+        detectedOptional[quebraOpcional] = { fileName: file.name, rowCount: optional[quebraOpcional]!.length };
+        optionalFileNames![quebraOpcional] = file.name;
+        continue;
+      }
       const dim = detectDimension(file.name, headerCol1);
       if (!dim) {
         errors.push(`${file.name}: dimensão não reconhecida (esperado: ${LOJA_DIMENSIONS.map(d => LOJA_DIMENSION_LABELS[d]).join(', ')}, ou um dos arquivos opcionais)`);
@@ -559,6 +591,7 @@ export async function parseLojaFiles(files: File[]): Promise<LojaParseResult> {
     fileNames,
     importedAt: new Date(),
     ...optional,
+    ...extranet,
     optionalFileNames,
     receitaBasesPorArquivo,
   };

@@ -17,10 +17,12 @@ type Scope = 'rede' | 'loja' | 'consultor';
 /**
  * Pra onde levar o usuário quando ele clica num indicador — só pros que têm uma tela claramente
  * mais específica que o próprio Scorecard (funil de Fidelidade/Serviços/Loja Digital, ou o canal
- * de cumprimento em Canais & Formas). Indicadores sem uma tela melhor (ex. "Itens por Boleto",
- * "Share de Alavancas BT/BP") ficam sem link — mandar pra Ranking geral não ajudaria em nada.
+ * de cumprimento em Canais & Formas). Indicadores sem uma tela melhor (ex. "Share de Alavancas
+ * BT/BP") ficam sem link — mandar pra Ranking geral não ajudaria em nada.
  */
 const INDICATOR_LINKS: { pattern: RegExp; route: string; label: string }[] = [
+  { pattern: /boleto (turbinado|promocional)|itens por boleto/i, route: 'loja-boletos', label: 'Ver em Boletos & alavancas' },
+  { pattern: /id cliente/i, route: 'loja-id-cliente', label: 'Ver em ID Cliente' },
   { pattern: /fidelidade|resgate/i, route: 'loja-fidelidade-servicos', label: 'Ver em Fidelidade & serviços' },
   { pattern: /cuidados faciais/i, route: 'loja-fidelidade-servicos', label: 'Ver em Fidelidade & serviços' },
   { pattern: /serviços em loja/i, route: 'loja-fidelidade-servicos', label: 'Ver em Fidelidade & serviços' },
@@ -186,7 +188,16 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
 
   const consultorOptions = useMemo(() => {
     if (!rp) return [];
-    return [...rp.consultor].sort((a, b) => a.nome.localeCompare(b.nome));
+    // A aba CONSULTOR tem uma linha por consultor e loja: quem vendeu em mais de uma loja aparece
+    // mais de uma vez, então a opção é identificada por nome + loja, e o rótulo leva a loja.
+    const repetidos = new Set(rp.consultor.map(c => c.nome).filter((n, i, a) => a.indexOf(n) !== i));
+    return [...rp.consultor]
+      .sort((a, b) => a.nome.localeCompare(b.nome) || b.receita - a.receita)
+      .map(c => ({
+        chave: `${c.nome}|${c.pdv ?? ''}`,
+        rotulo: repetidos.has(c.nome) && c.pdv ? `${c.nome} · ${resolveLojaNome(c.pdv, c.pdv)}` : c.nome,
+        row: c,
+      }));
   }, [rp]);
 
   const consultorRow: ResumoPerformanceRow | undefined = useMemo(() => {
@@ -194,8 +205,8 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
     // Mesma fonte do valor default do <select> (consultorOptions[0], ordenado por nome) — usar
     // rp.consultor[0] (ordem original do arquivo) aqui causava mismatch entre o nome selecionado
     // no dropdown e a linha de fato exibida na tabela.
-    const targetNome = consultorSel || consultorOptions[0]?.nome || '';
-    return rp.consultor.find(c => c.nome === targetNome);
+    const alvo = consultorSel || consultorOptions[0]?.chave || '';
+    return consultorOptions.find(o => o.chave === alvo)?.row;
   }, [rp, consultorSel, consultorOptions]);
 
   if (!dataset) {
@@ -249,7 +260,7 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
         Valor: formatIndicatorValue(m.metrica, m.valor),
         'Vs. Ano Passado': m.vsAnoAnteriorInvalido ? 'dado inválido' : m.vsAnoAnteriorPct != null ? fmtVariacao(m.vsAnoAnteriorPct, unidadeVariacao(m.tipo)) : '',
       }));
-      exportToCSV(rows, `indicadores-pef-${consultorRow.nome.replace(/\s+/g, '-').toLowerCase()}-${todayStr}`);
+      exportToCSV(rows, `indicadores-pef-${consultorRow.nome.replace(/\s+/g, '-').toLowerCase()}${consultorRow.pdv ? `-${consultorRow.pdv}` : ''}-${todayStr}`);
     }
   }
 
@@ -399,15 +410,15 @@ const LojaScorecardScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ on
           <ChartCard glow
             title="Indicadores por consultor"
             hint="A aba CONSULTOR do Resumo de Performance não traz Meta PEF individual — só a comparação com o ano anterior — por isso a cor aqui reflete Vs. Ano Passado, não Vs. Meta."
-            subtitle={consultorRow ? consultorRow.nome : undefined}
+            subtitle={consultorRow ? [consultorRow.nome, consultorRow.pdv && resolveLojaNome(consultorRow.pdv, consultorRow.pdv)].filter(Boolean).join(' · ') : undefined}
             action={
               <select
-                value={consultorSel || (consultorOptions[0]?.nome ?? '')}
+                value={consultorSel || (consultorOptions[0]?.chave ?? '')}
                 onChange={e => setConsultorSel(e.target.value)}
                 style={{ fontSize: 13, padding: '8px 12px', borderRadius: 9, border: '1px solid var(--loja-border, #E8E2D6)', background: 'var(--loja-surface, #FFFFFF)', color: 'var(--loja-ink, #1C1814)', cursor: 'pointer' }}
               >
                 {consultorOptions.map(c => (
-                  <option key={c.nome} value={c.nome}>{c.nome}</option>
+                  <option key={c.chave} value={c.chave}>{c.rotulo}</option>
                 ))}
               </select>
             }

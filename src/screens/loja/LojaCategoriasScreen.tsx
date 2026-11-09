@@ -9,6 +9,8 @@ import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { ReceitaCategoriaRow } from '../../types/loja';
 import PageTitle from '../../components/ui/PageTitle';
 import { fmtBRLshort, fmtBRL, fmtPct } from '../../utils/formatters';
+import { Alternador, ColunaTabela, LojaTabela, pct } from '../../components/loja/lojaUi';
+import { CategoriaDistribuicaoRow } from '../../types/lojaExtranet';
 
 /**
  * Estatísticas extras (painel de detalhe em tela cheia) de uma categoria/subcategoria/marca — não
@@ -34,6 +36,7 @@ function makeReceitaCategoriaExtraStats(list: ReceitaCategoriaRow[]) {
 const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
   const [lojaFiltro, setLojaFiltro] = useState<string>('');
+  const [nivelMix, setNivelMix] = useState<'pdv' | 'consultor'>('pdv');
 
   if (!dataset) {
     return (
@@ -47,6 +50,20 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
   const lojas = listLojasInDimension(dataset.gestao);
   const categorias = aggregateByName(dataset.gestao, true, lojaFiltro || null);
   const anomalias = categorias.filter(c => c.descontoPct > 100);
+  const distribuicao = dataset.categoriaDistribuicao;
+  const mix = distribuicao ? {
+    linhas: distribuicao[nivelMix],
+    colunas: [
+      { id: 'nome', titulo: nivelMix === 'pdv' ? 'Loja' : 'Consultor', valor: r => <strong>{nivelMix === 'pdv' ? resolveLojaNome(r.nome, r.nome) : r.nome}</strong> },
+      { id: 'total', titulo: 'Receita', direita: true, valor: r => fmtBRLshort(r.total), ordem: r => r.total },
+      ...distribuicao.categorias.map((c, i): ColunaTabela<CategoriaDistribuicaoRow> => ({
+        id: c, titulo: c, direita: true,
+        valor: r => pct(r.total > 0 ? (r.receitas[i] / r.total) * 100 : null),
+        ordem: r => (r.total > 0 ? r.receitas[i] / r.total : null),
+      })),
+    ] as ColunaTabela<CategoriaDistribuicaoRow>[],
+  } : null;
+
   const receitaCategoria = dataset.receitaCategoria;
   const hasXlsx = !!receitaCategoria && receitaCategoria.categoria.length > 0;
 
@@ -211,6 +228,17 @@ const LojaCategoriasScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ o
           )}
         </ChartCard>
       </div>
+
+      {mix && mix.linhas.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <ChartCard glow title="Peso de cada macrocategoria" subtitle="% da receita de cada um · clique na coluna para ordenar"
+            hint="Loja_Distribuicao_da_receita_por_categoria.xlsx, em receita GMV. Não muda com o filtro de loja: serve para comparar as lojas ou os consultores entre si."
+            action={<Alternador opcoes={[{ id: 'pdv', label: 'Lojas' }, { id: 'consultor', label: 'Consultores' }]} valor={nivelMix} onChange={setNivelMix} />}
+          >
+            <LojaTabela colunas={mix.colunas} linhas={mix.linhas} chave={r => r.nome} ordemInicial={{ id: 'total', desc: true }} />
+          </ChartCard>
+        </div>
+      )}
     </div>
   );
 };

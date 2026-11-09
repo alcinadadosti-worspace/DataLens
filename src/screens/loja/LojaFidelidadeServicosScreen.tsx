@@ -9,6 +9,10 @@ import { aggregateConsultoresPorLoja, findByPersonName } from '../../analytics/l
 import { resolveLojaNome } from '../../analytics/lojaStoreAliases';
 import { fmtBRL, fmtPct, fmtNumber } from '../../utils/formatters';
 import { ServicoConsultorRow } from '../../types/loja';
+import KpiCard from '../../components/ui/KpiCard';
+import SimpleLineChart from '../../components/loja/SimpleLineChart';
+import { pct, variacao } from '../../components/loja/lojaUi';
+import { FidelidadeDistribuicaoRow, FidelidadeEvolucaoBloco } from '../../types/lojaExtranet';
 
 function aggregateServicoTipo(rows: ServicoConsultorRow[]) {
   const map = new Map<string, { qtd: number; completos: number; gmv: number }>();
@@ -23,6 +27,15 @@ function aggregateServicoTipo(rows: ServicoConsultorRow[]) {
     .map(([servico, v]) => ({ servico, ...v }))
     .sort((a, b) => b.gmv - a.gmv);
 }
+
+/** KPI de evolução: a variação é em pontos percentuais, a diferença entre dois percentuais. */
+const KpiEvolucao: React.FC<{ titulo: string; bloco: FidelidadeEvolucaoBloco; hint: string }> = ({ titulo, bloco, hint }) => {
+  const dif = bloco.pctAtual - bloco.pctAnterior;
+  return (
+    <KpiCard glow eyebrow={titulo} value={pct(bloco.pctAtual, 2)} meta={`${pct(bloco.pctAnterior, 2)} em 2025`}
+      delta={`${Math.abs(dif).toFixed(2).replace('.', ',')} p.p.`} deltaDirection={dif >= 0 ? 'up' : 'down'} hint={hint} />
+  );
+};
 
 const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ onNavigate }) => {
   const dataset = useLojaStore(s => s.dataset);
@@ -55,6 +68,20 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
     );
   }
 
+  const evolucao = dataset.fidelidadeEvolucao;
+  const digital = dataset.lojaDigitalCiclo;
+  const servicosDiario = dataset.servicosDiario ?? [];
+  const nivelDist = tab === 'lojas' ? 'pdv' : 'consultor';
+  const distIdentificados = dataset.fidelidadeDistribuicao?.identificados?.[nivelDist];
+  const distResgate = dataset.fidelidadeDistribuicao?.resgate?.[nivelDist];
+  const itensDistribuicao = (linhas: FidelidadeDistribuicaoRow[], unidade: string): RankingItem[] =>
+    [...linhas].sort((a, b) => b.pct - a.pct).map(r => ({
+      label: tab === 'lojas' ? resolveLojaNome(r.nome, r.nome) : r.nome,
+      value: r.pct,
+      valueLabel: pct(r.pct),
+      meta: `${fmtNumber(r.qtd)}/${fmtNumber(r.base)} ${unidade}`,
+    }));
+
   const fidelidadeItems: RankingItem[] = fidelidade
     ? [...(tab === 'lojas' ? fidelidade.pdv : fidelidade.consultor)]
         .sort((a, b) => b.penetracaoPct - a.penetracaoPct)
@@ -68,19 +95,21 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
     : [];
 
   const servicosPdvItems: RankingItem[] = servicos
-    ? [...servicos.pdv]
+    ? servicos.pdv
+        // Linhas zeradas são códigos antigos de loja ou o tipo "Não Realizado", que não têm serviço a mostrar.
+        .filter(r => r.gmv > 0 || r.qtdRealizados > 0)
         .sort((a, b) => b.gmv - a.gmv)
         .map(r => ({
           label: resolveLojaNome(r.pdvCodigo, r.pdvCodigo),
           value: r.gmv,
           valueLabel: fmtBRL(r.gmv),
-          meta: `${r.qtdCompletos}/${r.qtdRealizados} completos${r.qtdMeta > 0 ? ` · ${fmtPct(r.atingimentoPct).replace('+', '')} da meta` : ''}`,
+          meta: r.qtdMeta > 0 ? `${r.qtdCompletos}/${r.qtdRealizados} · ${fmtPct(r.atingimentoPct).replace('+', '')} da meta` : `${r.qtdCompletos}/${r.qtdRealizados} completos`,
           lojaCodigo: r.pdvCodigo,
         }))
     : [];
 
   const servicoTipos = servicos ? aggregateServicoTipo(servicos.consultor) : [];
-  const servicoTiposItems: RankingItem[] = servicoTipos.map(s => ({
+  const servicoTiposItems: RankingItem[] = servicoTipos.filter(s => s.gmv > 0 || s.qtd > 0).map(s => ({
     label: s.servico,
     value: s.gmv,
     valueLabel: fmtBRL(s.gmv),
@@ -222,6 +251,26 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
       </div>
       <div style={{ marginBottom: 24 }} />
 
+      {(evolucao || digital) && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 20 }}>
+          {evolucao?.identificados && <KpiEvolucao titulo="Boletos identificados" bloco={evolucao.identificados} hint="% dos boletos de varejo identificados no Fidelidade, contra o mesmo ciclo de 2025. Rede toda: a comparação por loja não é possível porque a aba PDV guarda 2025 com códigos antigos de loja." />}
+          {evolucao?.resgate && <KpiEvolucao titulo="Boletos com resgate" bloco={evolucao.resgate} hint="% dos boletos Fidelidade com resgate, contra o mesmo ciclo de 2025." />}
+          {evolucao?.desafio && <KpiEvolucao titulo="Boletos com desafio" bloco={evolucao.desafio} hint="% dos boletos Fidelidade com desafio concluído, contra o mesmo ciclo de 2025." />}
+          {digital?.conversaoPct != null && (
+            <KpiCard glow eyebrow="Loja Digital: conversão" value={pct(digital.conversaoPct, 2)} meta={`${fmtNumber(digital.convertidos ?? 0)} de ${fmtNumber(digital.atendidos ?? 0)} atendidos`} hint="LojaDigital_Conversao_por_ciclo.xlsx: clientes convertidos ÷ clientes atendidos." />
+          )}
+          {digital?.receitaAtual != null && (
+            <KpiCard glow eyebrow="Loja Digital: receita" value={fmtBRL(digital.receitaAtual)} meta={`${fmtBRL(digital.receitaAnterior ?? 0)} em 2025`}
+              delta={`${Math.abs(variacao(digital.receitaAnterior, digital.receitaAtual) ?? 0).toFixed(1).replace('.', ',')}%`}
+              deltaDirection={(digital.receitaAtual ?? 0) >= (digital.receitaAnterior ?? 0) ? 'up' : 'down'}
+              hint="LojaDigital_Receita_por_ciclo.xlsx, em receita líquida." />
+          )}
+          {digital?.tmeAjustado && (
+            <KpiCard glow eyebrow="Loja Digital: TME ajustado" value={digital.tmeAjustado} meta={`regional ${digital.tmeRegional ?? '—'}`} footnote={digital.tmeBruto ? `Bruto: ${digital.tmeBruto}` : undefined} hint="LojaDigital_Tme_por_ciclo.xlsx: tempo médio de espera ajustado, comparado à média regional." />
+          )}
+        </div>
+      )}
+
       {penetracaoRede !== null && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
           <ChartCard glow
@@ -307,6 +356,31 @@ const LojaFidelidadeServicosScreen: React.FC<{ onNavigate: (r: string) => void }
           </ChartCard>
         )}
       </div>
+
+      {(distIdentificados || distResgate) && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
+          {distIdentificados && (
+            <ChartCard glow title={`Boletos identificados — ${tab === 'lojas' ? 'por loja' : 'por consultor'}`} subtitle="% dos boletos de varejo identificados no Fidelidade"
+              hint="ProgramaFidelidade_Distribuicao_%_Boletos_Identificados_Fidelidade.xlsx, ciclo atual.">
+              <RankingChart medals={false} items={itensDistribuicao(distIdentificados, 'boletos')} />
+            </ChartCard>
+          )}
+          {distResgate && (
+            <ChartCard glow title={`Boletos com resgate — ${tab === 'lojas' ? 'por loja' : 'por consultor'}`} subtitle="% dos boletos Fidelidade com resgate"
+              hint="ProgramaFidelidade_Distribuicao_%_Boletos_com_Resgate.xlsx, ciclo atual.">
+              <RankingChart medals={false} items={itensDistribuicao(distResgate, 'boletos')} />
+            </ChartCard>
+          )}
+        </div>
+      )}
+
+      {servicosDiario.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <ChartCard glow title="Serviços realizados por dia" subtitle="Rede toda, no ciclo" hint="TotalDeServicos.xlsx, aba Dia.">
+            <SimpleLineChart points={servicosDiario.map(d => ({ label: d.dia.split(' ').slice(0, 2).join(' '), value: d.realizados }))} />
+          </ChartCard>
+        </div>
+      )}
 
       {fidelidade && servicos && (
         <div style={{ marginTop: 20 }}>

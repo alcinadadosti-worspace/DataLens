@@ -1,3 +1,5 @@
+import { LOJA_EXTRANET_FILES, LOJA_EXTRANET_FILE_LABELS, LojaExtranetCampos, LojaExtranetFile } from './lojaExtranet';
+
 export type LojaDimension = 'lojas' | 'forma' | 'consultor' | 'operador' | 'data' | 'canal' | 'gestao';
 
 export interface LojaMetricRow {
@@ -43,7 +45,10 @@ export type LojaOptionalFile =
   | 'cuidadosFaciais'
   | 'logisticaAdesaoResumo'
   | 'logisticaAdesaoDetalhe'
-  | 'aderencia';
+  | 'aderencia'
+  | 'caixas'
+  | 'sistemaVenda'
+  | LojaExtranetFile;
 
 export const LOJA_OPTIONAL_FILES: LojaOptionalFile[] = [
   'abc',
@@ -66,6 +71,9 @@ export const LOJA_OPTIONAL_FILES: LojaOptionalFile[] = [
   'logisticaAdesaoResumo',
   'logisticaAdesaoDetalhe',
   'aderencia',
+  'caixas',
+  'sistemaVenda',
+  ...LOJA_EXTRANET_FILES,
 ];
 
 export const LOJA_OPTIONAL_FILE_LABELS: Record<LojaOptionalFile, string> = {
@@ -89,6 +97,9 @@ export const LOJA_OPTIONAL_FILE_LABELS: Record<LojaOptionalFile, string> = {
   logisticaAdesaoResumo: 'Logística — adesão à plataforma (resumo)',
   logisticaAdesaoDetalhe: 'Logística — adesão à plataforma (detalhe por pedido)',
   aderencia: 'Gestão de pedidos — aderência por curva (e histórico)',
+  caixas: 'Gerencial por caixa',
+  sistemaVenda: 'Gerencial por sistema de venda',
+  ...LOJA_EXTRANET_FILE_LABELS,
 };
 
 /** Curva ABC (relatorioABCVenda*.csv) — uma linha por SKU x data (agregar por SKU para o ranking). */
@@ -292,6 +303,8 @@ export interface ResumoPerformanceMetricValue {
 /** Resumo_de_Performance_Indicadores_Loja.xlsx — aba CP (consolidado) e PDV/CONSULTOR (por loja/consultor). */
 export interface ResumoPerformanceRow {
   nome: string;
+  /** Código da loja, só na aba CONSULTOR: quem vendeu em mais de uma loja tem uma linha por loja. */
+  pdv?: string;
   receita: number;
   vsMetaPEFPct: number | null;
   vsAnoAnteriorPct: number | null;
@@ -479,7 +492,7 @@ export interface AderenciaDataset {
   anual: AderenciaPeriodoRow[];
 }
 
-export interface LojaDataset {
+export interface LojaDataset extends LojaExtranetCampos {
   lojas: LojaMetricRow[];
   forma: LojaMetricRow[];
   consultor: LojaMetricRow[];
@@ -487,6 +500,9 @@ export interface LojaDataset {
   data: LojaMetricRow[];
   canal: LojaMetricRow[];
   gestao: LojaMetricRow[];
+  /** Quebras do GerencialVendas que entraram no Ciclo 15; opcionais, o Modo Loja abre sem elas. */
+  caixas?: LojaMetricRow[];
+  sistemaVenda?: LojaMetricRow[];
   fileNames: Partial<Record<LojaDimension, string>>;
   importedAt: Date;
 
