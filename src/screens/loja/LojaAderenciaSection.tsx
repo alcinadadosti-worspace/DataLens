@@ -64,7 +64,9 @@ const LojaAderenciaSection: React.FC<{ aderencia: AderenciaDataset; lojaCodigos:
   const pdvsDoLote = aderencia.pdv.filter(r => lojaCodigos.has(r.nome));
   const pdvs = pdvsDoLote.length > 0 ? pdvsDoLote : aderencia.pdv;
   const cp = aderencia.cp[0];
-  const periodo = [aderencia.ciclo ? `Ciclo ${aderencia.ciclo}` : null, aderencia.periodo].filter(Boolean).join(' · ');
+  // O arquivo traz o ciclo como intervalo ("15 - 2026 a 15 - 2026"); quando início e fim coincidem, mostra um só.
+  const ciclo = aderencia.ciclo?.replace(/^(.+?)\s+a\s+\1$/, '$1');
+  const periodo = [ciclo ? `Ciclo ${ciclo}` : null, aderencia.periodo].filter(Boolean).join(' · ');
 
   return (
     <div style={{ marginTop: 28 }}>

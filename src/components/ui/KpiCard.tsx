@@ -71,11 +71,17 @@ const KpiCard: React.FC<KpiCardProps> = ({ eyebrow, value, delta, deltaDirection
           fontWeight: 500,
           color: deltaColor,
           display: 'flex',
-          alignItems: 'center',
-          gap: 5,
+          flexWrap: 'wrap',
+          alignItems: 'baseline',
+          columnGap: 5,
         }}>
-          {arrow} {delta}
+          <span style={{ whiteSpace: 'nowrap' }}>{arrow} {delta}</span>
           {meta && <span style={{ color: 'var(--loja-text-secondary, #6B6258)', fontWeight: 400 }}>{meta}</span>}
+        </div>
+      )}
+      {!delta && meta && (
+        <div style={{ fontSize: 13, color: 'var(--loja-text-secondary, #6B6258)', fontVariantNumeric: 'tabular-nums' }}>
+          {meta}
         </div>
       )}
       {footnote && (

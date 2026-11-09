@@ -92,7 +92,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
                     {fmtBRLshort(r.gmv)}
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)' }}>{fmtNumber(r.qtdBoletos)} boletos</div>
+                <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)' }}>{fmtNumber(r.qtdBoletos)} {r.qtdBoletos === 1 ? 'boleto' : 'boletos'}</div>
               </div>
               <motion.i
                 className="ph ph-caret-down"
@@ -193,7 +193,7 @@ const LojaConsultoresScreen: React.FC<{ onNavigate: (r: string) => void }> = ({ 
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}
+            style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 20 }}
           >
             <ChartCard glow
               title="Consultores que mais desempenharam"
