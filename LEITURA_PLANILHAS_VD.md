@@ -1,4 +1,4 @@
-# Leitura de Planilhas — Modo VD v2 (Camada de Dados Corporativos, Ciclo 13 · atualizado para o Ciclo 14 na §10)
+# Leitura de Planilhas — Modo VD v2 (Camada de Dados Corporativos, Ciclo 13 · atualizado para o Ciclo 14 na §10 e para o Ciclo 15 na §12)
 
 Este documento evolui o `LEITURA_PLANILHAS_VD.md` original. Aquele descrevia um modelo simples —
 **1 arquivo → 1 dataset de `Order[]`**. O lote analisado aqui (18 arquivos, todos referentes ao
@@ -666,3 +666,103 @@ está em I1–I6, o app lê os **ConsultaPedidos dos ciclos anteriores**, no mes
   completos a folga é de 1 a 2 dias.
 - **Segmentação** mostrada é a do pedido mais recente da revendedora (Papel na última compra), não a classificação
   atual da Extranet.
+
+---
+
+## 12. Lote do Ciclo 15 (exportado em 07/11/2026)
+
+Ciclo 15 - 2026 na Loja: 13/10/2026 a 01/11/2026. Os filtros da Extranet dizem 13/10 a 02/11 (ano anterior: 13/10/2025
+a 02/11/2025), mas 02/11 não faz parte do ciclo. Os arquivos do Modo VD foram trocados, e o Modo Loja ganhou 16 grupos
+de relatórios novos da Extranet (§12.3).
+
+**Corte de 02/11 na Loja:** `lojaExtranetParser.ts` remove as linhas datadas de 02/11 do BSO (10 linhas, R$ 30,36, loja
+24617; o valor gerado fica em R$ 24.484,03) e de `TotalDeServicos` (dia zerado). Os totais prontos da Extranet não abrem
+por dia e seguem como vieram. A Extranet conta no ciclo os boletos aprovados ou faturados até um dia depois do fim
+dele, então quase sempre fica um pouco acima do ERP, que termina em 01/11. Neste ciclo são R$ 974,61 de GMV (R$ 416.346,96
+contra R$ 415.372,35) e 7 boletos (2.022 contra 2.015). A diferença é esperada e não indica erro de leitura.
+
+**Na VD o corte não se aplica (decisão de 07/11/2026):** os pedidos seguem até 04/11, com Dia do Ciclo 21 a 23 e Ciclo 15
+no sistema. São 211 pedidos e R$ 180.508,76 depois de 01/11, parte da receita e da meta da Extranet.
+
+### 12.1 O que mudou no Modo VD
+
+- **`ReceitaCanalVD_Performance_por_PDV` voltou ao layout `blocos`** (VD / OMNI ENVIO ER / TOTAL), o mesmo do
+  Ciclo 13, com a Meta PEF preenchida. A tabela manual de `metaPefCanalVD.ts` só vale para o Ciclo 14.
+- **Tipo de receita:** `ReceitaCanalVD_*` e `Receita_por_*` passaram de "Receita Bruta" para "Receita GMV + Omni".
+  `VendaDireta_*` continua em "Receita GMV". No Ciclo 14, GMV e Bruta ficaram a 0,18% uma da outra.
+- **`BaseComOptOutDeCatalogo_*` não existe para o Ciclo 15.** Os 3 arquivos antigos foram retirados para dados do
+  Ciclo 14 não aparecerem como Ciclo 15. O app esconde o que depende deles.
+- **Histórico:** o `ConsultaPedidos.xlsx` do Ciclo 14 virou `historico-pedidos/Ciclo 14.xlsx`.
+- **Fora do lote:** `ReceitaCanalLoja_*` na pasta da VD (é do canal LOJ) e duas cópias idênticas de
+  `Meta_Sell_In` e `Detalhamento_por_Sku`.
+
+### 12.2 `ConsultaPedidos` incompleto no Ciclo 15
+
+A reconciliação VD+ × Extranet ficou em −3,57% (R$ 3.415.908,15 × R$ 3.542.495,31); no Ciclo 14 foi −0,78%.
+A soma do app está certa: é `ValorPraticado` sem cancelados. O que falta são pedidos no arquivo, que não pode mais ser
+reexportado: o alerta do painel de qualidade é esperado neste ciclo.
+
+| Conferência | Pedidos | Extranet / ranking |
+|---|---|---|
+| Pedidos válidos | 3.676 | 3.702 (Extranet) |
+| PDV 13706 | R$ 997.864,01 | R$ 1.000.831,91 (GMV), −0,30% |
+| PDV 13707 | R$ 2.418.044,14 | R$ 2.533.889,91 (GMV), −4,57% |
+| Supervisora de Relacionamento Penedo | R$ 648.720,56 | R$ 755.309,08 (GMV), R$ 754.026,99 (ranking) |
+
+Cruzando `ConsultaRankingVendas` com `ConsultaPedidos` por revendedora e dia, R$ 118.761,31 existem só no
+ranking, quase tudo (R$ 117.848,48) com meio de captação APP Revendedor:
+
+- **Revendedora 8165488:** R$ 88.610,71 em 4 dias dentro do ciclo, sem nenhum pedido no arquivo. Seis
+  revendedoras menores também não aparecem.
+- **Captação antes de 13/10:** cerca de R$ 24,9 mil do Ciclo 15 captados entre 02/10 e 12/10. O arquivo começa
+  em 13/10, o que sugere um filtro de data na exportação.
+
+Essas revendedoras contam como sem compra no ciclo na Inatividade, e a receita por supervisor das telas VD+ fica abaixo
+da Extranet. Motivo da ausência da 8165488: não confirmado.
+
+### 12.3 Relatórios novos do Modo Loja
+
+Tipos em `src/types/lojaExtranet.ts`, leitura em `src/parsers/lojaExtranetParser.ts`. Todos são opcionais. A
+detecção por nome roda antes das dicas antigas, que são genéricas demais para esses arquivos.
+
+| Campo do dataset | Arquivos | Tela |
+|---|---|---|
+| `indicadoresLoja` | `Loja_Indicadores_de_Loja` | Comparativo da rede, Boletos & alavancas |
+| `idCliente`, `idClienteEvolucao` | `Indicadores_ID_Cliente`, `ID_Cliente_Evolucao_Boletos` | ID Cliente |
+| `boletoResumo`, `boletoPromocional`, `boletoTurbinado`, `itensPorBoleto` | `Loja_Boleto`, `Loja_Boleto_20promocional`, `Loja_Boleto_20turbinado`, `Loja_Distribuicao_de_itens_por_boleto` | Boletos & alavancas |
+| `abastecimento` | `Boletos_Visao_Abastecimento_*` | Boletos & alavancas |
+| `mobshop` | `Loja_Distribuicao_Receita_Transacionada_Mobshop` | Canais & Formas |
+| `caixas`, `sistemaVenda` | `GerencialVendas` com quebra por caixas e por sistema | Canais & Formas |
+| `categoriaDistribuicao` | `Loja_Distribuicao_da_receita_por_categoria` | Categorias |
+| `fidelidadeEvolucao`, `fidelidadeDistribuicao` | `ProgramaFidelidade_Evolucao_*`, `ProgramaFidelidade_Distribuicao_*` | Fidelidade & serviços |
+| `lojaDigitalCiclo` | `LojaDigital_Conversao_por_ciclo`, `_Receita_por_ciclo`, `_Tme_por_ciclo` | Fidelidade & serviços |
+| `servicosDiario` | `TotalDeServicos` | Fidelidade & serviços |
+| `ruptura` | `RupturaVD_*` do canal Loja | Ruptura |
+| `bso` | `RelatorioBso-GeradoDetalhePorPeriodo`, `RelatorioBso-GeradoPorCiclo` | Campanhas BSO |
+
+**Reconhecidos e ignorados por serem redundantes:** `RelatorioBso-GeradoMovPorPeriodo`,
+`Loja_Receita_Transacionada_X_Aderencia_Mobshop`, `Loja_Distribuicao_da_Receita`, `Loja_Receita_por_Ciclo`,
+`ReceitaCanalLoja_por_Ciclo` e `Receita_por_Ciclo`. `GerencialVendas` sem quebra e o de CP geral também ficam de fora.
+
+**Cuidados na leitura:**
+
+- `Receita_por_Canal_UN` e `Receita_por_Cat_Sub_Mar` do canal Loja passaram de "GMV + Omni" para "Receita
+  Líquida". `ReceitaCanalLoja_*` continua em "GMV + Omni".
+- A coluna DESCONTO de `Loja_Indicadores_de_Loja` não é lida: mistura valores positivos e negativos.
+- As abas PDV do Fidelidade guardam 2025 com códigos antigos de loja (3540, 7178, 5905, 11074). Por isso a
+  comparação anual só existe na rede toda, e linhas sem base são descartadas.
+- O arquivo de ruptura por item só detalha a causa franqueado (28 itens). A causa indústria aparece apenas no total
+  do ciclo (13,87% de 14,82%).
+- Mobshop traz "Receita transacionada" e "Aderência" com valores idênticos; o app mostra uma só.
+- BSO: a soma de todas as linhas, com 02/11, dá R$ 24.514,39 e bate com `GeradoPorCiclo`.
+- A aba Semanal da aderência vem fora de ordem; `ordenarSemanas` corrige isso nos dois modos.
+
+### 12.4 Origem dos termos e do benchmark
+
+- **"Clube":** cabeçalho `FORA DO CLUBE` / `DENTRO DO CLUBE` da aba CP de `Loja_Indicadores_de_Loja` e
+  `Indicadores_ID_Cliente`. Nenhum arquivo define quem está no clube.
+- **"BSO":** nome dos arquivos `RelatorioBso-*` e de campanhas como `2026/C15 - BSO OMNI BOT`. Nenhum arquivo define a sigla.
+- **Benchmark:** resultado, posição e média vêm prontos, como texto, na aba CP desses dois arquivos. O app só os exibe.
+- **Direção da posição:** não é documentada e, pelos números, não é a mesma em todo indicador. Em uso indevido, a posição
+  1 parece ser o maior valor: `Boletos ID Cliente Uso Indevido` = 0 fica em 233º no país. Em TMA parece ser o menor:
+  00:09:38 fica em 34º no país, com média de 00:11:49. Ou seja, 5º em % Atendimentos Uso Indevido não significa bom resultado.

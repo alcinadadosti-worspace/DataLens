@@ -104,11 +104,12 @@ lista para `RankingList.tsx`. As cores de tier vêm de `TIER_STYLES`
 
 ### 3.1 Origem e autoload
 
-O Modo Loja consome até 26 arquivos: 7 CSVs obrigatórios de quebra (`CANAL`, `CONSULTOR`, `DATA`,
-`FORMA`, `GESTAO`, `LOJAS`, `OPERADOR`) + 19 arquivos opcionais (Curva ABC, Venda por Hora, 7
-arquivos de Gestão de Pedidos, 3 da família Receita por Canal/UN, e 7 xlsx de indicadores —
-Resumo de Performance, Receita por Categoria, Serviços, Fidelidade, Loja Digital, Cuidados
-Faciais, e os 2 de adesão à plataforma logística). Ao entrar em `LojaImportScreen.tsx`, se nenhum
+O Modo Loja consome 7 CSVs obrigatórios de quebra (`CANAL`, `CONSULTOR`, `DATA`, `FORMA`, `GESTAO`,
+`LOJAS`, `OPERADOR`) mais arquivos opcionais: Curva ABC, Venda por Hora, Gestão de Pedidos, a família
+Receita por Canal/UN, os xlsx de indicadores (Resumo de Performance, Receita por Categoria, Serviços,
+Fidelidade, Loja Digital, Cuidados Faciais e adesão à plataforma logística), as quebras `CAIXAS` e
+`SISTEMA` do Gerencial e, desde o Ciclo 15, os relatórios da Extranet listados em
+`LEITURA_PLANILHAS_VD.md` §12.3. Ao entrar em `LojaImportScreen.tsx`, se nenhum
 arquivo já tiver sido carregado manualmente, um `useEffect` busca automaticamente todos os nomes
 listados em `DEFAULT_FILE_NAMES` dentro de `public/dados-padrao-loja/` via `fetch`
 (`encodeURIComponent` no nome, já que alguns arquivos trazem acento ou parênteses no nome de
@@ -182,7 +183,10 @@ campos opcionais tipados: `abc`, `vendaPorHora`, `pedidosVisaoGeral`, `pedidosGi
 `pedidosHistorico`, `pedidosDetalhamentoSku`, `pedidosMetaSellIn`, `resumoPerformance`,
 `receitaCanal`, `receitaCategoria`, `receitaCanalLojaPdv`, `receitaCanalLojaUn`,
 `receitaCanalLojaPeriodo`, `servicos`, `fidelidade`, `lojaDigital`, `cuidadosFaciais`,
-`logisticaAdesaoResumo`, `logisticaAdesaoDetalhe`.
+`logisticaAdesaoResumo`, `logisticaAdesaoDetalhe`, `caixas`, `sistemaVenda`, além de
+`LojaExtranetCampos` (`src/types/lojaExtranet.ts`). Esses últimos são lidos por
+`src/parsers/lojaExtranetParser.ts`: `detectarRelatorioExtranet` roda antes da detecção antiga por nome
+e devolve `'ignorado'` para os relatórios redundantes, e `aplicarRelatorioExtranet` preenche o dataset.
 
 ### 3.3 Estado global
 
@@ -268,6 +272,11 @@ Esta é a camada que efetivamente cruza os diferentes arquivos entre si. Princip
 | `LojaPedidosScreen.tsx` | `dataset.pedidosHistorico`, `dataset.pedidosVisaoGeral`, `dataset.pedidosGiroCanais`, `dataset.pedidosDetalhamentoSku`, `dataset.pedidosMetaSellIn`, `dataset.logisticaAdesaoResumo`, `dataset.logisticaAdesaoDetalhe` (todos opcionais) | `pedidosRates` (por loja e por categoria), `buildLojaNomeLookup`, `sellInSkuRanking`, `logisticaAdesaoResumoPorPdv` | `RankingChart`s de taxa de colocação/atendimento por loja e por categoria, ranking de SKUs abaixo da meta de sell-in, e painel de adesão à plataforma logística por PDV (com fallback para o resumo por categoria quando só o resumo estiver presente) |
 | `LojaHorarioScreen.tsx` | `dataset.vendaPorHora` (opcional) | `hourlyDistribution` | `RankingChart` de receita/boletos por faixa horária |
 | `LojaFidelidadeServicosScreen.tsx` | `dataset.fidelidade`, `dataset.lojaDigital`, `dataset.servicos`, `dataset.cuidadosFaciais` (todos opcionais) | `aggregateConsultoresPorLoja` para contexto de loja, `findByPersonName` para cruzar pessoa entre arquivos | Quatro `RankingChart`s independentes: penetração Fidelidade, funil Loja Digital, Serviços por PDV, receita Cuidados Faciais/Botik — cada um com `getBreakdown` próprio |
+| `LojaComparativoScreen.tsx` | `dataset.indicadoresLoja`, `idCliente` (opcionais) | Benchmark do CP por indicador (regional, estado, país; fora e dentro do clube) e cada loja contra o mesmo ciclo do ano anterior | `LojaTabela`s com alternador e seletor de medida |
+| `LojaBoletosScreen.tsx` | `dataset.boletoResumo`, `boletoPromocional`, `boletoTurbinado`, `itensPorBoleto`, `abastecimento` (opcionais) | Visão por loja ou consultor, com resumo do ciclo contra 2025 | `KpiCard`s, `RankingChart`s de conversão e penetração, tabelas de faixa e itens, bloco de abastecimento |
+| `LojaBsoScreen.tsx` | `dataset.bso` (opcional) | Soma das linhas por campanha, loja, dia e SKU, com filtro por loja | `KpiCard`s, `RankingChart`s, `SimpleLineChart` diário, tabelas com exportação CSV |
+| `LojaRupturaScreen.tsx` | `dataset.ruptura` (opcional) | SKUs monitorados com ruptura por loja, com filtro por loja | `KpiCard`s por causa, `RankingChart`, leitura automática, `LojaTabela` de produtos |
+| `LojaIdClienteScreen.tsx` | `dataset.idCliente`, `idClienteEvolucao` (opcionais) | Loja contra o ano anterior e consultores por % válido e uso indevido | `KpiCard`s, `LojaTabela`s, `RankingChart`s |
 | `LojaImportScreen.tsx` | Upload manual ou autoload de `public/dados-padrao-loja/` | Chama `parseLojaFiles` e popula `useLojaStore` | Tela de import com checklist de arquivos detectados/faltando por dimensão |
 
 ### 3.6 Termo ambíguo entre arquivos: "canal"
