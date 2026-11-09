@@ -29,7 +29,7 @@ export function isHistoricoPedidos(f: File): boolean {
 }
 
 /**
- * Orquestra a importação do lote completo do Modo VD (Ciclo 13): identifica o arquivo de pedidos
+ * Orquestra a importação do lote completo do Modo VD: identifica o arquivo de pedidos
  * (ConsultaPedidos) e o de ranking de vendas por nome, processa cada um com seu parser dedicado, e
  * passa o resto dos arquivos (Família B + C) para `parseVDCorporateFiles`.
  */

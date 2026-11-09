@@ -175,7 +175,7 @@ const VDPedidosMixScreen: React.FC<Props> = ({ onNavigate }) => {
             delta={fmtPct(receitaCiclo.variacaoPct)}
             deltaDirection={receitaCiclo.variacaoPct >= 0 ? 'up' : 'down'}
             meta={`vs. ${fmtBRL(receitaCiclo.anterior)}`}
-            hint="VendaDireta_Receita_por_Ciclo.xlsx (ou a linha do CP em VendaDireta_Distribuicao_da_Receita.xlsx) — receita GMV do canal VD. É uma base diferente da 'Receita Bruta' da tela Receita & Metas, por isso os valores não são iguais."
+            hint="VendaDireta_Receita_por_Ciclo.xlsx (ou a linha do CP em VendaDireta_Distribuicao_da_Receita.xlsx) — receita GMV do canal VD. É uma base diferente da usada na tela Receita & Metas (Receita GMV + Omni desde o Ciclo 15), por isso os valores não são iguais."
           />
         )}
         {arvore?.totalPedidos && (
@@ -249,7 +249,7 @@ const VDPedidosMixScreen: React.FC<Props> = ({ onNavigate }) => {
           <ChartCard
             title="Receita GMV por marca (UN)"
             subtitle="Ciclo atual"
-            hint="VendaDireta_Receita_Por_UN.xlsx — só o ciclo atual. A variação contra o ano anterior por UN está em Receita & Metas ('Meta por UN'), em Receita Bruta."
+            hint="VendaDireta_Receita_Por_UN.xlsx — só o ciclo atual. A variação contra o ano anterior por UN está em Receita & Metas ('Meta por UN'), na base daquela tela."
           >
             <RankingChart items={unItems} mode="vd" medals={false} emptyMessage="Sem dados" />
           </ChartCard>

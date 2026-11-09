@@ -48,7 +48,7 @@ const PdvDetailModal: React.FC<Props> = ({ pdvCodigo, onClose }) => {
     const pedidosElegiveis = pdvOrders.filter(isRevenueEligible);
     const receitaPedidos = pedidosElegiveis.reduce((s, o) => s + o.ValorPraticado, 0);
 
-    // Ciclo 14+: relatórios VendaDireta (GMV), base digital, opt-out e gestão de pedidos por PDV.
+    // Relatórios VendaDireta (GMV), base digital, opt-out (quando vier no lote) e gestão de pedidos por PDV.
     const gmv = dataset?.distribuicaoReceita?.pdv.find(r => r.nome === pdvCodigo) ?? null;
     const perf = dataset?.performancePdvSupervisor?.pdv.find(r => r.nome === pdvCodigo) ?? null;
     const mix = dataset?.receitaCategoriaMix?.pdv.find(r => r.nome === pdvCodigo) ?? null;

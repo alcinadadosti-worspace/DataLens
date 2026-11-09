@@ -12,8 +12,8 @@ import { ReportContext, VDCorporateFile, VD_CORPORATE_FILE_LABELS } from '../../
 
 /**
  * Relatórios cujo valor é receita em R$, em duas famílias. Dentro de cada família o tipo de receita
- * precisa ser igual; entre as famílias ele muda de propósito (Ciclo 14: ReceitaCanalVD_* e Receita_por_*
- * em "Receita Bruta", VendaDireta_* sempre em "Receita GMV"), então isso é informação, não alerta.
+ * precisa ser igual; entre as famílias ele muda de propósito (Ciclo 15: ReceitaCanalVD_* e Receita_por_*
+ * em "Receita GMV + Omni", VendaDireta_* sempre em "Receita GMV"), então isso é informação, não alerta.
  */
 const RECEITA_FILES: VDCorporateFile[] = [
   'receitaCanalVDPdv', 'receitaCanalVDUn', 'receitaCanalVDPeriodo', 'receitaCanalVDCiclo',

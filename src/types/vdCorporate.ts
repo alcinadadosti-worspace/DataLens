@@ -493,7 +493,7 @@ export interface VDCorporateDataset {
   receitaCanalUn?: ReceitaCanalUnRow[];
   receitaCategoria?: VDReceitaCategoriaDataset;
 
-  /** 'blocos' = layout do Ciclo 13 (VD / OMNI ENVIO ER / TOTAL); 'simples' = Ciclo 14+, uma receita só (canal VD), sem Omni. */
+  /** 'blocos' = VD / OMNI ENVIO ER / TOTAL (Ciclos 13 e 15); 'simples' = uma receita só, sem Omni (Ciclo 14). */
   receitaCanalVDPdvLayout?: 'blocos' | 'simples';
   receitaCanalVDCiclo?: ReceitaCanalVDCicloRow[];
   vdReceitaCiclo?: VDAnteriorAtualRow[];

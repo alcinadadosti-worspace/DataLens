@@ -111,8 +111,8 @@ function colStartsWith(header: unknown[], prefix: string): number {
 
 /**
  * ReceitaCanalVD_Performance_por_PDV.xlsx. Dois layouts:
- * - 'blocos' (Ciclo 13): cabeçalho em 2 linhas, blocos VD / OMNI ENVIO ER / TOTAL lado a lado;
- * - 'simples' (Ciclo 14+): cabeçalho de 1 linha (UN | PDV | ... | RECEITA CICLO ANTERIOR | RECEITA CICLO
+ * - 'blocos' (Ciclos 13 e 15): cabeçalho em 2 linhas, blocos VD / OMNI ENVIO ER / TOTAL lado a lado;
+ * - 'simples' (Ciclo 14): cabeçalho de 1 linha (UN | PDV | ... | RECEITA CICLO ANTERIOR | RECEITA CICLO
  *   ATUAL | META PEF | GAP ACORDADO (R$) | GAP ACORDADO (%) | REALIZADO), uma receita só — a do canal
  *   VD, sem Omni — e a linha TOTAL ANTES do cabeçalho. Nesse layout `vd` e `total` recebem os mesmos
  *   valores e `omni` fica zerado (o arquivo não traz Omni; ele aparece em Receita_por_Canal_UN).

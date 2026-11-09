@@ -53,7 +53,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
   const pdvRows = dataset?.receitaCanalVDPdv ?? [];
   const totalRow = pdvRows.find(r => r.un.trim().toUpperCase() === 'TOTAL');
   const unRows = pdvRows.filter(r => r.un.trim().toUpperCase() !== 'TOTAL');
-  // Ciclo 14+: o arquivo traz uma receita só (canal VD), sem os blocos VD / Omni Envio ER / Total.
+  // Ciclo 14: o arquivo trouxe uma receita só (canal VD), sem os blocos VD / Omni Envio ER / Total, que voltaram no Ciclo 15.
   const semBlocos = dataset?.receitaCanalVDPdvLayout === 'simples';
   const tipoReceita = dataset?.reportContexts.receitaCanalVDPdv?.tipoReceita ?? null;
   // Meta zerada = a Extranet ainda não lançou a meta PEF do ciclo. Se ela foi informada à mão
@@ -61,7 +61,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
   const metaCanal = metaPefCanalVD(dataset);
   const metaManual = metaCanal?.origem === 'manual' ? metaCanal : null;
   const semMeta = !!totalRow && !metaCanal;
-  // Receita VD ÷ meta VD — no layout do Ciclo 14 a receita do arquivo é só a do canal VD, sem Omni.
+  // Receita VD ÷ meta VD. No layout 'simples' (Ciclo 14) a receita do arquivo é só a do canal VD, sem Omni.
   const realizadoVDManual = metaManual && totalRow && metaManual.vd > 0 ? (totalRow.vd.receitaAtual / metaManual.vd) * 100 : null;
   const omniCanalUn = dataset?.receitaCanalUn?.find(r => !r.indent && /^omnichannel vd$/i.test(r.canal.trim())) ?? null;
 
@@ -110,7 +110,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
             deltaDirection={totalRow.total.receitaAtual >= totalRow.total.receitaAnterior ? 'up' : 'down'}
             meta={`vs. mesmo ciclo do ano anterior${tipoReceita ? ` · ${tipoReceita}` : ''}`}
             hint={semBlocos
-              ? "Coluna 'RECEITA CICLO ATUAL' da linha TOTAL de ReceitaCanalVD_Performance_por_PDV.xlsx — receita do canal Venda Direta de todos os PDVs, na base declarada na aba FILTROS. A partir do Ciclo 14 o arquivo não separa mais VD de Omni Envio ER. A variação compara com 'RECEITA CICLO ANTERIOR', que é o mesmo ciclo do ano passado."
+              ? "Coluna 'RECEITA CICLO ATUAL' da linha TOTAL de ReceitaCanalVD_Performance_por_PDV.xlsx — receita do canal Venda Direta de todos os PDVs, na base declarada na aba FILTROS. Neste formato o arquivo não separa VD de Omni Envio ER. A variação compara com 'RECEITA CICLO ANTERIOR', que é o mesmo ciclo do ano passado."
               : "Coluna 'RECEITA ATUAL (R$)' do bloco TOTAL, linha TOTAL de ReceitaCanalVD_Performance_por_PDV.xlsx — soma VD + Omni Envio ER de todos os PDVs. A variação compara com a coluna 'RECEITA ANTERIOR (R$)' do mesmo bloco."}
           />
           {metaManual ? (
@@ -161,7 +161,7 @@ const VDReceitaScreen: React.FC<Props> = ({ onNavigate }) => {
                 ? `meta ${fmtBRL(metaManual.omni)} · ${((omniCanalUn.receitaAtual / metaManual.omni) * 100).toFixed(2).replace('.', ',')}% realizado`
                 : undefined}
               footnote={omniCanalUn ? 'não somar à receita VD ao lado' : 'Receita_por_Canal_UN não importado'}
-              hint="A partir do Ciclo 14 ReceitaCanalVD_Performance_por_PDV não traz mais o bloco Omni Envio ER. Este valor vem da linha 'Omnichannel VD' de Receita_por_Canal_UN.xlsx — receita de pedidos Omni atribuídos à Venda Direta. Pode já estar dentro da receita VD do primeiro card (no Ciclo 13, a linha 'Venda Direta' desse arquivo incluía o Omni), por isso não some os dois."
+              hint="Neste formato ReceitaCanalVD_Performance_por_PDV não traz o bloco Omni Envio ER. Este valor vem da linha 'Omnichannel VD' de Receita_por_Canal_UN.xlsx — receita de pedidos Omni atribuídos à Venda Direta. Pode já estar dentro da receita VD do primeiro card (no Ciclo 13, a linha 'Venda Direta' desse arquivo incluía o Omni), por isso não some os dois."
             />
           ) : (
             <KpiCard
