@@ -177,6 +177,35 @@ export function rankLojas(lojasRows: LojaMetricRow[]): AggregatedRow[] {
 }
 
 /**
+ * Linhas de LOJAS.csv com GMV, boletos e boleto médio trocados pelos da Extranet (Resumo de
+ * Performance, aba PDV). O ERP corta por data; a Extranet fecha pelo ciclo e conta os boletos
+ * aprovados ou faturados até um dia depois do fim dele, então costuma passar um pouco do ERP.
+ * Receita líquida, descontos, trocas e fidelidade por loja só existem no ERP e ficam como estão.
+ * Sem o Resumo de Performance, ou para uma loja que ele não traz, vale o número do ERP.
+ */
+export function lojasNaBaseExtranet(dataset: LojaDataset): LojaMetricRow[] {
+  const pdv = new Map((dataset.resumoPerformance?.pdv ?? []).map(r => [r.nome.trim(), r]));
+  if (pdv.size === 0) return dataset.lojas;
+  return dataset.lojas.map(l => {
+    const e = l.lojaCodigo ? pdv.get(l.lojaCodigo) : undefined;
+    if (!e) return l;
+    const qtdBoletos = e.boletos ?? l.qtdBoletos;
+    return { ...l, gmv: e.receita, qtdBoletos, boletoMedio: qtdBoletos > 0 ? e.receita / qtdBoletos : 0 };
+  });
+}
+
+/**
+ * % dos boletos da rede com cliente Fidelidade. Vem da Extranet (aba CP do Resumo de Performance)
+ * quando ela foi importada, para fechar com o GMV e os boletos da mesma base; senão, é a média do
+ * ERP ponderada pelos boletos de cada loja.
+ */
+export function fidelidadePenetracaoRede(dataset: LojaDataset): { pct: number; fonte: 'Extranet' | 'ERP' } {
+  const cp = dataset.resumoPerformance?.cp.find(i => /penetra[çc][ãa]o de boletos fidelidade/i.test(i.indicador));
+  if (cp?.realizado != null) return { pct: cp.realizado, fonte: 'Extranet' };
+  return { pct: computeOverallKPIs(dataset.lojas).fidelidadePenetracaoPctGeral, fonte: 'ERP' };
+}
+
+/**
  * Nomes de pessoa vêm em formatos diferentes entre os arquivos — MAIÚSCULO nos CSVs obrigatórios
  * e no xlsx Cuidados Faciais, mas Capitalizado no xlsx Loja Digital — então a comparação entre
  * datasets precisa ser sem acento/case/espaço, senão "Mariane Santos Sousa" nunca bate com
@@ -353,7 +382,7 @@ export function crossInsights(dataset: LojaDataset): string[] {
   const canais = aggregateByName(dataset.canal);
   const formas = aggregateByName(dataset.forma);
   const categorias = aggregateByName(dataset.gestao);
-  const lojas = rankLojas(dataset.lojas);
+  const lojas = rankLojas(lojasNaBaseExtranet(dataset));
   const gmvPorLoja = new Map(lojas.filter(l => l.lojaCodigos[0]).map(l => [l.lojaCodigos[0], l.gmv]));
   const gmvRede = lojas.reduce((s, l) => s + l.gmv, 0);
 
@@ -407,11 +436,11 @@ export function crossInsights(dataset: LojaDataset): string[] {
     insights.push(`${nomeLider} lidera o GMV do ciclo, ${fmtPct(gapPct)} à frente da ${nomeVice}. Ganha ${motivo}.`);
   }
 
-  const kpis = computeOverallKPIs(dataset.lojas);
-  if (dataset.fidelidade && dataset.fidelidade.cp.length > 0 && kpis.fidelidadePenetracaoPctGeral > 0) {
+  const fidelidadeRede = fidelidadePenetracaoRede(dataset).pct;
+  if (dataset.fidelidade && dataset.fidelidade.cp.length > 0 && fidelidadeRede > 0) {
     const desafioPct = dataset.fidelidade.cp[0].penetracaoPct;
     let texto =
-      `${fmtPct(kpis.fidelidadePenetracaoPctGeral, 0)} das compras têm o cliente identificado no Fidelidade, mas só ${fmtPct(desafioPct, 0)} ` +
+      `${fmtPct(fidelidadeRede, 0)} das compras têm o cliente identificado no Fidelidade, mas só ${fmtPct(desafioPct, 0)} ` +
       `das compras Fidelidade concluíram um desafio do programa — quase todos se identificam, mas poucos participam dos desafios.`;
     const porLoja = [...dataset.fidelidade.pdv].sort((a, b) => a.penetracaoPct - b.penetracaoPct);
     if (porLoja.length >= 3) {

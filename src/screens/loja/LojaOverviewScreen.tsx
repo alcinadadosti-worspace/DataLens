@@ -9,6 +9,7 @@ import { useLojaStore } from '../../store/useLojaStore';
 import {
   computeOverallKPIs, rankLojas, consistencyCheck, crossInsights, optionalConsistencyWarnings, aggregateConsultoresPorLoja,
   findByPersonName, classifyAbcByLoja, dailySeries, dayOfWeekAverages, hourlyDistribution,
+  lojasNaBaseExtranet, fidelidadePenetracaoRede,
 } from '../../analytics/lojaMetrics';
 import { RankingItem, BreakdownRow } from '../../components/charts/RankingList';
 import { DetailView } from '../../components/charts/RankingChart';
@@ -30,10 +31,15 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       return {
         kpis: null, ranking: [], consistency: null, insights: [] as string[],
         optionalWarnings: [] as string[], receitaTotalIndicador: undefined, rankingItems: [] as RankingItem[],
+        fidelidadeRede: null, fonteGmv: 'ERP' as const,
       };
     }
-    const kpis = computeOverallKPIs(dataset.lojas);
-    const ranking = rankLojas(dataset.lojas);
+    // GMV, boletos e boleto médio na base da Extranet, que fecha pelo ciclo (não pela data) e
+    // por isso bate com Indicadores PEF; receita líquida e descontos seguem do ERP. Ver lojasNaBaseExtranet.
+    const fonteGmv: 'Extranet' | 'ERP' = dataset.resumoPerformance?.pdv.length ? 'Extranet' : 'ERP';
+    const kpis = computeOverallKPIs(lojasNaBaseExtranet(dataset));
+    const ranking = rankLojas(lojasNaBaseExtranet(dataset));
+    const fidelidadeRede = fidelidadePenetracaoRede(dataset);
     const consistency = consistencyCheck(dataset);
     const insights = crossInsights(dataset);
     const optionalWarnings = optionalConsistencyWarnings(dataset);
@@ -58,9 +64,9 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       lojaCodigo: r.lojaCodigos[0],
     }));
 
-    return { kpis, ranking, consistency, insights, optionalWarnings, receitaTotalIndicador, rankingItems };
+    return { kpis, ranking, consistency, insights, optionalWarnings, receitaTotalIndicador, rankingItems, fidelidadeRede, fonteGmv };
   }, [dataset]);
-  const { kpis, consistency, insights, optionalWarnings, receitaTotalIndicador, rankingItems } = overview;
+  const { kpis, consistency, insights, optionalWarnings, receitaTotalIndicador, rankingItems, fidelidadeRede, fonteGmv } = overview;
 
   if (!dataset) {
     return (
@@ -80,7 +86,17 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
   }
   // O memo acima sempre computa kpis/consistency juntos com dataset não-nulo — nunca deveria cair
   // aqui, mas estreita o tipo pro TS (em vez de espalhar `!` em cada uso abaixo).
-  if (!kpis || !consistency) return null;
+  if (!kpis || !consistency || !fidelidadeRede) return null;
+
+  // GMV e boletos por colaborador de uma loja, na mesma base do ranking: a aba CONSULTOR do Resumo
+  // de Performance (Extranet), que soma exatamente o total da loja; sem ela, o CSV de consultor do ERP.
+  function colaboradoresDaLoja(codigo: string): { nome: string; gmv: number; qtdBoletos: number }[] {
+    const extranet = dataset?.resumoPerformance?.consultor.filter(c => c.pdv === codigo) ?? [];
+    if (fonteGmv === 'Extranet' && extranet.length > 0) {
+      return extranet.map(c => ({ nome: c.nome, gmv: c.receita, qtdBoletos: c.boletos ?? 0 }));
+    }
+    return aggregateConsultoresPorLoja(dataset?.consultor ?? [], codigo).map(c => ({ nome: c.key, gmv: c.gmv, qtdBoletos: c.qtdBoletos }));
+  }
 
   // Painel de detalhe (tela cheia) de uma loja: 8 "páginas" diferentes, alternadas clicando de
   // novo no nome da loja já selecionada (mesmo padrão de ciclo do seletor barra/pizza/mais).
@@ -90,11 +106,11 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
 
   function getLojaBreakdown(item: RankingItem): BreakdownRow[] | null {
     if (!item.lojaCodigo || !dataset) return null;
-    const consultores = aggregateConsultoresPorLoja(dataset.consultor, item.lojaCodigo);
+    const consultores = colaboradoresDaLoja(item.lojaCodigo).filter(c => c.gmv !== 0);
     if (consultores.length === 0) return null;
-    const total = item.value > 0 ? item.value : consultores.reduce((s, c) => s + c.gmv, 0);
+    const total = consultores.reduce((s, c) => s + c.gmv, 0);
     return consultores
-      .map(c => ({ label: c.key, value: c.gmv, valueLabel: fmtBRLshort(c.gmv), pct: total > 0 ? (c.gmv / total) * 100 : 0 }))
+      .map(c => ({ label: c.nome, value: c.gmv, valueLabel: fmtBRLshort(c.gmv), pct: total > 0 ? (c.gmv / total) * 100 : 0 }))
       .sort((a, b) => b.value - a.value);
   }
 
@@ -116,11 +132,11 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
 
   function getBoletosBreakdown(item: RankingItem): BreakdownRow[] | null {
     if (!item.lojaCodigo || !dataset) return null;
-    const consultores = aggregateConsultoresPorLoja(dataset.consultor, item.lojaCodigo).filter(c => c.qtdBoletos > 0);
+    const consultores = colaboradoresDaLoja(item.lojaCodigo).filter(c => c.qtdBoletos > 0);
     if (consultores.length === 0) return null;
     const total = consultores.reduce((s, c) => s + c.qtdBoletos, 0);
     return consultores
-      .map(c => ({ label: c.key, value: c.qtdBoletos, valueLabel: fmtNumber(c.qtdBoletos), pct: total > 0 ? (c.qtdBoletos / total) * 100 : 0 }))
+      .map(c => ({ label: c.nome, value: c.qtdBoletos, valueLabel: fmtNumber(c.qtdBoletos), pct: total > 0 ? (c.qtdBoletos / total) * 100 : 0 }))
       .sort((a, b) => b.value - a.value);
   }
 
@@ -257,16 +273,18 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
         </div>
       )}
 
-      {(kpis.fidelidadePenetracaoPctGeral > 0 || dataset.fidelidade || dataset.cuidadosFaciais) && (
+      {(fidelidadeRede.pct > 0 || dataset.fidelidade || dataset.cuidadosFaciais) && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 20 }}>
-          {kpis.fidelidadePenetracaoPctGeral > 0 && (
+          {fidelidadeRede.pct > 0 && (
             <div style={{ background: 'var(--loja-surface, #FFFFFF)', border: '1px solid var(--loja-border, #E8E2D6)', borderRadius: 14, padding: '14px 18px' }}>
               <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
                 Boletos de cliente Fidelidade
                 <InfoHint text="% dos boletos (cupons de venda) que pertencem a clientes cadastrados no programa Fidelidade — dado que já vinha nos CSVs obrigatórios, mas não era exibido em nenhuma tela." />
               </div>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{kpis.fidelidadePenetracaoPctGeral.toFixed(1).replace('.', ',')}%</div>
-              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 2 }}>média ponderada por boletos, {fmtNumber(kpis.qtdBoletosTotal)} boletos no ciclo</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{fidelidadeRede.pct.toFixed(1).replace('.', ',')}%</div>
+              <div style={{ fontSize: 11, color: 'var(--loja-text-muted, #9B9287)', marginTop: 2 }}>
+                {fidelidadeRede.fonte === 'Extranet' ? 'Extranet' : 'média ponderada por boletos'}, {fmtNumber(kpis.qtdBoletosTotal)} boletos no ciclo
+              </div>
             </div>
           )}
           {dataset.fidelidade && dataset.fidelidade.cp.length > 0 && (
@@ -307,8 +325,11 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 28 }}>
         <KpiCard glow
           eyebrow="GMV do grupo"
-          hint="GMV — Gross Merchandise Value: valor total vendido por toda a rede no ciclo, antes de descontos e trocas."
+          hint={fonteGmv === 'Extranet'
+            ? 'GMV — Gross Merchandise Value: valor total vendido por toda a rede no ciclo, antes de descontos e trocas. Vem da Extranet, que fecha pelo ciclo e conta os boletos aprovados ou faturados até um dia depois do fim dele; por isso costuma passar um pouco do ERP.'
+            : 'GMV — Gross Merchandise Value: valor total vendido por toda a rede no ciclo, antes de descontos e trocas.'}
           value={fmtBRLshort(kpis.gmvTotal)}
+          footnote={`Fonte: ${fonteGmv}`}
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(kpis.gmvTotal)}</span>}
         />
         <KpiCard glow
@@ -320,13 +341,14 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
         />
         <KpiCard glow
           eyebrow="Receita líquida"
-          hint="Receita já descontando trocas e devoluções — o valor que efetivamente ficou com a rede."
+          hint="Receita já descontando trocas e devoluções — o valor que efetivamente ficou com a rede. Só o ERP traz esse número, então ele segue o corte por data."
           value={fmtBRLshort(kpis.receitaLiquidaTotal)}
+          footnote="Fonte: ERP"
           tooltip={<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>{fmtBRL(kpis.receitaLiquidaTotal)}</span>}
         />
         <KpiCard glow
           eyebrow="% Desconto sobre receita"
-          hint="Total de descontos concedidos dividido pela receita líquida — quanto do valor vendido foi abatido em desconto."
+          hint="Total de descontos concedidos dividido pela receita líquida — quanto do valor vendido foi abatido em desconto. As duas partes vêm do ERP."
           value={kpis.descontoPctGeral.toFixed(1).replace('.', ',') + '%'}
           meta={fmtBRL(kpis.totalDescontosTotal)}
         />
@@ -335,7 +357,7 @@ const LojaOverviewScreen: React.FC<LojaOverviewScreenProps> = ({ onNavigate }) =
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, marginTop: 24 }}>
         <ChartCard glow
           title="Ranking de lojas"
-          hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu. Na visão de colunas empilhadas (botão de barras, 3º clique), a Meta PEF de cada loja aparece como referência de fundo, quando o Resumo de Performance foi importado. Em tela cheia, clique numa loja para ver o detalhe dela; clique de novo no nome pra alternar entre GMV por colaborador, produtos mais vendidos, boletos finalizados/fidelizados, serviços, cuidados faciais, dias e horários de pico (conforme os arquivos importados)."
+          hint="Todas as lojas da rede ordenadas por GMV (Gross Merchandise Value) no ciclo, da que mais vendeu até a que menos vendeu. GMV, boletos e participação vêm da Extranet quando o Resumo de Performance foi importado (senão, do ERP). Na visão de colunas empilhadas (botão de barras, 3º clique), a Meta PEF de cada loja aparece como referência de fundo, quando o Resumo de Performance foi importado. Em tela cheia, clique numa loja para ver o detalhe dela; clique de novo no nome pra alternar entre GMV por colaborador, produtos mais vendidos, boletos finalizados/fidelizados, serviços, cuidados faciais, dias e horários de pico (conforme os arquivos importados)."
           subtitle="Por GMV — 1º ao último lugar"
         >
           <RankingChart items={rankingItems} detailViews={lojaDetailViews} />
